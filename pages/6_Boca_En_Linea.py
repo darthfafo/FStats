@@ -137,27 +137,20 @@ with col_izq:
         st.info("Sin datos de alcance diario.")
 
 with col_der:
-    st.subheader("🏆 Top 5 contenidos por rendimiento")
-    posts_perf = imp_ig.get("posts_data", [])
-    if posts_perf:
-        top5 = sorted(posts_perf,
-                      key=lambda x: x.get("plays", 0) or x.get("reach", 0),
-                      reverse=True)[:5]
-        items = []
-        for p in top5:
-            icono = "🎬" if p["tipo"] == "reel" else \
-                    ("▶️" if p["tipo"] == "video" else \
-                    ("🖼️" if p["tipo"] == "carousel_album" else "📷"))
-            val = p.get("plays") or p.get("reach", 0)
-            items.append({"Publicación": f"{icono} {p['ts']}", "Plays / Alcance": val})
-        df_top = pd.DataFrame(items)
-        fig = px.bar(df_top, x="Plays / Alcance", y="Publicación",
-                     orientation="h", color_discrete_sequence=["#006AA7"])
-        fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=10, b=0),
-                          yaxis=dict(autorange="reversed"))
-        st.plotly_chart(fig, width='stretch')
+    st.subheader("👥 Nuevos seguidores por día")
+    daily_seg = imp_ig.get("daily_followers", {})
+    if daily_seg:
+        df_seg = pd.DataFrame([{"Fecha": k, "Nuevos seguidores": v}
+                                for k, v in sorted(daily_seg.items()) if v > 0])
+        if not df_seg.empty:
+            fig = px.bar(df_seg, x="Fecha", y="Nuevos seguidores",
+                         color_discrete_sequence=["#c026d3"])
+            fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=10, b=0))
+            st.plotly_chart(fig, width='stretch')
+        else:
+            st.info("Sin datos de seguidores por día.")
     else:
-        st.info("Sin datos de rendimiento por publicación.")
+        st.info("Sin datos de seguidores por día.")
 
 # ── Segmentación por tipo ─────────────────────────────────────────────
 st.markdown("---")

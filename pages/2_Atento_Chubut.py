@@ -131,7 +131,7 @@ st.markdown(f"""
         <div style="color:#94a3b8;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase">
             📊 Total visualizaciones — últimos 30 días
         </div>
-        <div style="color:white;font-size:60px;font-weight:900;line-height:1;margin:8px 0 4px">
+        <div style="color:white;font-size:clamp(26px,7vw,60px);font-weight:900;line-height:1;margin:8px 0 4px">
             {gran_total:,}
         </div>
         <div style="color:#64748b;font-size:13px">Facebook + Instagram</div>
@@ -139,12 +139,12 @@ st.markdown(f"""
     <div style="display:flex;gap:32px;flex-wrap:wrap;">
         <div style="text-align:center">
             <div style="color:#60a5fa;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase">📘 Facebook</div>
-            <div style="color:white;font-size:28px;font-weight:800">{imp_fb_total:,}</div>
+            <div style="color:white;font-size:clamp(18px,4vw,28px);font-weight:800">{imp_fb_total:,}</div>
             <div style="color:#475569;font-size:11px">alcance único · {seg_fb:,} seguidores</div>
         </div>
         <div style="text-align:center">
             <div style="color:#e879f9;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase">📸 Instagram</div>
-            <div style="color:white;font-size:28px;font-weight:800">{imp_ig_total:,}</div>
+            <div style="color:white;font-size:clamp(18px,4vw,28px);font-weight:800">{imp_ig_total:,}</div>
             <div style="color:#475569;font-size:11px">visualizaciones · {seg_ig:,} seguidores</div>
         </div>
     </div>
@@ -257,42 +257,20 @@ with tab_ig:
             st.info("Sin datos de alcance diario.")
 
     with col_der:
-        st.subheader("🏆 Top 5 contenidos por rendimiento")
-        posts_perf = imp_ig.get("posts_data", [])
-        if posts_perf:
-            top5 = sorted(posts_perf,
-                          key=lambda x: x.get("plays", 0) or x.get("reach", 0),
-                          reverse=True)[:5]
-            items = []
-            for p in top5:
-                icono = "🎬" if p["tipo"] == "reel" else \
-                        ("▶️" if p["tipo"] == "video" else \
-                        ("🖼️" if p["tipo"] == "carousel_album" else "📷"))
-                val = p.get("plays") or p.get("reach", 0)
-                items.append({"Publicación": f"{icono} {p['ts']}", "Plays / Alcance": val})
-            df_top = pd.DataFrame(items)
-            fig = px.bar(df_top, x="Plays / Alcance", y="Publicación",
-                         orientation="h", color_discrete_sequence=["#c026d3"])
-            fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=10, b=0),
-                              yaxis=dict(autorange="reversed"))
-            st.plotly_chart(fig, width='stretch')
-        else:
-            media_der = datos_ig.get("media", {}).get("data", [])
-            if media_der:
-                items = []
-                for p in media_der[:10]:
-                    tipo  = p.get("media_type", "")
-                    icono = "🎬" if p.get("product_type") == "clips" else \
-                            ("▶️" if tipo == "VIDEO" else \
-                            ("🖼️" if tipo == "CAROUSEL_ALBUM" else "📷"))
-                    items.append({"Publicación": f"{icono} {p.get('timestamp','')[:10]}",
-                                  "Likes": p.get("like_count", 0)})
-                df_l = pd.DataFrame(items)
-                fig = px.bar(df_l, x="Likes", y="Publicación", orientation="h",
+        st.subheader("👥 Nuevos seguidores por día")
+        daily_seg = imp_ig.get("daily_followers", {})
+        if daily_seg:
+            df_seg = pd.DataFrame([{"Fecha": k, "Nuevos seguidores": v}
+                                    for k, v in sorted(daily_seg.items()) if v > 0])
+            if not df_seg.empty:
+                fig = px.bar(df_seg, x="Fecha", y="Nuevos seguidores",
                              color_discrete_sequence=["#c026d3"])
-                fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=10, b=0),
-                                  yaxis=dict(autorange="reversed"))
+                fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=10, b=0))
                 st.plotly_chart(fig, width='stretch')
+            else:
+                st.info("Sin datos de seguidores por día.")
+        else:
+            st.info("Sin datos de seguidores por día.")
 
     # ── Segmentación por tipo de contenido ──────────────────────────
     st.markdown("---")

@@ -59,8 +59,10 @@ class InstagramCollector:
             "daily_alcance": {},
         }
 
+        result["daily_followers"] = {}
+
         # ── 1. Métricas time-series (period=day) ───────────────────
-        for metric in ["reach"]:
+        for metric in ["reach", "follower_count"]:
             try:
                 resp = self._get(f"{self.ig_id}/insights", {
                     "metric": metric,
@@ -77,6 +79,8 @@ class InstagramCollector:
                     if name == "reach":
                         result["alcance"]       = total
                         result["daily_alcance"] = daily
+                    elif name == "follower_count":
+                        result["daily_followers"] = daily
                     elif name == "total_interactions":
                         result["total_inter"]   = total
                 print(f"[IG] ✓ account insights (time_series): {metric} = {total:,}")
@@ -225,9 +229,10 @@ class InstagramCollector:
             daily = acc.get("daily_alcance", {})
 
         return {
-            "total_imp":   total_imp,
-            "total_reach": total_reach,
-            "daily":       daily,
-            "engaged":     acc.get("total_inter", 0),
-            "posts_data":  posts_data,
+            "total_imp":       total_imp,
+            "total_reach":     total_reach,
+            "daily":           daily,
+            "engaged":         acc.get("total_inter", 0),
+            "posts_data":      posts_data,
+            "daily_followers": acc.get("daily_followers", {}),
         }
