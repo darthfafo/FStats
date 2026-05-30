@@ -92,32 +92,6 @@ with st.sidebar:
     st.markdown(f"*{datetime.now().strftime('%d/%m/%Y %H:%M')}*")
     st.markdown("---")
     st.caption(f"{len(PORTALES_ACTIVOS)} portal(es) activo(s)")
-    st.markdown("---")
-
-    # ── Botón de descarga PDF ────────────────────────────────────────
-    if st.button("📄 Generar brief PDF", use_container_width=True, type="primary"):
-        with st.spinner("Generando PDF..."):
-            try:
-                pdf_bytes = generar_brief(
-                    resumenes=resumenes,
-                    totales={
-                        "total_imp": gran_total_imp,
-                        "total_seg": gran_total_seg,
-                        "total_eng": gran_total_eng,
-                        "total_fb":  gran_total_fb,
-                        "total_ig":  gran_total_ig,
-                    }
-                )
-                fecha = datetime.now().strftime("%Y%m%d")
-                st.download_button(
-                    label="⬇️ Descargar informe",
-                    data=pdf_bytes,
-                    file_name=f"informe_fstats_{fecha}.pdf",
-                    mime="application/pdf",
-                    use_container_width=True,
-                )
-            except Exception as e:
-                st.error(f"Error al generar PDF: {e}")
 
 # ── Carga de datos ─────────────────────────────────────────────────
 @st.cache_data(ttl=3600)
@@ -280,3 +254,30 @@ if len(resumenes) > 1:
         )
         fig_b.update_layout(margin=dict(l=0, r=0, t=40, b=0), legend_title="")
         st.plotly_chart(fig_b, width='stretch')
+
+# ── Botón PDF — va aquí, después de que resumenes está disponible ────
+with st.sidebar:
+    st.markdown("---")
+    if st.button("📄 Generar brief PDF", use_container_width=True, type="primary"):
+        with st.spinner("Generando PDF..."):
+            try:
+                pdf_bytes = generar_brief(
+                    resumenes=resumenes,
+                    totales={
+                        "total_imp": gran_total_imp,
+                        "total_seg": gran_total_seg,
+                        "total_eng": gran_total_eng,
+                        "total_fb":  gran_total_fb,
+                        "total_ig":  gran_total_ig,
+                    }
+                )
+                fecha = datetime.now().strftime("%Y%m%d")
+                st.sidebar.download_button(
+                    label="⬇️ Descargar informe",
+                    data=pdf_bytes,
+                    file_name=f"informe_fstats_{fecha}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                )
+            except Exception as e:
+                st.sidebar.error(f"Error: {e}")
