@@ -243,22 +243,30 @@ if activos:
         # ── Top 10 IG últimos 30 días ─────────────────────────────────
         st.markdown("---")
         st.subheader("📸 Top 10 publicaciones Instagram — últimos 30 días")
-        # Ordenar por likes (engagement real) en lugar de plays que favorece solo Reels
-        top10_ig = sorted(todos_posts_ig,
-                          key=lambda x: x.get("likes", 0),
-                          reverse=True)[:10]
+        # Usar all_media_ig (hasta 500 posts) filtrado a 30 días, ordenado por likes
+        # posts_ig solo tiene 25 posts recientes y puede perder posts virales más viejos
+        from datetime import timedelta
+        limite_ig = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+        todos_30d_ig = []
+        for d in activos:
+            for post in d.get("all_media_ig", []):
+                if post.get("ts", "") >= limite_ig:
+                    todos_30d_ig.append({**post, "portal": d["nombre"]})
+
+        # Fallback: si no hay all_media_ig, usar posts_ig
+        fuente_30d = todos_30d_ig if todos_30d_ig else todos_posts_ig
+        top10_ig = sorted(fuente_30d, key=lambda x: x.get("likes", 0), reverse=True)[:10]
+
         if top10_ig:
             for i, post in enumerate(top10_ig, 1):
                 icono = "🎬" if post["tipo"]=="reel" else "▶️" if post["tipo"]=="video" else "🖼️" if post["tipo"]=="carousel_album" else "📷"
-                plays = post.get("plays") or post.get("reach", 0)
                 with st.container(border=True):
-                    cols = st.columns([0.4, 3.5, 1, 1, 1, 0.5])
+                    cols = st.columns([0.4, 3.5, 1, 1, 0.5])
                     cols[0].markdown(f"**#{i}**")
                     cols[1].markdown(f"{icono} **{post['portal']}** · `{post['ts']}`  \n{post.get('caption','')[:100]}")
-                    cols[2].metric("❤️ Likes",         f"{post.get('likes',0):,}")
-                    cols[3].metric("▶️ Plays/Alcance", f"{plays:,}")
-                    cols[4].metric("💬 Comentarios",   f"{post.get('comments',0):,}")
-                    cols[5].markdown(f"[🔗]({post.get('permalink','')})" if post.get("permalink") else "")
+                    cols[2].metric("❤️ Likes",       f"{post.get('likes',0):,}")
+                    cols[3].metric("💬 Comentarios", f"{post.get('comments',0):,}")
+                    cols[4].markdown(f"[🔗]({post.get('permalink','')})" if post.get("permalink") else "")
         else:
             st.info("Sin datos de publicaciones en los últimos 30 días.")
 
