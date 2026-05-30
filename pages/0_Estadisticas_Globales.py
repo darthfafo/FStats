@@ -31,7 +31,7 @@ def pendiente(v):
 def cargar_portal(nombre, page_id, ig_id, token, ig_only=False):
     r = {"nombre": nombre, "fb_seg":0,"fb_imp":0,"fb_eng":0,"fb_vistas":0,
          "ig_seg":0,"ig_imp":0,"ig_reach":0,"ig_engaged":0,
-         "fb_daily":{},"ig_daily":{},"posts_ig":[],"posts_fb":[]}
+         "fb_daily":{},"ig_daily":{},"posts_ig":[],"posts_fb":[],"all_media_ig":[]}
     if not ig_only and not pendiente(page_id) and not pendiente(token):
         try:
             fb = FacebookCollector(page_id=page_id, access_token=token)
@@ -55,6 +55,22 @@ def cargar_portal(nombre, page_id, ig_id, token, ig_only=False):
             r["ig_engaged"] = imp_ig.get("engaged", 0)
             r["ig_daily"]   = imp_ig.get("daily", {})
             r["posts_ig"]   = imp_ig.get("posts_data", [])
+            # Historial completo para ranking por likes
+            all_m = ig.get_all_media(max_posts=500)
+            r["all_media_ig"] = [
+                {
+                    "ts":        p.get("timestamp","")[:10],
+                    "tipo":      "reel" if p.get("product_type")=="clips"
+                                 else p.get("media_type","IMAGE").lower(),
+                    "plays":     0,
+                    "reach":     0,
+                    "likes":     p.get("like_count", 0),
+                    "comments":  p.get("comments_count", 0),
+                    "permalink": p.get("permalink",""),
+                    "caption":   (p.get("caption") or "")[:60],
+                }
+                for p in all_m.get("data", [])
+            ]
         except Exception as e:
             print(f"[{nombre}] IG: {e}")
     r["total_imp"] = r["fb_imp"] + r["ig_imp"]
@@ -70,7 +86,7 @@ with st.spinner("Cargando datos de todos los portales..."):
             datos_portales.append({"nombre": p["nombre"], "pendiente": True,
                                    "fb_seg":0,"fb_imp":0,"fb_eng":0,"fb_vistas":0,
                                    "ig_seg":0,"ig_imp":0,"ig_reach":0,"ig_engaged":0,
-                                   "fb_daily":{},"ig_daily":{},"posts_ig":[],"posts_fb":[],
+                                   "fb_daily":{},"ig_daily":{},"posts_ig":[],"posts_fb":[],"all_media_ig":[],
                                    "total_imp":0,"total_seg":0,"tasa_eng":0})
         else:
             d = cargar_portal(p["nombre"], p.get("facebook_page_id"),
@@ -252,23 +268,27 @@ if activos:
             fig_pie.update_layout(margin=dict(l=0,r=0,t=40,b=0))
             st.plotly_chart(fig_pie, width='stretch')
 
-        # Top posts globales
+        # Top posts globales — histórico completo ordenado por likes
         st.markdown("---")
         st.subheader("🥇 Top 10 publicaciones de Instagram — todos los portales")
-        top10 = sorted(todos_posts_ig,
-                       key=lambda x: x.get("plays",0) or x.get("reach",0),
-                       reverse=True)[:10]
+
+        todos_historico = []
+        for d in activos:
+            for post in d.get("all_media_ig", []):
+                todos_historico.append({**post, "portal": d["nombre"]})
+
+        fuente_top = todos_historico if todos_historico else todos_posts_ig
+        top10 = sorted(fuente_top, key=lambda x: x.get("likes", 0), reverse=True)[:10]
+
         for i, post in enumerate(top10, 1):
             icono = "🎬" if post["tipo"]=="reel" else "▶️" if post["tipo"]=="video" else "🖼️" if post["tipo"]=="carousel_album" else "📷"
-            val   = post.get("plays") or post.get("reach", 0)
             with st.container(border=True):
-                cols = st.columns([0.5, 3, 1, 1, 1, 1])
+                cols = st.columns([0.5, 3, 1, 1, 1])
                 cols[0].markdown(f"**#{i}**")
                 cols[1].markdown(f"{icono} **{post['portal']}** · `{post['ts']}`  \n{post.get('caption','')[:100]}")
-                cols[2].metric("▶️ Plays/Alcance", f"{val:,}")
-                cols[3].metric("❤️ Likes",         f"{post.get('likes',0):,}")
-                cols[4].metric("💬 Comentarios",   f"{post.get('comments',0):,}")
-                cols[5].markdown(f"[🔗]({post.get('permalink','')})" if post.get("permalink") else "")
+                cols[2].metric("❤️ Likes",       f"{post.get('likes',0):,}")
+                cols[3].metric("💬 Comentarios", f"{post.get('comments',0):,}")
+                cols[4].markdown(f"[🔗]({post.get('permalink','')})" if post.get("permalink") else "")
 
 else:
     st.info("No hay portales activos con datos disponibles aún.")
