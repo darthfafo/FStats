@@ -243,19 +243,20 @@ if activos:
         # ── Top 10 IG últimos 30 días ─────────────────────────────────
         st.markdown("---")
         st.subheader("📸 Top 10 publicaciones Instagram — últimos 30 días")
+        # Ordenar por likes (engagement real) en lugar de plays que favorece solo Reels
         top10_ig = sorted(todos_posts_ig,
-                          key=lambda x: x.get("plays", 0) or x.get("reach", 0),
+                          key=lambda x: x.get("likes", 0),
                           reverse=True)[:10]
         if top10_ig:
             for i, post in enumerate(top10_ig, 1):
                 icono = "🎬" if post["tipo"]=="reel" else "▶️" if post["tipo"]=="video" else "🖼️" if post["tipo"]=="carousel_album" else "📷"
-                val   = post.get("plays") or post.get("reach", 0)
+                plays = post.get("plays") or post.get("reach", 0)
                 with st.container(border=True):
                     cols = st.columns([0.4, 3.5, 1, 1, 1, 0.5])
                     cols[0].markdown(f"**#{i}**")
                     cols[1].markdown(f"{icono} **{post['portal']}** · `{post['ts']}`  \n{post.get('caption','')[:100]}")
-                    cols[2].metric("▶️ Plays/Alcance", f"{val:,}")
-                    cols[3].metric("❤️ Likes",         f"{post.get('likes',0):,}")
+                    cols[2].metric("❤️ Likes",         f"{post.get('likes',0):,}")
+                    cols[3].metric("▶️ Plays/Alcance", f"{plays:,}")
                     cols[4].metric("💬 Comentarios",   f"{post.get('comments',0):,}")
                     cols[5].markdown(f"[🔗]({post.get('permalink','')})" if post.get("permalink") else "")
         else:

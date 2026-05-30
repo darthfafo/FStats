@@ -219,8 +219,7 @@ with tab_fb:
         for _, row in df_fb_top.head(10).iterrows():
             with st.container(border=True):
                 cols = st.columns([5, 1, 1, 1])
-                cols[0].markdown(f"📅 `{row['Fecha']}`  
-{row['Publicación']}")
+                cols[0].markdown(f"📅 `{row['Fecha']}`  \n{row['Publicación']}")
                 cols[1].metric("❤️", f"{row['❤️ Likes']:,}" if row["❤️ Likes"] > 0 else "—")
                 cols[2].metric("💬", f"{row['💬 Comentarios']:,}")
                 cols[3].metric("🔁", f"{row['🔁 Compartidos']:,}" if row["🔁 Compartidos"] > 0 else "—")
