@@ -4,6 +4,35 @@ import streamlit as st
 
 load_dotenv()
 
+RESPONSIVE_CSS = """
+<style>
+@media (max-width: 768px) {
+    div[style*="font-size:60px"], div[style*="font-size: 60px"] {
+        font-size: 36px !important;
+    }
+    div[style*="font-size:56px"], div[style*="font-size: 56px"] {
+        font-size: 32px !important;
+    }
+    div[style*="font-size:28px"], div[style*="font-size: 28px"] {
+        font-size: 20px !important;
+    }
+    div[style*="justify-content:space-between"] {
+        flex-direction: column !important;
+        gap: 16px !important;
+    }
+    div[style*="padding:28px 32px"] {
+        padding: 18px 14px !important;
+    }
+    div[style*="gap:32px"] {
+        gap: 12px !important;
+    }
+    section[data-testid="stSidebar"] > div {
+        padding-top: 1rem !important;
+    }
+}
+</style>
+"""
+
 def _secret(key, default="PENDIENTE"):
     try:
         return st.secrets[key]

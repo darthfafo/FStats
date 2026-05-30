@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
-from config import PORTALES
+from config import PORTALES, RESPONSIVE_CSS
 from collectors.facebook import FacebookCollector
 from collectors.instagram import InstagramCollector
 

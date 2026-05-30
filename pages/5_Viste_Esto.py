@@ -2,11 +2,12 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
-from config import PORTALES
+from config import PORTALES, RESPONSIVE_CSS
 from collectors.instagram import InstagramCollector
 
 st.set_page_config(page_title="VISTE ESTO?", page_icon="👁️", layout="wide")
 
+st.markdown(RESPONSIVE_CSS, unsafe_allow_html=True)
 st.markdown("""
 <style>
 .pendiente-box { background:linear-gradient(135deg,#1e293b,#334155); border-radius:14px; padding:40px; text-align:center; margin:20px 0; }

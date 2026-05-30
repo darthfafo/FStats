@@ -17,27 +17,56 @@ st.markdown("""
 .hero {
     background: linear-gradient(135deg, #0f172a, #1e3a5f);
     border-radius: 16px;
-    padding: 40px;
+    padding: 32px 24px;
     text-align: center;
     margin-bottom: 24px;
 }
 .hero .label {
     color: #94a3b8;
-    font-size: 14px;
+    font-size: clamp(11px, 2vw, 14px);
     font-weight: 700;
     letter-spacing: 2px;
     text-transform: uppercase;
 }
 .hero .total {
     color: white;
-    font-size: 72px;
+    font-size: clamp(36px, 10vw, 72px);
     font-weight: 900;
     line-height: 1;
     margin: 12px 0 8px 0;
+    word-break: keep-all;
 }
 .hero .sub {
     color: #64748b;
-    font-size: 15px;
+    font-size: clamp(12px, 2vw, 15px);
+}
+
+/* Responsive: hero inline divs en portales */
+@media (max-width: 768px) {
+    div[style*="font-size:60px"], div[style*="font-size: 60px"] {
+        font-size: 38px !important;
+    }
+    div[style*="font-size:56px"], div[style*="font-size: 56px"] {
+        font-size: 34px !important;
+    }
+    div[style*="font-size:28px"], div[style*="font-size: 28px"] {
+        font-size: 20px !important;
+    }
+    div[style*="justify-content:space-between"][style*="display:flex"] {
+        flex-direction: column !important;
+    }
+    div[style*="gap:32px"] {
+        gap: 16px !important;
+        flex-wrap: wrap !important;
+    }
+    /* Padding en heroes de portales */
+    div[style*="padding:28px 32px"] {
+        padding: 20px 16px !important;
+    }
+    /* Ocultar sidebar en mobile para dar más espacio */
+    section[data-testid="stSidebar"] {
+        display: none;
+    }
 }
 </style>
 """, unsafe_allow_html=True)
