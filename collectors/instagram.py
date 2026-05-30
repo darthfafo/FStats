@@ -39,6 +39,27 @@ class InstagramCollector:
             "limit":  limit
         })
 
+    def get_all_media(self, max_posts=500):
+        """Pagina por todos los posts para encontrar el top histórico por likes."""
+        all_posts = []
+        params = {
+            "fields": "id,caption,media_type,product_type,timestamp,like_count,comments_count,permalink",
+            "limit": 100,
+            "access_token": self.access_token,
+        }
+        url = f"{self.base_url}/{self.ig_id}/media"
+        while url and len(all_posts) < max_posts:
+            r = requests.get(url, params=params)
+            if not r.ok:
+                break
+            data = r.json()
+            all_posts.extend(data.get("data", []))
+            next_url = data.get("paging", {}).get("next")
+            url = next_url
+            params = {}  # la URL "next" ya trae todos los params
+        print(f"[IG] get_all_media: {len(all_posts)} posts obtenidos")
+        return {"data": all_posts[:max_posts]}
+
     def get_account_insights(self):
         """
         Métricas a nivel de cuenta Instagram (v25.0).

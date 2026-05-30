@@ -54,7 +54,7 @@ def cargar_ig(ig_id, token):
     return {
         "info":        ig.get_account_info(),
         "impresiones": ig.get_media_impressions(limit=25),
-        "media":       ig.get_recent_media(limit=30),
+        "media":       ig.get_all_media(max_posts=500),
     }
 
 st.title("📰 Chubut Noticias")
