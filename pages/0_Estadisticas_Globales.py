@@ -42,6 +42,8 @@ def cargar_portal(nombre, page_id, ig_id, token, ig_only=False):
             r["fb_eng"]   = imp.get("engagement", 0)
             r["fb_vistas"]= imp.get("vistas", 0)
             r["fb_daily"] = imp.get("daily", {})
+            posts = fb.get_recent_posts(limit=30)
+            r["posts_fb"] = posts.get("data", [])
         except Exception as e:
             print(f"[{nombre}] FB: {e}")
     if not pendiente(ig_id) and not pendiente(token):
@@ -166,36 +168,6 @@ if activos:
 
     st.markdown("---")
 
-    # ── Tasa de engagement ──────────────────────────────────────────
-    st.subheader("💬 Tasa de engagement por portal (Engagement FB / Seguidores)")
-    df_eng = pd.DataFrame([
-        {"Portal": d["nombre"], "Tasa (%)": d["tasa_eng"],
-         "Engagement": d["fb_eng"], "Seguidores FB": d["fb_seg"]}
-        for d in activos if d["fb_seg"] > 0
-    ]).sort_values("Tasa (%)", ascending=False)
-
-    if not df_eng.empty:
-        col_a, col_b = st.columns(2)
-        with col_a:
-            fig_e = px.bar(df_eng, x="Portal", y="Tasa (%)",
-                           color="Tasa (%)", color_continuous_scale="Greens",
-                           title="Tasa de engagement (%)")
-            fig_e.add_hline(y=tasa_global, line_dash="dash", line_color="white",
-                            annotation_text=f"Promedio: {tasa_global:.2f}%",
-                            annotation_position="top right")
-            fig_e.update_layout(showlegend=False, margin=dict(l=0,r=0,t=40,b=0),
-                                coloraxis_showscale=False)
-            st.plotly_chart(fig_e, width='stretch')
-        with col_b:
-            fig_s = px.scatter(df_eng, x="Seguidores FB", y="Engagement",
-                               size="Tasa (%)", color="Portal", text="Portal",
-                               title="Seguidores vs Engagement (tamaño = tasa)")
-            fig_s.update_traces(textposition="top center")
-            fig_s.update_layout(showlegend=False, margin=dict(l=0,r=0,t=40,b=0))
-            st.plotly_chart(fig_s, width='stretch')
-
-    st.markdown("---")
-
     # ── Tendencia de alcance diario combinada ───────────────────────
     st.subheader("📈 Tendencia de alcance diario — todos los portales")
 
@@ -268,27 +240,67 @@ if activos:
             fig_pie.update_layout(margin=dict(l=0,r=0,t=40,b=0))
             st.plotly_chart(fig_pie, width='stretch')
 
-        # Top posts globales — histórico completo ordenado por likes
+        # ── Top 10 IG últimos 30 días ─────────────────────────────────
         st.markdown("---")
-        st.subheader("🥇 Top 10 publicaciones de Instagram — todos los portales")
+        st.subheader("📸 Top 10 publicaciones Instagram — últimos 30 días")
+        top10_ig = sorted(todos_posts_ig,
+                          key=lambda x: x.get("plays", 0) or x.get("reach", 0),
+                          reverse=True)[:10]
+        if top10_ig:
+            for i, post in enumerate(top10_ig, 1):
+                icono = "🎬" if post["tipo"]=="reel" else "▶️" if post["tipo"]=="video" else "🖼️" if post["tipo"]=="carousel_album" else "📷"
+                val   = post.get("plays") or post.get("reach", 0)
+                with st.container(border=True):
+                    cols = st.columns([0.4, 3.5, 1, 1, 1, 0.5])
+                    cols[0].markdown(f"**#{i}**")
+                    cols[1].markdown(f"{icono} **{post['portal']}** · `{post['ts']}`  \n{post.get('caption','')[:100]}")
+                    cols[2].metric("▶️ Plays/Alcance", f"{val:,}")
+                    cols[3].metric("❤️ Likes",         f"{post.get('likes',0):,}")
+                    cols[4].metric("💬 Comentarios",   f"{post.get('comments',0):,}")
+                    cols[5].markdown(f"[🔗]({post.get('permalink','')})" if post.get("permalink") else "")
+        else:
+            st.info("Sin datos de publicaciones en los últimos 30 días.")
 
-        todos_historico = []
-        for d in activos:
-            for post in d.get("all_media_ig", []):
-                todos_historico.append({**post, "portal": d["nombre"]})
+    # ── Top 10 FB últimos 30 días ─────────────────────────────────────
+    st.markdown("---")
+    st.subheader("📘 Top 10 publicaciones Facebook — últimos 30 días")
+    from datetime import timedelta
+    limite_30 = datetime.now() - timedelta(days=30)
+    todos_posts_fb = []
+    for d in activos:
+        for post in d.get("posts_fb", []):
+            try:
+                fecha = datetime.strptime(post.get("created_time","")[:10], "%Y-%m-%d")
+                if fecha < limite_30:
+                    continue
+                reac  = post.get("reactions") or post.get("likes") or {}
+                likes = reac.get("summary", {}).get("total_count", 0)
+                com   = post.get("comments", {}).get("summary", {}).get("total_count", 0)
+                shares= post.get("shares", {}).get("count", 0)
+                todos_posts_fb.append({
+                    "portal":  d["nombre"],
+                    "fecha":   post.get("created_time","")[:10],
+                    "mensaje": (post.get("message") or "")[:100],
+                    "likes":   likes,
+                    "comentarios": com,
+                    "compartidos": shares,
+                    "engagement": likes + com + shares,
+                })
+            except:
+                pass
 
-        fuente_top = todos_historico if todos_historico else todos_posts_ig
-        top10 = sorted(fuente_top, key=lambda x: x.get("likes", 0), reverse=True)[:10]
-
-        for i, post in enumerate(top10, 1):
-            icono = "🎬" if post["tipo"]=="reel" else "▶️" if post["tipo"]=="video" else "🖼️" if post["tipo"]=="carousel_album" else "📷"
+    if todos_posts_fb:
+        top10_fb = sorted(todos_posts_fb, key=lambda x: x["engagement"], reverse=True)[:10]
+        for i, post in enumerate(top10_fb, 1):
             with st.container(border=True):
-                cols = st.columns([0.5, 3, 1, 1, 1])
+                cols = st.columns([0.4, 3.5, 1, 1, 1])
                 cols[0].markdown(f"**#{i}**")
-                cols[1].markdown(f"{icono} **{post['portal']}** · `{post['ts']}`  \n{post.get('caption','')[:100]}")
-                cols[2].metric("❤️ Likes",       f"{post.get('likes',0):,}")
-                cols[3].metric("💬 Comentarios", f"{post.get('comments',0):,}")
-                cols[4].markdown(f"[🔗]({post.get('permalink','')})" if post.get("permalink") else "")
+                cols[1].markdown(f"📘 **{post['portal']}** · `{post['fecha']}`  \n{post['mensaje']}")
+                cols[2].metric("❤️ Likes",       f"{post['likes']:,}")
+                cols[3].metric("💬 Comentarios", f"{post['comentarios']:,}")
+                cols[4].metric("🔁 Compartidos", f"{post['compartidos']:,}")
+    else:
+        st.info("Sin datos de publicaciones de Facebook en los últimos 30 días.")
 
 else:
     st.info("No hay portales activos con datos disponibles aún.")

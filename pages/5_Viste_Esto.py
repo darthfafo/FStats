@@ -180,8 +180,8 @@ if media_data.get("data"):
                          "🔗 Link":post.get("permalink","")})
     df_ig = pd.DataFrame(lista_ig)
     if not df_ig.empty: df_ig = df_ig.sort_values("❤️ Likes", ascending=False)
-    st.markdown("#### 🏆 Top 5 publicaciones")
-    for _, row in df_ig.head(5).iterrows():
+    st.markdown("#### 🏆 Top 10 publicaciones")
+    for _, row in df_ig.head(10).iterrows():
         with st.container(border=True):
             cols = st.columns([5,1,1,1])
             cols[0].markdown(f"📅 `{row['Fecha']}` · {row['Tipo']}  \n{row['Publicación']}")

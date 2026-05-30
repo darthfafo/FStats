@@ -82,6 +82,7 @@ def cargar_fb(page_id, token):
         "info":        fb.get_page_info(),
         "impresiones": fb.get_posts_impressions(),
         "fan_growth":  fb.get_fan_growth(),
+        "posts":       fb.get_recent_posts(limit=100),
     }
 
 @st.cache_data(ttl=3600)
@@ -99,7 +100,7 @@ with st.spinner("Cargando estadísticas..."):
         error_fb = None
     except Exception as e:
         datos    = {"info": {}, "impresiones": {"total_imp": 0, "total_reach": 0, "daily": {}},
-                    "fan_growth": {"data": []}}
+                    "fan_growth": {"data": []}, "posts": {"data": []}}
         error_fb = str(e)
     try:
         datos_ig = cargar_ig(portal["instagram_id"], portal["access_token"])
@@ -205,6 +206,41 @@ with tab_fb:
             st.plotly_chart(fig, width='stretch')
         else:
             st.info("Sin datos de seguidores por día.")
+
+
+    # ── Top 10 publicaciones FB históricas ───────────────────────────
+    st.markdown("---")
+    st.subheader("📝 Top 10 publicaciones de Facebook")
+    posts_data_fb = datos.get("posts", {})
+    if posts_data_fb.get("data"):
+        lista_fb = []
+        for post in posts_data_fb["data"]:
+            msg   = post.get("message", "(Sin texto)")
+            reac  = post.get("reactions") or post.get("likes") or {}
+            likes = reac.get("summary", {}).get("total_count", 0)
+            com   = post.get("comments", {}).get("summary", {}).get("total_count", 0)
+            shares= post.get("shares", {}).get("count", 0)
+            lista_fb.append({
+                "Fecha":          post.get("created_time", "")[:10],
+                "Publicación":    msg[:140] + "..." if len(msg) > 140 else msg,
+                "❤️ Likes":       likes,
+                "💬 Comentarios": com,
+                "🔁 Compartidos": shares,
+                "📊 Engagement":  likes + com + shares,
+            })
+        df_fb_top = pd.DataFrame(lista_fb).sort_values("❤️ Likes", ascending=False)
+        for _, row in df_fb_top.head(10).iterrows():
+            with st.container(border=True):
+                cols = st.columns([5, 1, 1, 1])
+                cols[0].markdown(f"📅 `{row['Fecha']}`  
+{row['Publicación']}")
+                cols[1].metric("❤️", f"{row['❤️ Likes']:,}" if row["❤️ Likes"] > 0 else "—")
+                cols[2].metric("💬", f"{row['💬 Comentarios']:,}")
+                cols[3].metric("🔁", f"{row['🔁 Compartidos']:,}" if row["🔁 Compartidos"] > 0 else "—")
+        with st.expander("📋 Ver todas las publicaciones de Facebook"):
+            st.dataframe(df_fb_top, width='stretch', hide_index=True)
+    else:
+        st.info("Sin datos de publicaciones de Facebook.")
 
 # ═══════════════════════ INSTAGRAM ══════════════════════════════════
 with tab_ig:
@@ -335,8 +371,8 @@ with tab_ig:
         df_ig = pd.DataFrame(lista_ig)
         if not df_ig.empty:
             df_ig = df_ig.sort_values("❤️ Likes", ascending=False)
-        st.markdown("#### 🏆 Top 5 publicaciones")
-        for _, row in df_ig.head(5).iterrows():
+        st.markdown("#### 🏆 Top 10 publicaciones")
+        for _, row in df_ig.head(10).iterrows():
             with st.container(border=True):
                 cols = st.columns([5, 1, 1, 1])
                 cols[0].markdown(f"📅 `{row['Fecha']}` · {row['Tipo']}  \n{row['Publicación']}")
