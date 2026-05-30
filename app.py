@@ -100,7 +100,7 @@ def cargar_resumen(nombre, page_id, ig_id, access_token):
         "nombre":   nombre,
         "fb_imp":   0, "fb_reach": 0, "fb_seg": 0,
         "fb_eng":   0, "fb_vistas": 0,
-        "ig_imp":   0, "ig_reach": 0, "ig_seg": 0,
+        "ig_imp":   0, "ig_reach": 0, "ig_seg": 0, "ig_engaged": 0,
     }
     try:
         fb        = FacebookCollector(page_id=page_id, access_token=access_token)
@@ -118,8 +118,9 @@ def cargar_resumen(nombre, page_id, ig_id, access_token):
         info_ig   = ig.get_account_info()
         res["ig_seg"] = info_ig.get("followers_count", 0)
         imp_ig    = ig.get_media_impressions(limit=25)
-        res["ig_imp"]   = imp_ig["total_imp"]
-        res["ig_reach"] = imp_ig["total_reach"]
+        res["ig_imp"]     = imp_ig["total_imp"]
+        res["ig_reach"]   = imp_ig["total_reach"]
+        res["ig_engaged"] = imp_ig.get("engaged", 0)
     except Exception as e:
         print(f"[{nombre}] IG: {e}")
 
