@@ -5,6 +5,7 @@ from datetime import datetime
 from config import PORTALES
 from collectors.facebook import FacebookCollector
 from collectors.instagram import InstagramCollector  # también usado para portales ig_only
+from pdf_report import generar_brief
 
 st.set_page_config(
     page_title="Panel General",
@@ -91,6 +92,32 @@ with st.sidebar:
     st.markdown(f"*{datetime.now().strftime('%d/%m/%Y %H:%M')}*")
     st.markdown("---")
     st.caption(f"{len(PORTALES_ACTIVOS)} portal(es) activo(s)")
+    st.markdown("---")
+
+    # ── Botón de descarga PDF ────────────────────────────────────────
+    if st.button("📄 Generar brief PDF", use_container_width=True, type="primary"):
+        with st.spinner("Generando PDF..."):
+            try:
+                pdf_bytes = generar_brief(
+                    resumenes=resumenes,
+                    totales={
+                        "total_imp": gran_total_imp,
+                        "total_seg": gran_total_seg,
+                        "total_eng": gran_total_eng,
+                        "total_fb":  gran_total_fb,
+                        "total_ig":  gran_total_ig,
+                    }
+                )
+                fecha = datetime.now().strftime("%Y%m%d")
+                st.download_button(
+                    label="⬇️ Descargar informe",
+                    data=pdf_bytes,
+                    file_name=f"informe_fstats_{fecha}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                )
+            except Exception as e:
+                st.error(f"Error al generar PDF: {e}")
 
 # ── Carga de datos ─────────────────────────────────────────────────
 @st.cache_data(ttl=3600)
