@@ -90,7 +90,7 @@ class DarkBrief(FPDF):
         self.cell(0, 16, _s(number_str), align="C", new_x="LMARGIN", new_y="NEXT")
         self.set_font("Helvetica", "B", 8)
         self.set_text_color(*ACCENT)
-        self.cell(0, 4, _s(label.upper()), align="C", new_x="LMARGIN", new_y="NEXT")
+        self.cell(0, 4, _s(label.upper()).replace("?", "|"), align="C", new_x="LMARGIN", new_y="NEXT")
         if sublabel:
             self.set_font("Helvetica", "", 6.5)
             self.set_text_color(*SLATE)
@@ -247,24 +247,29 @@ class DarkBrief(FPDF):
         n = len(items)
         w = 182 / n
         x0, y0 = self.l_margin, self.get_y()
-        h = 18
+        h = 24
         for val, lbl, sub in items:
             self.set_fill_color(*CARD2)
             self.rect(x0, y0, w - 1.5, h, "F")
             self.set_fill_color(*accent)
-            self.rect(x0, y0, w - 1.5, 2, "F")
+            self.rect(x0, y0, w - 1.5, 2.5, "F")
             # valor
-            self.set_xy(x0 + 2, y0 + 4)
-            self.set_font("Helvetica", "B", 12)
+            self.set_xy(x0 + 2, y0 + 5)
+            self.set_font("Helvetica", "B", 14)
             self.set_text_color(*WHITE)
-            self.cell(w - 4, 7, _s(val))
+            self.cell(w - 4, 8, _s(val))
             # label
-            self.set_xy(x0 + 2, y0 + 11)
-            self.set_font("Helvetica", "", 5.5)
+            self.set_xy(x0 + 2, y0 + 14)
+            self.set_font("Helvetica", "", 6)
             self.set_text_color(*LIGHT)
             self.cell(w - 4, 4, _s(lbl))
+            # sub
+            self.set_xy(x0 + 2, y0 + 19)
+            self.set_font("Helvetica", "", 5.2)
+            self.set_text_color(*SLATE)
+            self.cell(w - 4, 3, _s(sub))
             x0 += w
-        self.set_y(y0 + h + 3)
+        self.set_y(y0 + h + 4)
 
     # ── Tarjeta de portal ─────────────────────────────────────────────
     def _portal_card(self, d, total, i):
@@ -302,14 +307,14 @@ class DarkBrief(FPDF):
         self.ln(13)
 
         # Numero total grande
-        self.set_font("Helvetica", "B", 28)
+        self.set_font("Helvetica", "B", 36)
         self.set_text_color(*WHITE)
-        self.cell(0, 11, _n(t_imp), new_x="LMARGIN", new_y="NEXT")
-        self.set_font("Helvetica", "", 6.5)
+        self.cell(0, 14, _n(t_imp), new_x="LMARGIN", new_y="NEXT")
+        self.set_font("Helvetica", "", 7)
         self.set_text_color(*SLATE)
-        self.cell(0, 4, "visualizaciones totales (FB alcance unico + IG reproducciones) - ultimo mes",
+        self.cell(0, 5, "visualizaciones totales (FB alcance unico + IG reproducciones) - ultimo mes",
                   new_x="LMARGIN", new_y="NEXT")
-        self.ln(3)
+        self.ln(4)
 
         # Barra FB vs IG
         self._split_bar(fb_imp, ig_imp)
@@ -324,10 +329,10 @@ class DarkBrief(FPDF):
                 tasa_v = fb_eng / fb_seg * 100
                 tasa_s = f"{tasa_v:.1f}%" if tasa_v <= 200 else "N/D"
             else:
-                tasa_s = "—"
+                tasa_s = "N/D"
             self._metric_row([
                 (_n(fb_imp),  "Alcance unico",    "personas distintas"),
-                (_n(fb_eng) if fb_eng > 0 else "—", "Engagement",  "likes + comentarios"),
+                (_n(fb_eng) if fb_eng > 0 else "N/D", "Engagement",  "likes + comentarios"),
                 (tasa_s,      "Tasa engagement",  "eng/seguidores x100"),
                 (_n(fb_seg),  "Seguidores",       "fans de la pagina"),
             ], BLUE)
@@ -372,7 +377,7 @@ def generar_brief(resumenes: list, totales: dict) -> bytes:
     # Hero number
     pdf._big_number(
         _n(total),
-        "Total visualizaciones — Ultimo mes",
+        "Total visualizaciones | Ultimo mes",
         "Alcance unico Facebook + Reproducciones Instagram"
     )
 
@@ -395,52 +400,48 @@ def generar_brief(resumenes: list, totales: dict) -> bytes:
     pdf._donut_legend(resumenes, total, pdf.l_margin + 86, y_g + 8)
     pdf.set_y(yc + radio + 8)
 
-    # Conceptos en 2 columnas
+    # Conceptos en 2 columnas reales (izquierda primero, luego derecha)
     pdf._section_title("Como se construyen estas estadisticas", ACCENT)
 
     col_w = 88
-    xi, xd = pdf.l_margin, pdf.l_margin + col_w + 6
-    y_c = pdf.get_y()
+    xi = pdf.l_margin
+    xd = pdf.l_margin + col_w + 6
+    y_start = pdf.get_y()
 
-    conceptos = [
-        (xi, BLUE, "FACEBOOK - ALCANCE UNICO",
-         "Cuenta las personas DISTINTAS que vieron al menos una publicacion "
-         "en el ultimo mes. Si alguien vio 10 posts, cuenta como 1. "
-         "Es la audiencia real impactada."),
-        (xi, GREEN, "ENGAGEMENT - INTERACCION ACTIVA",
-         "Mide cuando el publico hace algo: like, comentario o compartido. "
-         "Tasa = (L+C+C) / Seguidores x 100. "
-         "Una tasa 1-3% es excelente en medios digitales."),
-        (xd, PINK, "INSTAGRAM - REPRODUCCIONES TOTALES",
-         "Suma todas las veces que se vio cualquier contenido (Reels, videos, fotos). "
-         "Una persona puede sumar multiples reproducciones. "
-         "Refleja el volumen total de consumo."),
-        (xd, ACCENT, "ALCANCE ORGANICO",
-         "TODO el impacto de este informe es ORGANICO: sin publicidad paga. "
-         "Representa la audiencia fiel que consume el contenido de forma voluntaria."),
-    ]
-
-    y_ends = []
-    for col_x, col_color, title, body in conceptos:
-        pdf.set_xy(col_x, y_c if col_x == xi else y_c)
-        if col_x == xd and len(y_ends) >= 2:
-            pass  # usamos y_c para ambas columnas (empiezan igual)
+    def _write_concept(x, y, color, title, body, width):
+        """Escribe un bloque concepto en la posicion dada y retorna Y final."""
+        pdf.set_xy(x, y)
         pdf.set_font("Helvetica", "B", 6.5)
-        pdf.set_text_color(*col_color)
-        pdf.set_x(col_x)
-        pdf.cell(col_w, 5, _s(title), new_x="LMARGIN", new_y="NEXT")
-        pdf.set_x(col_x)
+        pdf.set_text_color(*color)
+        pdf.cell(width, 5, _s(title))
+        pdf.set_xy(x, y + 5)
         pdf.set_font("Helvetica", "", 6.2)
         pdf.set_text_color(*LIGHT)
-        pdf.multi_cell(col_w, 3.5, _s(body))
-        y_ends.append(pdf.get_y())
-        if col_x == xi and len(y_ends) == 1:
-            y_c = y_c  # columna derecha empieza en el mismo Y
+        pdf.multi_cell(width, 3.5, _s(body))
+        return pdf.get_y() + 2
 
-    # Mover al Y mas bajo despues de ambas columnas
-    # Simular: las columnas izquierda se renderizan top-to-bottom
-    # Solo ajustamos el Y final
-    pdf.set_y(max(y_ends) + 4 if y_ends else pdf.get_y() + 4)
+    # Columna izquierda (dos conceptos apilados)
+    y_l = y_start
+    y_l = _write_concept(xi, y_l, BLUE, "FACEBOOK - ALCANCE UNICO",
+        "Cuenta las personas DISTINTAS que vieron al menos una publicacion "
+        "en el ultimo mes. Si alguien vio 10 posts, cuenta como 1. "
+        "Es la audiencia real impactada.", col_w)
+    y_l = _write_concept(xi, y_l, GREEN, "ENGAGEMENT - INTERACCION ACTIVA",
+        "Mide cuando el publico hace algo: like, comentario o compartido. "
+        "Tasa = (L+C+C) / Seguidores x 100. "
+        "Una tasa del 1-3% es excelente en medios digitales.", col_w)
+
+    # Columna derecha (dos conceptos apilados, misma Y de inicio)
+    y_r = y_start
+    y_r = _write_concept(xd, y_r, PINK, "INSTAGRAM - REPRODUCCIONES TOTALES",
+        "Suma todas las veces que se vio cualquier contenido (Reels, videos, fotos). "
+        "Una persona puede sumar multiples reproducciones. "
+        "Refleja el volumen total de consumo de contenido.", col_w)
+    y_r = _write_concept(xd, y_r, ACCENT, "ALCANCE ORGANICO - SIN PUBLICIDAD",
+        "Todo el impacto de este informe es ORGANICO: sin inversion publicitaria. "
+        "Representa la audiencia fiel que consume el contenido de forma voluntaria.", col_w)
+
+    pdf.set_y(max(y_l, y_r) + 3)
 
     # Nota metodologica al pie de pag 1
     pdf.set_font("Helvetica", "I", 5.5)
