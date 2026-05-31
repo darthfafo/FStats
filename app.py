@@ -195,7 +195,7 @@ for i, resumen in enumerate(resumenes):
 
             st.metric("🎯 Personas alcanzadas",
                       f"{resumen['total_imp']:,}",
-                      help="Facebook alcance único + Instagram visualizaciones — últimos 30 días")
+                      help="Facebook alcance único + Instagram visualizaciones — último mes")
 
             if gran_total_imp > 0:
                 prop = resumen["total_imp"] / gran_total_imp

@@ -122,7 +122,7 @@ st.markdown(f"""
             display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:20px;">
     <div>
         <div style="color:#94a3b8;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase">
-            📊 Total visualizaciones — últimos 30 días
+            📊 Total visualizaciones — último mes
         </div>
         <div style="color:white;font-size:clamp(26px,7vw,60px);font-weight:900;line-height:1;margin:8px 0 4px">
             {gran_total:,}
@@ -167,7 +167,7 @@ with tab_fb:
 
     st.markdown(f"""
     <div class="bloque-imp" style="background:linear-gradient(135deg,#1e40af,#2563eb)">
-        <div class="label">🎯 Personas alcanzadas en Facebook — últimos 30 días</div>
+        <div class="label">🎯 Personas alcanzadas en Facebook — último mes</div>
         <div class="valor">{imp['total_imp']:,}</div>
         <div class="sub">Alcance único · personas distintas que vieron el contenido</div>
     </div>
@@ -253,7 +253,7 @@ with tab_ig:
 
     st.markdown(f"""
     <div class="bloque-imp" style="background:linear-gradient(135deg,#7c3aed,#c026d3)">
-        <div class="label">▶️ Visualizaciones Instagram — últimos 30 días</div>
+        <div class="label">▶️ Visualizaciones Instagram — último mes</div>
         <div class="valor">{imp_ig['total_imp']:,}</div>
         <div class="sub">Plays de Reels + reproducciones de videos + vistas</div>
     </div>

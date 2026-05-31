@@ -88,7 +88,7 @@ st.markdown(f"""
             display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:20px;">
     <div>
         <div style="color:#FECC02;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase">
-            📸 Total visualizaciones Instagram — últimos 30 días
+            📸 Total visualizaciones Instagram — último mes
         </div>
         <div style="color:white;font-size:60px;font-weight:900;line-height:1;margin:8px 0 4px">
             {imp_ig['total_imp']:,}

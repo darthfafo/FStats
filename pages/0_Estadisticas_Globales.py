@@ -20,7 +20,7 @@ with st.sidebar:
     st.caption(datetime.now().strftime("%d/%m/%Y %H:%M"))
 
 st.title("📊 Estadísticas Globales — Todos los portales")
-st.markdown("Análisis comparativo · últimos 30 días")
+st.markdown("Análisis comparativo · último mes")
 st.markdown("---")
 
 # ── Carga de datos ──────────────────────────────────────────────────
@@ -240,9 +240,9 @@ if activos:
             fig_pie.update_layout(margin=dict(l=0,r=0,t=40,b=0))
             st.plotly_chart(fig_pie, width='stretch')
 
-        # ── Top 10 IG últimos 30 días ─────────────────────────────────
+        # ── Top 10 IG último mes ─────────────────────────────────
         st.markdown("---")
-        st.subheader("📸 Top 10 publicaciones Instagram — últimos 30 días")
+        st.subheader("📸 Top 10 publicaciones Instagram — último mes")
         # Usar all_media_ig (hasta 500 posts) filtrado a 30 días, ordenado por likes
         # posts_ig solo tiene 25 posts recientes y puede perder posts virales más viejos
         from datetime import timedelta
@@ -268,11 +268,11 @@ if activos:
                     cols[3].metric("💬 Comentarios", f"{post.get('comments',0):,}")
                     cols[4].markdown(f"[🔗]({post.get('permalink','')})" if post.get("permalink") else "")
         else:
-            st.info("Sin datos de publicaciones en los últimos 30 días.")
+            st.info("Sin datos de publicaciones en los último mes.")
 
-    # ── Top 10 FB últimos 30 días ─────────────────────────────────────
+    # ── Top 10 FB último mes ─────────────────────────────────────
     st.markdown("---")
-    st.subheader("📘 Top 10 publicaciones Facebook — últimos 30 días")
+    st.subheader("📘 Top 10 publicaciones Facebook — último mes")
     from datetime import timedelta
     limite_30 = datetime.now() - timedelta(days=30)
     todos_posts_fb = []
@@ -309,7 +309,7 @@ if activos:
                 cols[3].metric("💬 Comentarios", f"{post['comentarios']:,}")
                 cols[4].metric("🔁 Compartidos", f"{post['compartidos']:,}")
     else:
-        st.info("Sin datos de publicaciones de Facebook en los últimos 30 días.")
+        st.info("Sin datos de publicaciones de Facebook en los último mes.")
 
 else:
     st.info("No hay portales activos con datos disponibles aún.")

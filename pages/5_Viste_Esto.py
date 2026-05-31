@@ -75,7 +75,7 @@ st.markdown(f"""
 <div style="background:linear-gradient(135deg,#0f172a,#3b0764);border-radius:16px;padding:28px 32px;margin-bottom:20px;
             display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px;">
   <div>
-    <div style="color:#94a3b8;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase">📸 Total visualizaciones Instagram — últimos 30 días</div>
+    <div style="color:#94a3b8;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase">📸 Total visualizaciones Instagram — último mes</div>
     <div style="color:white;font-size:clamp(26px,7vw,60px);font-weight:900;line-height:1;margin:8px 0 4px">{imp_ig['total_imp']:,}</div>
     <div style="color:#64748b;font-size:13px">Plays de Reels + reproducciones + vistas</div>
   </div>
