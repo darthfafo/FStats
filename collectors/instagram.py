@@ -248,13 +248,20 @@ class InstagramCollector:
         total_imp   = acc.get("views", 0) or acc.get("alcance", 0)
         total_reach = acc.get("alcance", 0)
 
-        if not daily:
-            daily = acc.get("daily_alcance", {})
+        # daily_alcance de account insights cubre los 30 días completos (un valor por día).
+        # El 'daily' de posts es esparso (solo días con publicaciones nuevas).
+        # Siempre preferimos el account-level para el gráfico de tendencia.
+        daily_account = acc.get("daily_alcance", {})
+        if daily_account:
+            daily = daily_account   # cobertura completa: 30 datos diarios
+        elif not daily:
+            daily = {}              # sin datos en ninguna fuente
 
         return {
             "total_imp":       total_imp,
             "total_reach":     total_reach,
-            "daily":           daily,
+            "daily":           daily,          # ahora = account-level reach diario
+            "daily_posts":     posts_data,     # datos por post para otros usos
             "engaged":         acc.get("total_inter", 0),
             "posts_data":      posts_data,
             "daily_followers": acc.get("daily_followers", {}),
