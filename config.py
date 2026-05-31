@@ -6,9 +6,12 @@ load_dotenv()
 
 RESPONSIVE_CSS = """
 <style>
-/* Ocultar la navegación automática de Streamlit:
-   elimina "app", portales no configurados y duplicados del sidebar */
-[data-testid="stSidebarNav"] {
+/* Ocultar la navegación automática de Streamlit */
+[data-testid="stSidebarNav"],
+[data-testid="stSidebarNavItems"],
+[data-testid="stSidebarNavSeparator"],
+.css-1544g2n, .css-k1vhr4,
+section[data-testid="stSidebar"] ul {
     display: none !important;
 }
 
@@ -38,6 +41,47 @@ RESPONSIVE_CSS = """
 }
 </style>
 """
+
+_NAV_PORTALES = [
+    ("📰", "Chubut Noticias",  "pages/1_Chubut_Noticias.py"),
+    ("📡", "Atento Chubut",    "pages/2_Atento_Chubut.py"),
+    ("🗞️", "La Calle Online", "pages/3_La_Calle_Online.py"),
+    ("🌎", "El Americano",     "pages/4_El_Americano.py"),
+]
+
+def sidebar_nav(current="", show_update=True, extra_widgets=None):
+    """
+    Sidebar de navegación unificado para todas las páginas.
+    current: nombre del portal activo (para resaltarlo).
+    extra_widgets: callable que se ejecuta antes del separador final.
+    """
+    from datetime import datetime as _dt
+    with st.sidebar:
+        st.markdown("### 📊 FStats")
+        st.markdown("---")
+        # Panel general
+        if st.button("🏠 Panel general", use_container_width=True, key="nav_home"):
+            st.switch_page("app.py")
+        # Estadísticas globales
+        if st.button("📊 Estadísticas Globales", use_container_width=True, key="nav_stats"):
+            st.switch_page("pages/0_Estadisticas_Globales.py")
+        st.markdown("---")
+        st.caption("PORTALES")
+        for icono, nombre, pagina in _NAV_PORTALES:
+            btn_type = "primary" if nombre == current else "secondary"
+            if st.button(f"{icono} {nombre}", use_container_width=True,
+                         key=f"nav_{nombre}", type=btn_type):
+                st.switch_page(pagina)
+        st.markdown("---")
+        # Widgets extra (botón PDF, etc.)
+        if extra_widgets:
+            extra_widgets()
+        if show_update:
+            if st.button("🔄 Actualizar", use_container_width=True, key="nav_update"):
+                st.cache_data.clear()
+                st.rerun()
+        st.caption(_dt.now().strftime("%d/%m/%Y %H:%M"))
+
 
 def _secret(key, default="PENDIENTE"):
     try:

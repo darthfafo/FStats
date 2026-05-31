@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
-from config import PORTALES, RESPONSIVE_CSS
+from config import PORTALES, RESPONSIVE_CSS, sidebar_nav
 from collectors.facebook import FacebookCollector
 from collectors.instagram import InstagramCollector
 
@@ -28,15 +28,7 @@ st.markdown("""
 
 portal = next((p for p in PORTALES if p["nombre"] == "Chubut Noticias"), PORTALES[0])
 
-with st.sidebar:
-    st.title("📰 Chubut Noticias")
-    st.markdown("---")
-    if st.button("🏠 Panel general", use_container_width=True):
-        st.switch_page("app.py")
-    if st.button("🔄 Actualizar", use_container_width=True):
-        st.cache_data.clear()
-        st.rerun()
-    st.caption(datetime.now().strftime("%d/%m/%Y %H:%M"))
+sidebar_nav(current="Chubut Noticias")
 
 # ── Carga con caché ─────────────────────────────────────────────────
 @st.cache_data(ttl=3600)

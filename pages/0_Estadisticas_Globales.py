@@ -3,21 +3,13 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
-from config import PORTALES, RESPONSIVE_CSS
+from config import PORTALES, RESPONSIVE_CSS, sidebar_nav
 from collectors.facebook import FacebookCollector
 from collectors.instagram import InstagramCollector
 
 st.set_page_config(page_title="Estadísticas Globales", page_icon="📊", layout="wide")
 
-with st.sidebar:
-    st.title("📊 Estadísticas Globales")
-    st.markdown("---")
-    if st.button("🏠 Panel general", use_container_width=True):
-        st.switch_page("app.py")
-    if st.button("🔄 Actualizar datos", use_container_width=True):
-        st.cache_data.clear()
-        st.rerun()
-    st.caption(datetime.now().strftime("%d/%m/%Y %H:%M"))
+sidebar_nav(current="")
 
 st.title("📊 Estadísticas Globales — Todos los portales")
 st.markdown("Análisis comparativo · último mes")

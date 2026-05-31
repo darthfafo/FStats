@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
-from config import PORTALES, RESPONSIVE_CSS
+from config import PORTALES, RESPONSIVE_CSS, sidebar_nav
 from collectors.instagram import InstagramCollector
 
 st.set_page_config(page_title="VISTE ESTO?", page_icon="👁️", layout="wide")
@@ -16,15 +16,7 @@ st.markdown("""
 
 portal = next((p for p in PORTALES if p["nombre"] == "VISTE ESTO?"), None)
 
-with st.sidebar:
-    st.title("👁️ VISTE ESTO?")
-    st.markdown("---")
-    if st.button("🏠 Panel general", use_container_width=True):
-        st.switch_page("app.py")
-    if st.button("🔄 Actualizar", use_container_width=True):
-        st.cache_data.clear()
-        st.rerun()
-    st.caption(datetime.now().strftime("%d/%m/%Y %H:%M"))
+sidebar_nav(current="VISTE ESTO?")
 
 st.title("👁️ VISTE ESTO?")
 st.markdown("---")
