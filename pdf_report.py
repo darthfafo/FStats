@@ -18,7 +18,7 @@ WHITE   = (255, 255, 255)
 ACCENT  = (56,  189, 248)     # celeste claro para highlights
 
 PORTAL_COLOR_MAP = {
-    "Chubut Noticias": (80,  80,  80),    # gris oscuro (negro legible en PDF oscuro)
+    "Chubut Noticias": (150, 150, 150),   # gris claro legible en fondo oscuro
     "Atento Chubut":   (14,  165, 233),   # celeste
     "La Calle Online": (234, 88,  12),    # naranja
     "El Americano":    (34,  197, 94),    # verde
@@ -39,8 +39,10 @@ def _n(v):
 
 
 def _s(t):
-    """Texto seguro latin-1."""
-    return str(t or "").encode("latin-1", errors="replace").decode("latin-1")
+    """Texto seguro latin-1 - reemplaza caracteres especiales antes de encodear."""
+    t = str(t or "")
+    t = t.replace("—", "|").replace("–", "-").replace("’", "'").replace("é", "e").replace("ó", "o").replace("ñ", "n").replace("á", "a").replace("í", "i").replace("ú", "u").replace("É", "E").replace("ò", "o").replace("à", "a").replace("ü", "u")
+    return t.encode("latin-1", errors="replace").decode("latin-1")
 
 
 def _p(part, total):
@@ -245,37 +247,39 @@ class DarkBrief(FPDF):
             self.set_xy(x0 + fb_w + 2, y0 + 5.5)
             self.set_font("Helvetica", "", 5.5)
             self.cell(ig_w - 4, 4, _n(ig))
-        self.ln(h + 4)
+        self.ln(h + 2)
 
     # ── Metricas en fila ──────────────────────────────────────────────
     def _metric_row(self, items, accent):
-        """Fila de metricas: (valor, label, sub)"""
+        """Fila de metricas: (valor, label, sub) - sin auto page break"""
         n = len(items)
         w = 182 / n
+        h = 18
+        # Verificar espacio; si no hay, nueva pagina
+        if self.get_y() + h + 5 > self.h - self.b_margin:
+            self.add_page()
         x0, y0 = self.l_margin, self.get_y()
-        h = 24
+        self.set_auto_page_break(False)   # desactivar para evitar corte
         for val, lbl, sub in items:
             self.set_fill_color(*CARD2)
             self.rect(x0, y0, w - 1.5, h, "F")
             self.set_fill_color(*accent)
             self.rect(x0, y0, w - 1.5, 2.5, "F")
-            # valor
-            self.set_xy(x0 + 2, y0 + 5)
-            self.set_font("Helvetica", "B", 14)
+            self.set_xy(x0 + 2, y0 + 3)
+            self.set_font("Helvetica", "B", 12)
             self.set_text_color(*WHITE)
-            self.cell(w - 4, 8, _s(val))
-            # label
-            self.set_xy(x0 + 2, y0 + 14)
+            self.cell(w - 4, 6, _s(val))
+            self.set_xy(x0 + 2, y0 + 10)
             self.set_font("Helvetica", "", 6)
             self.set_text_color(*LIGHT)
             self.cell(w - 4, 4, _s(lbl))
-            # sub
-            self.set_xy(x0 + 2, y0 + 19)
+            self.set_xy(x0 + 2, y0 + 15)
             self.set_font("Helvetica", "", 5.2)
             self.set_text_color(*LIGHT)
             self.cell(w - 4, 3, _s(sub))
             x0 += w
-        self.set_y(y0 + h + 4)
+        self.set_auto_page_break(True, margin=14)  # reactivar
+        self.set_y(y0 + h + 2)
 
     # ── Tarjeta de portal ─────────────────────────────────────────────
     def _portal_card(self, d, total, i):
@@ -291,7 +295,7 @@ class DarkBrief(FPDF):
         ig_seg  = d.get("ig_seg", 0)
         ig_eng  = d.get("ig_engaged", 0)
 
-        if self.get_y() > 230:
+        if self.get_y() > 150:
             self.add_page()
             self._section_title("Detalle por portal (continuacion)", ACCENT)
 
@@ -313,9 +317,9 @@ class DarkBrief(FPDF):
         self.ln(13)
 
         # Numero total grande
-        self.set_font("Helvetica", "B", 36)
+        self.set_font("Helvetica", "B", 28)
         self.set_text_color(*WHITE)
-        self.cell(0, 14, _n(t_imp), new_x="LMARGIN", new_y="NEXT")
+        self.cell(0, 11, _n(t_imp), new_x="LMARGIN", new_y="NEXT")
         self.set_font("Helvetica", "", 7)
         self.set_text_color(*LIGHT)
         self.cell(0, 5, "visualizaciones totales (FB alcance unico + IG reproducciones) - ultimo mes",
@@ -365,13 +369,17 @@ class DarkBrief(FPDF):
     # ── Pagina Top 10 posts ───────────────────────────────────────────
     def _top10_page(self, posts, titulo, icono, campo_valor, campo_val_label,
                     campo2, campo2_label, campo3, campo3_label, accent):
-        """Pagina de top 10 publicaciones."""
+        """Pagina de top 10 publicaciones - compacta, sin auto page break."""
         if not posts:
             return
         self.add_page()
         self._section_title(titulo, accent)
 
         top10 = sorted(posts, key=lambda x: x.get(campo_valor, 0), reverse=True)[:10]
+        h_row = 14   # altura por fila (mm)
+        gap   = 1.5  # separacion entre filas
+
+        self.set_auto_page_break(False)   # controlar manualmente
 
         for i, p in enumerate(top10, 1):
             portal  = _s(p.get("portal", ""))
@@ -380,63 +388,64 @@ class DarkBrief(FPDF):
             v1 = p.get(campo_valor, 0)
             v2 = p.get(campo2, 0)
             v3 = p.get(campo3, 0)
-
-            # Tipo icono para IG
             tipo = p.get("tipo", "")
-            tipo_icon = "[REEL]" if tipo == "reel" else ("[VID]" if tipo == "video" else "[IMG]")
+            tipo_lbl = "REEL" if tipo == "reel" else ("VID" if tipo == "video" else "IMG")
 
-            # Color del portal
             p_idx = next((j for j, r in enumerate(self._portales_ref)
                           if r.get("nombre") == p.get("portal")), 0)
             color = _c(p.get("portal", ""), p_idx)
 
             y0 = self.get_y()
-            if y0 > 258:
+            if y0 + h_row > self.h - 35:   # reservar espacio para participacion
                 break
 
-            # Fila
+            # Fondo + barra color
             self.set_fill_color(*CARD)
-            self.rect(self.l_margin, y0, 182, 18, "F")
+            self.rect(self.l_margin, y0, 182, h_row, "F")
             self.set_fill_color(*color)
-            self.rect(self.l_margin, y0, 3, 18, "F")
+            self.rect(self.l_margin, y0, 3, h_row, "F")
 
-            # Numero
-            self.set_xy(self.l_margin + 5, y0 + 2)
+            # #N  (color del portal)
+            self.set_xy(self.l_margin + 4, y0 + 1)
             self.set_font("Helvetica", "B", 9)
             self.set_text_color(*color)
-            self.cell(8, 5, f"#{i}")
+            self.cell(10, 5, f"#{i}")
 
-            # Portal + fecha
-            self.set_xy(self.l_margin + 14, y0 + 1.5)
-            self.set_font("Helvetica", "B", 7)
+            # Portal + tipo + fecha
+            self.set_xy(self.l_margin + 15, y0 + 1)
+            self.set_font("Helvetica", "B", 7.5)
             self.set_text_color(*WHITE)
-            self.cell(60, 4, f"{portal}  {tipo_icon}  {fecha}")
+            header = f"{portal}  [{tipo_lbl}]  {fecha}"
+            self.cell(95, 4.5, header[:60])
 
-            # Texto
-            self.set_xy(self.l_margin + 14, y0 + 6)
-            self.set_font("Helvetica", "", 6.2)
+            # Caption / mensaje
+            self.set_xy(self.l_margin + 15, y0 + 6.5)
+            self.set_font("Helvetica", "", 6)
             self.set_text_color(*LIGHT)
-            self.cell(100, 4, texto[:72])
+            self.cell(95, 4, texto[:75])
 
-            # Metricas a la derecha
-            mx = self.l_margin + 120
-            for val, lbl, clr in [(v1, campo_val_label, WHITE),
-                                   (v2, campo2_label, LIGHT),
-                                   (v3, campo3_label, LIGHT)]:
-                self.set_xy(mx, y0 + 1.5)
-                self.set_font("Helvetica", "B", 8)
-                self.set_text_color(*clr)
-                self.cell(20, 5, _n(val), align="R")
+            # 3 metricas a la derecha (3 columnas de 21mm)
+            mx = self.l_margin + 119
+            for val, lbl in [(v1, campo_val_label), (v2, campo2_label), (v3, campo3_label)]:
+                if not lbl:
+                    mx += 21
+                    continue
+                self.set_xy(mx, y0 + 1)
+                self.set_font("Helvetica", "B", 9)
+                self.set_text_color(*WHITE)
+                self.cell(21, 5, _n(val), align="R")
                 self.set_xy(mx, y0 + 7)
                 self.set_font("Helvetica", "", 5)
                 self.set_text_color(*LIGHT)
-                self.cell(20, 3, lbl, align="R")
+                self.cell(21, 3.5, lbl, align="R")
                 mx += 21
 
-            self.set_y(y0 + 20)
+            self.set_y(y0 + h_row + gap)
+
+        self.set_auto_page_break(True, margin=14)
 
         # Participacion por portal en el top10
-        self.ln(3)
+        self.ln(2)
         self._section_title("Participacion de cada portal en este top 10", accent)
         from collections import Counter
         conteo = Counter(p.get("portal") for p in top10)
@@ -452,11 +461,11 @@ class DarkBrief(FPDF):
             self.set_xy(x0 + 6, self.get_y())
             self.set_font("Helvetica", "B", 7.5)
             self.set_text_color(*WHITE)
-            self.cell(60, 6, _s(nombre))
-            self.set_font("Helvetica", "", 7)
-            self.set_text_color(*color)
-            self.cell(20, 6, f"{cnt} posts  ({pct_p}%)")
-            self.ln(7)
+            self.cell(55, 7, _s(nombre))
+            self.set_font("Helvetica", "B", 7.5)
+            self.set_text_color(*accent)
+            self.cell(35, 7, f"{cnt} posts  ({pct_p}%)")
+            self.ln(8)
 
 
 # ── Funcion publica ───────────────────────────────────────────────────
