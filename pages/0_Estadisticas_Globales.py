@@ -141,33 +141,25 @@ if activos:
         for d in sorted(activos, key=lambda x: x["total_imp"], reverse=True)
     ])
 
-    col1, col2 = st.columns(2)
-    with col1:
-        fig = px.bar(df_rank, x="Total", y="Portal", orientation="h",
-                     color="Total", color_continuous_scale="Blues",
-                     title="Total FB + IG")
-        fig.update_layout(showlegend=False, margin=dict(l=0,r=0,t=40,b=0),
-                          yaxis=dict(autorange="reversed"), coloraxis_showscale=False)
-        st.plotly_chart(fig, width='stretch')
-    with col2:
-        df_melt = df_rank.melt(id_vars="Portal", value_vars=["Facebook","Instagram"],
-                               var_name="Red", value_name="Alcance")
-        fig2 = px.bar(df_melt, x="Alcance", y="Portal", color="Red", orientation="h",
-                      color_discrete_map={"Facebook":"#1877F2","Instagram":"#E1306C"},
-                      title="FB vs IG por portal")
-        fig2.update_layout(margin=dict(l=0,r=0,t=40,b=0),
-                           yaxis=dict(autorange="reversed"), legend_title="")
-        st.plotly_chart(fig2, width='stretch')
+    # Solo el gráfico FB vs IG (sin el duplicado de Total)
+    df_melt = df_rank.melt(id_vars="Portal", value_vars=["Facebook","Instagram"],
+                           var_name="Red", value_name="Alcance")
+    fig2 = px.bar(df_melt, x="Alcance", y="Portal", color="Red", orientation="h",
+                  color_discrete_map={"Facebook":"#1877F2","Instagram":"#E1306C"},
+                  barmode="group")
+    fig2.update_layout(margin=dict(l=0,r=0,t=10,b=0),
+                       yaxis=dict(autorange="reversed"), legend_title="",
+                       height=220)
+    st.plotly_chart(fig2, width='stretch')
 
     st.markdown("---")
 
-    # ── Tendencia de alcance diario combinada ───────────────────────
+    # ── Tendencia de alcance diario combinada (escala logarítmica) ─────
     st.subheader("📈 Tendencia de alcance diario — todos los portales")
 
     fig_trend = go.Figure()
     colores = ["#1877F2","#E1306C","#16a34a","#f59e0b","#a855f7"]
     for i, d in enumerate(activos):
-        # FB diario
         if d["fb_daily"]:
             df_fb = pd.DataFrame([{"Fecha":k,"Alcance":v} for k,v in sorted(d["fb_daily"].items())])
             fig_trend.add_trace(go.Scatter(
@@ -176,7 +168,6 @@ if activos:
                 line=dict(color=colores[i % len(colores)], width=2, dash="solid"),
                 opacity=0.9
             ))
-        # IG diario
         if d["ig_daily"]:
             df_ig2 = pd.DataFrame([{"Fecha":k,"Alcance":v} for k,v in sorted(d["ig_daily"].items())])
             fig_trend.add_trace(go.Scatter(
@@ -188,13 +179,23 @@ if activos:
 
     fig_trend.update_layout(
         legend_title="Portal · Red",
-        margin=dict(l=0,r=0,t=10,b=0),
+        margin=dict(l=0,r=0,t=10,b=40),
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
         xaxis=dict(gridcolor="rgba(255,255,255,0.1)"),
-        yaxis=dict(gridcolor="rgba(255,255,255,0.1)"),
+        yaxis=dict(
+            type="log",
+            title="Alcance (escala logarítmica)",
+            gridcolor="rgba(255,255,255,0.1)",
+            tickformat=".2s",
+        ),
     )
     st.plotly_chart(fig_trend, width='stretch')
+    st.caption(
+        "📐 **Escala logarítmica**: cada división del eje Y representa 10× el valor anterior. "
+        "Esto permite comparar portales con audiencias muy distintas en el mismo gráfico. "
+        "Línea continua = Facebook (alcance único). Línea punteada = Instagram (reproducciones diarias)."
+    )
 
     st.markdown("---")
 
