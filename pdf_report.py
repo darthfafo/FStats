@@ -62,14 +62,29 @@ class Brief(FPDF):
     def header(self):
         self.set_fill_color(*WHITE)
         self.rect(0, 0, 210, 297, "F")
+        # Header barra: 15mm para caber titulo + rango de fechas
         self.set_fill_color(*HERO_BG)
-        self.rect(0, 0, 210, 10, "F")
+        self.rect(0, 0, 210, 15, "F")
+        # Calcular rango de los ultimos 30 dias
+        from datetime import timedelta
+        meses = ["enero","febrero","marzo","abril","mayo","junio",
+                 "julio","agosto","septiembre","octubre","noviembre","diciembre"]
+        hoy    = datetime.now()
+        inicio = hoy - timedelta(days=29)
+        if inicio.month == hoy.month:
+            rango = f"del {inicio.day} al {hoy.day} de {meses[hoy.month-1]} de {hoy.year}"
+        else:
+            rango = (f"del {inicio.day} de {meses[inicio.month-1]} "
+                     f"al {hoy.day} de {meses[hoy.month-1]} de {hoy.year}")
         self.set_font("Helvetica", "B", 8.5)
         self.set_text_color(*WHITE)
-        self.set_y(2.8)
-        self.cell(0, 4.5, "INFORME DE RENDIMIENTO DIGITAL  |  FStats", align="C",
+        self.set_y(2)
+        self.cell(0, 5, "INFORME DE RENDIMIENTO DIGITAL", align="C",
                   new_x="LMARGIN", new_y="NEXT")
-        self.set_y(14)
+        self.set_font("Helvetica", "", 7)
+        self.set_text_color(148, 185, 220)
+        self.cell(0, 5, _s(rango), align="C")
+        self.set_y(19)
 
     def footer(self):
         self.set_y(-10)
@@ -130,8 +145,8 @@ class Brief(FPDF):
         self.set_text_color(*WHITE)
         self.cell(182, 11, _s(numero), align="C", new_x="LMARGIN", new_y="NEXT")
         self.set_xy(self.l_margin, y0+15)
-        self.set_font("Helvetica", "", 6.5)
-        self.set_text_color(148, 163, 184)
+        self.set_font("Helvetica", "", 7)
+        self.set_text_color(*WHITE)
         self.cell(182, 5, _s(subtitulo), align="C")
         self.set_auto_page_break(True, margin=14)
         self.set_y(y0 + h + 4)
@@ -628,6 +643,20 @@ def generar_brief(resumenes: list, totales: dict,
 
     # PAGINA 1 — HERO + KPIs + EXPLICACIONES + DONUT
     pdf.add_page()
+
+    # Breve explicacion ANTES del numero
+    pdf.set_font("Helvetica", "B", 9)
+    pdf.set_text_color(*HERO_BG)
+    pdf.cell(0, 6, "Como se construye este numero", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", "", 8.5)
+    pdf.set_text_color(*TEXT_DARK)
+    pdf.multi_cell(0, 5, _s(
+        "Este numero combina dos metricas: el ALCANCE UNICO de Facebook "
+        "(personas distintas que vieron el contenido) mas las REPRODUCCIONES de Instagram "
+        "(veces que se vio cualquier Reel, video o foto). Ambas fuentes son organicas, "
+        "sin inversion publicitaria. A continuacion el detalle de cada componente."
+    ))
+    pdf.ln(4)
 
     # Hero con numero total
     pdf._hero_box(
