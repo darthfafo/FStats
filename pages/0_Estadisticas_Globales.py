@@ -157,24 +157,37 @@ if activos:
     # ── Tendencia de alcance diario combinada (escala logarítmica) ─────
     st.subheader("📈 Tendencia de alcance diario — todos los portales")
 
+    # Colores por portal (iguales al brief)
+    PORTAL_COLOR = {
+        "Chubut Noticias": "#E2E8F0",  # blanco/gris claro (tema oscuro)
+        "Atento Chubut":   "#0EA5E9",  # celeste
+        "La Calle Online": "#EA580C",  # naranja
+        "El Americano":    "#22C55E",  # verde
+    }
+    FALLBACK = ["#a855f7","#fbbf24","#14b8a6"]
+
     fig_trend = go.Figure()
-    colores = ["#1877F2","#E1306C","#16a34a","#f59e0b","#a855f7"]
-    for i, d in enumerate(activos):
+    fallback_i = 0
+    for d in activos:
+        color = PORTAL_COLOR.get(d["nombre"])
+        if not color:
+            color = FALLBACK[fallback_i % len(FALLBACK)]
+            fallback_i += 1
         if d["fb_daily"]:
             df_fb = pd.DataFrame([{"Fecha":k,"Alcance":v} for k,v in sorted(d["fb_daily"].items())])
             fig_trend.add_trace(go.Scatter(
                 x=df_fb["Fecha"], y=df_fb["Alcance"],
                 mode="lines", name=f"{d['nombre']} (FB)",
-                line=dict(color=colores[i % len(colores)], width=2, dash="solid"),
-                opacity=0.9
+                line=dict(color=color, width=2.5, dash="solid"),
+                opacity=0.95
             ))
         if d["ig_daily"]:
             df_ig2 = pd.DataFrame([{"Fecha":k,"Alcance":v} for k,v in sorted(d["ig_daily"].items())])
             fig_trend.add_trace(go.Scatter(
                 x=df_ig2["Fecha"], y=df_ig2["Alcance"],
                 mode="lines", name=f"{d['nombre']} (IG)",
-                line=dict(color=colores[i % len(colores)], width=2, dash="dot"),
-                opacity=0.7
+                line=dict(color=color, width=2.5, dash="dot"),
+                opacity=0.75
             ))
 
     fig_trend.update_layout(
