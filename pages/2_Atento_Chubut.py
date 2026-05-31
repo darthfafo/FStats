@@ -237,26 +237,15 @@ with tab_fb:
                 "📊 Engagement":  likes + com + shares,
             })
         df_fb_top = pd.DataFrame(lista_fb).sort_values("❤️ Likes", ascending=False)
-        tiene_stats = df_fb_top["❤️ Likes"].sum() > 0 or df_fb_top["💬 Comentarios"].sum() > 0
-        if not tiene_stats:
-            st.info(
-                "ℹ️ Los likes y compartidos individuales no están disponibles para esta página "
-                "(limitación de Meta API para páginas de nueva generación). "
-                f"El **engagement total del mes** fue de **{imp.get('engagement', 0):,} interacciones**, "
-                "visible en los indicadores de arriba."
-            )
-            with st.expander("📋 Ver publicaciones del mes (sin métricas de reacción)"):
-                st.dataframe(df_fb_top[["Fecha", "Publicación"]], width='stretch', hide_index=True)
-        else:
-            for _, row in df_fb_top.head(10).iterrows():
-                with st.container(border=True):
-                    cols = st.columns([5, 1, 1, 1])
-                    cols[0].markdown(f"📅 `{row['Fecha']}`  \n{row['Publicación']}")
-                    cols[1].metric("❤️", f"{row['❤️ Likes']:,}" if row["❤️ Likes"] > 0 else "—")
-                    cols[2].metric("💬", f"{row['💬 Comentarios']:,}")
-                    cols[3].metric("🔁", f"{row['🔁 Compartidos']:,}" if row["🔁 Compartidos"] > 0 else "—")
-            with st.expander("📋 Ver todas las publicaciones de Facebook"):
-                st.dataframe(df_fb_top, width='stretch', hide_index=True)
+        for _, row in df_fb_top.head(10).iterrows():
+            with st.container(border=True):
+                cols = st.columns([5, 1, 1, 1])
+                cols[0].markdown(f"📅 `{row['Fecha']}`  \n{row['Publicación']}")
+                cols[1].metric("❤️", f"{row['❤️ Likes']:,}" if row["❤️ Likes"] > 0 else "—")
+                cols[2].metric("💬", f"{row['💬 Comentarios']:,}")
+                cols[3].metric("🔁", f"{row['🔁 Compartidos']:,}" if row["🔁 Compartidos"] > 0 else "—")
+        with st.expander("📋 Ver todas las publicaciones de Facebook"):
+            st.dataframe(df_fb_top, width='stretch', hide_index=True)
     else:
         st.info("Sin datos de publicaciones de Facebook.")
 

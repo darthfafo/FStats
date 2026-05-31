@@ -60,28 +60,84 @@ class FacebookCollector:
         r.raise_for_status()
         return r.json()
 
+    def _enrich_with_reactions(self, posts):
+        """
+        Para páginas NPE donde /posts?fields=reactions falla, usa la Batch API
+        para obtener reactions de cada post individualmente.
+        """
+        import json as _json
+        try:
+            batch = [
+                {"method": "GET",
+                 "relative_url": f"{p['id']}?fields=reactions.summary(true),comments.summary(true),shares"}
+                for p in posts[:50]
+            ]
+            r = requests.post(
+                self.base_url,
+                params={"access_token": self.access_token},
+                json={"batch": batch}
+            )
+            if not r.ok:
+                return
+            responses = r.json()
+            for i, resp in enumerate(responses or []):
+                if i >= len(posts):
+                    break
+                if resp and resp.get("code") == 200:
+                    try:
+                        data = _json.loads(resp.get("body", "{}"))
+                        if data.get("reactions"):
+                            posts[i]["reactions"] = data["reactions"]
+                        if data.get("comments"):
+                            posts[i]["comments"] = data["comments"]
+                        if data.get("shares"):
+                            posts[i]["shares"] = data["shares"]
+                    except Exception:
+                        pass
+            enriched = sum(1 for p in posts if p.get("reactions") or p.get("comments"))
+            print(f"[FB] ✓ Batch reactions enriched {enriched}/{len(posts)} posts")
+        except Exception as e:
+            print(f"[FB] ✗ Batch reactions error: {e}")
+
     def get_recent_posts(self, limit=30):
-        """Obtiene posts recientes usando el Page Access Token."""
-        intentos = [
+        """
+        Obtiene posts recientes con reactions.
+        Para páginas NPE donde el endpoint bulk falla, usa Batch API
+        para obtener reactions post por post.
+        """
+        # Intentar primero con reactions incluidas en el mismo request
+        intentos_con_reac = [
             (f"{self.page_id}/posts",
              "id,message,created_time,reactions.summary(true),comments.summary(true),shares"),
             (f"{self.page_id}/posts",
              "id,message,created_time,likes.summary(true),comments.summary(true),shares"),
-            (f"{self.page_id}/posts",
-             "id,message,created_time,reactions.summary(true),comments.summary(true)"),
-            (f"{self.page_id}/posts",
-             "id,message,created_time"),
             (f"{self.page_id}/feed",
              "id,message,created_time,reactions.summary(true),comments.summary(true),shares"),
-            (f"{self.page_id}/feed",
-             "id,message,created_time"),
+        ]
+        for endpoint, fields in intentos_con_reac:
+            try:
+                result = self._get(endpoint, {"fields": fields, "limit": limit})
+                if result.get("data"):
+                    has_reac = any(p.get("reactions") or p.get("likes") for p in result["data"])
+                    if has_reac:
+                        print(f"[FB] ✓ Posts con reactions OK — {len(result['data'])} posts")
+                        return result
+            except Exception as e:
+                print(f"[FB] ✗ {endpoint} con reactions: {e}")
+
+        # Si falla, obtener posts sin reactions y luego enriquecer con Batch API
+        intentos_basicos = [
+            (f"{self.page_id}/posts", "id,message,created_time,comments.summary(true),shares"),
+            (f"{self.page_id}/posts", "id,message,created_time"),
+            (f"{self.page_id}/feed",  "id,message,created_time"),
         ]
         last_error = ""
-        for endpoint, fields in intentos:
+        for endpoint, fields in intentos_basicos:
             try:
                 result = self._get(endpoint, {"fields": fields, "limit": limit})
                 if result.get("data") is not None:
-                    print(f"[FB] ✓ Posts OK — {len(result['data'])} posts")
+                    print(f"[FB] ✓ Posts sin reactions — {len(result['data'])} posts, intentando batch enrichment")
+                    self._enrich_with_reactions(result["data"])
                     return result
             except Exception as e:
                 last_error = str(e)
