@@ -319,6 +319,20 @@ class Brief(FPDF):
         self.set_auto_page_break(True, margin=14)
         self.set_y(y0 + h + 2)
 
+    def _chart_note(self, text):
+        """Nota explicativa debajo de un grafico."""
+        self.set_font("Helvetica", "I", 5.8)
+        self.set_text_color(*TEXT_LIGHT)
+        self.cell(0, 4, _s(text), new_x="LMARGIN", new_y="NEXT")
+        self.ln(1)
+
+    def _metric_note(self, text):
+        """Nota explicativa debajo de una fila de metricas."""
+        self.set_font("Helvetica", "I", 6)
+        self.set_text_color(*TEXT_LIGHT)
+        self.multi_cell(0, 3.5, _s(text))
+        self.ln(2)
+
     def _portal_page(self, d, total, i):
         self.add_page()
         color    = _c(d["nombre"], i)
@@ -366,10 +380,21 @@ class Brief(FPDF):
                 (tasa_s, "Tasa engagement", "engagement / seguidores x100"),
                 (_n(fb_seg), "Seguidores", "fans de la pagina"),
             ], BLUE_FB)
+            self._metric_note(
+                "Alcance unico: personas distintas que vieron al menos 1 publicacion (sin repeticion). "
+                "Engagement: suma de likes + comentarios + compartidos. "
+                "Tasa de engagement: que tan activa es la audiencia en proporcion a su tamano (1-3% = excelente)."
+            )
             if fb_daily:
-                self._line_chart(fb_daily, self.l_margin, self.get_y(), 182, 24,
+                yc_fb = self.get_y()
+                self._line_chart(fb_daily, self.l_margin, yc_fb, 182, 22,
                                  BLUE_FB, "Alcance diario Facebook")
-                self.ln(27)
+                self.set_y(yc_fb + 22)
+                self._chart_note(
+                    "Personas distintas alcanzadas cada dia. Los picos coinciden con dias "
+                    "en que se publicaron contenidos de mayor difusion organica."
+                )
+                self.ln(2)
 
         # Instagram
         if ig_imp > 0 or ig_seg > 0:
@@ -380,16 +405,34 @@ class Brief(FPDF):
                 (_n(ig_eng), "Interacciones", "cuentas que actuaron"),
                 (_n(ig_seg), "Seguidores", "seguidores actuales"),
             ], PINK_IG)
-            cw = 88
-            yc = self.get_y()
+            self._metric_note(
+                "Reproducciones: total de vistas de todos los contenidos (incluye repeticiones de la misma persona). "
+                "Alcance unico: cuentas distintas que vieron algo. "
+                "Interacciones: perfiles que dieron like, comentaron o guardaron algun contenido del mes."
+            )
+            # Alcance diario IG (anchura completa)
             if ig_daily:
-                self._line_chart(ig_daily, self.l_margin, yc, cw, 24,
+                yc_ig = self.get_y()
+                self._line_chart(ig_daily, self.l_margin, yc_ig, 182, 22,
                                  PINK_IG, "Alcance diario Instagram")
+                self.set_y(yc_ig + 22)
+                self._chart_note(
+                    "Visualizaciones totales de todos los contenidos publicados por dia. "
+                    "Los picos suelen coincidir con la publicacion de Reels o videos virales."
+                )
+                self.ln(2)
+            # Nuevos seguidores por dia (anchura completa, debajo del alcance)
             if ig_seg_d:
-                self._bar_chart(ig_seg_d, self.l_margin+cw+6, yc, cw, 24,
+                yc_seg = self.get_y()
+                self._bar_chart(ig_seg_d, self.l_margin, yc_seg, 182, 20,
                                 (14,165,233), "Nuevos seguidores por dia")
-            if ig_daily or ig_seg_d:
-                self.set_y(yc + 27)
+                self.set_y(yc_seg + 20)
+                self._chart_note(
+                    "Seguidores nuevos ganados organicamente cada dia. "
+                    "Refleja el crecimiento de la audiencia: un pico indica "
+                    "que una publicacion atrajo nuevos seguidores ese dia."
+                )
+                self.ln(2)
 
     def _global_page(self, resumenes, totales):
         self.add_page()
@@ -594,12 +637,39 @@ def generar_brief(resumenes: list, totales: dict,
     yc  = y_g + r + 4
     pdf._donut(resumenes, total, xc, yc, r)
     pdf._donut_legend(resumenes, total, pdf.l_margin + 80, y_g + 5)
-    pdf.set_y(yc + r + 5)
+    pdf.set_y(yc + r + 4)
 
-    # PAGINA 2 — ESTADISTICAS GLOBALES
-    pdf._global_page(resumenes, totales)
+    # Barras de participacion — continua en pagina 1 (sin nueva pagina)
+    pdf.ln(2)
+    pdf._section("Estadisticas globales | Comparativa de portales", HERO_BG)
+    activos_sorted = sorted([d for d in resumenes if d.get("total_imp",0) > 0],
+                            key=lambda x: -x.get("total_imp",0))
+    for idx2, d2 in enumerate(activos_sorted):
+        color2 = _c(d2["nombre"], idx2)
+        pct2   = _p(d2.get("total_imp",0), total)
+        bar_w2 = 130 * pct2 / 100
+        y02    = pdf.get_y()
+        pdf.set_xy(pdf.l_margin, y02)
+        pdf.set_font("Helvetica", "B", 8)
+        pdf.set_text_color(*TEXT_DARK)
+        pdf.cell(52, 8, _s(d2["nombre"]))
+        pdf.set_fill_color(*color2)
+        pdf.rect(pdf.l_margin+52, y02+2, bar_w2, 4.5, "F")
+        pdf.set_xy(pdf.l_margin+52+bar_w2+2, y02)
+        pdf.set_font("Helvetica", "B", 8)
+        pdf.set_text_color(*color2)
+        pdf.cell(18, 8, f"{pct2}%")
+        pdf.set_xy(pdf.l_margin+52+bar_w2+21, y02)
+        pdf.set_font("Helvetica", "", 7)
+        pdf.set_text_color(*TEXT_MID)
+        pdf.cell(40, 8, _n(d2.get("total_imp",0)) + " viz.")
+        pdf.ln(9)
+    pdf.set_font("Helvetica", "I", 6)
+    pdf.set_text_color(*TEXT_LIGHT)
+    pdf.cell(0, 4, "La barra muestra la participacion de cada portal en el total combinado de visualizaciones del mes.")
+    pdf.ln(5)
 
-    # PAGINAS 3+ — UN PORTAL POR PAGINA
+    # PAGINAS 2+ — UN PORTAL POR PAGINA
     for i, d in enumerate(resumenes):
         pdf._portal_page(d, total, i)
 
