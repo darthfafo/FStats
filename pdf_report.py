@@ -98,9 +98,9 @@ class Brief(FPDF):
 
     def _section(self, text, color=None):
         color = color or HERO_BG
-        self.set_font("Helvetica", "B", 9)
+        self.set_font("Helvetica", "B", 10)
         self.set_text_color(*color)
-        self.cell(0, 6, _s(text.upper()), new_x="LMARGIN", new_y="NEXT")
+        self.cell(0, 7, _s(text.upper()), new_x="LMARGIN", new_y="NEXT")
         self.set_draw_color(*color)
         self.line(self.l_margin, self.get_y(), 196, self.get_y())
         self.ln(3)
@@ -111,15 +111,15 @@ class Brief(FPDF):
         self.set_fill_color(*color)
         self.rect(x, y, w, 2.5, "F")
         self.set_xy(x+2, y+4)
-        self.set_font("Helvetica", "B", 13)
+        self.set_font("Helvetica", "B", 15)
         self.set_text_color(*TEXT_DARK)
-        self.cell(w-4, 6.5, _s(val))
+        self.cell(w-4, 7.5, _s(val))
         self.set_xy(x+2, y+12)
-        self.set_font("Helvetica", "B", 6)
+        self.set_font("Helvetica", "B", 7)
         self.set_text_color(*color)
-        self.cell(w-4, 3.5, _s(lbl.upper()))
+        self.cell(w-4, 4, _s(lbl.upper()))
         self.set_xy(x+2, y+16)
-        self.set_font("Helvetica", "", 7)
+        self.set_font("Helvetica", "B", 7)
         self.set_text_color(*TEXT_LIGHT)
         self.cell(w-4, 4, _s(sub))
 
@@ -141,13 +141,13 @@ class Brief(FPDF):
         self.set_fill_color(*HERO_BG)
         self.rect(self.l_margin, y0, 182, h, "F")
         self.set_xy(self.l_margin, y0+3)
-        self.set_font("Helvetica", "B", 26)
+        self.set_font("Helvetica", "B", 30)
         self.set_text_color(*WHITE)
         self.cell(182, 11, _s(numero), align="C", new_x="LMARGIN", new_y="NEXT")
         self.set_xy(self.l_margin, y0+15)
-        self.set_font("Helvetica", "", 7)
+        self.set_font("Helvetica", "B", 8)
         self.set_text_color(*WHITE)
-        self.cell(182, 5, _s(subtitulo), align="C")
+        self.cell(182, 5.5, _s(subtitulo), align="C")
         self.set_auto_page_break(True, margin=14)
         self.set_y(y0 + h + 4)
 
@@ -319,15 +319,15 @@ class Brief(FPDF):
             self.set_fill_color(*accent)
             self.rect(x0, y0, w-1.5, 2.5, "F")
             self.set_xy(x0+2, y0+4)
-            self.set_font("Helvetica", "B", 12)
+            self.set_font("Helvetica", "B", 14)
             self.set_text_color(*TEXT_DARK)
-            self.cell(w-4, 6, _s(val))
+            self.cell(w-4, 7, _s(val))
             self.set_xy(x0+2, y0+11)
-            self.set_font("Helvetica", "", 7.5)
+            self.set_font("Helvetica", "B", 8)
             self.set_text_color(*TEXT_MID)
-            self.cell(w-4, 4.5, _s(lbl))
+            self.cell(w-4, 5, _s(lbl))
             self.set_xy(x0+2, y0+15.5)
-            self.set_font("Helvetica", "", 7)
+            self.set_font("Helvetica", "B", 7)
             self.set_text_color(*TEXT_LIGHT)
             self.cell(w-4, 4, _s(sub))
             x0 += w
@@ -385,14 +385,19 @@ class Brief(FPDF):
         # Facebook
         if fb_imp > 0 or fb_seg > 0:
             self._section("Facebook", BLUE_FB)
-            tasa_s = "N/D"
+            # Tasa engagement: mostrar valor real sin cap (puede ser >100% si hay muchas publicaciones)
             if fb_seg > 0 and fb_eng > 0:
                 tv = fb_eng / fb_seg * 100
-                tasa_s = f"{tv:.1f}%" if tv <= 200 else "N/D"
+                tasa_s = f"{tv:.0f}%"
+            elif fb_eng > 0:
+                tasa_s = "N/D"
+            else:
+                tasa_s = "Sin datos"
+            eng_s = _n(fb_eng) if fb_eng > 0 else "Sin datos"
             self._metric_row([
                 (_n(fb_imp), "Alcance unico", "personas distintas"),
-                (_n(fb_eng) if fb_eng > 0 else "N/D", "Engagement", "likes + comentarios"),
-                (tasa_s, "Tasa engagement", "engagement / seguidores x100"),
+                (eng_s, "Engagement", "likes + comentarios + compartidos"),
+                (tasa_s, "Eng/Seguidor", "total del mes / seguidores x100"),
                 (_n(fb_seg), "Seguidores", "fans de la pagina"),
             ], BLUE_FB)
             self._metric_note(
