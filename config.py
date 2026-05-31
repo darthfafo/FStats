@@ -6,6 +6,12 @@ load_dotenv()
 
 RESPONSIVE_CSS = """
 <style>
+/* Ocultar la navegación automática de Streamlit:
+   elimina "app", portales no configurados y duplicados del sidebar */
+[data-testid="stSidebarNav"] {
+    display: none !important;
+}
+
 @media (max-width: 768px) {
     div[style*="font-size:60px"], div[style*="font-size: 60px"] {
         font-size: 36px !important;

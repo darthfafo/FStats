@@ -86,6 +86,9 @@ st.set_page_config(
 
 st.markdown("""
 <style>
+/* Ocultar navegación automática de Streamlit (app, portales no configurados) */
+[data-testid="stSidebarNav"] { display: none !important; }
+
 .hero {
     background: linear-gradient(135deg, #0f172a, #1e3a5f);
     border-radius: 16px;
@@ -156,6 +159,19 @@ PORTALES_ACTIVOS = [p for p in PORTALES if portal_activo(p)]
 # ── Sidebar ────────────────────────────────────────────────────────
 with st.sidebar:
     st.title("📊 Panel General")
+    st.markdown("---")
+    # Navegación a cada portal activo
+    iconos_portales = {
+        "Chubut Noticias": "📰", "Atento Chubut": "📡",
+        "La Calle Online": "🗞️", "El Americano": "🌎",
+        "VISTE ESTO?": "👁️", "Boca en Linea": "🇸🇪",
+    }
+    if st.button("📊 Estadísticas Globales", use_container_width=True):
+        st.switch_page("pages/0_Estadisticas_Globales.py")
+    for p in PORTALES_ACTIVOS:
+        icono = iconos_portales.get(p["nombre"], "📄")
+        if st.button(f"{icono} {p['nombre']}", use_container_width=True, key=f"nav_{p['nombre']}"):
+            st.switch_page(p["pagina"])
     st.markdown("---")
     if st.button("🔄 Actualizar datos", use_container_width=True):
         st.cache_data.clear()
