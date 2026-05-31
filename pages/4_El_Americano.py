@@ -347,10 +347,10 @@ with tab_ig:
             st.plotly_chart(fig_b, width='stretch')
 
     st.markdown("---")
-    st.subheader("🖼️ Publicaciones recientes")
     media_data = datos_ig.get("media", {})
     if media_data.get("data"):
         lista_ig = []
+        plays_lookup = {(pd_i.get("id","") or pd_i.get("ts","")): (pd_i.get("plays",0) or pd_i.get("reach",0)) for pd_i in imp_ig.get("posts_data",[])}
         for post in media_data["data"]:
             cap = post.get("caption", "(Sin descripción)")
             mt  = post.get("media_type", "")
@@ -359,12 +359,15 @@ with tab_ig:
             elif mt == "VIDEO":          tipo_label = "▶️ Video"
             elif mt == "CAROUSEL_ALBUM": tipo_label = "🖼️ Carrusel"
             else:                        tipo_label = "📷 Imagen"
+            pid   = post.get("id", "")
+            plays = plays_lookup.get(pid, 0) or plays_lookup.get(post.get("timestamp","")[:10], 0)
             lista_ig.append({
                 "Fecha":          post.get("timestamp","")[:10],
                 "Tipo":           tipo_label,
                 "Publicación":    cap[:140] + "..." if len(cap) > 140 else cap,
                 "❤️ Likes":       post.get("like_count", 0),
                 "💬 Comentarios": post.get("comments_count", 0),
+                "▶️ Visualiz.":   plays if plays > 0 else 0,
                 "🔗 Link":        post.get("permalink",""),
             })
         df_ig = pd.DataFrame(lista_ig)

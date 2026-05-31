@@ -237,15 +237,26 @@ with tab_fb:
                 "📊 Engagement":  likes + com + shares,
             })
         df_fb_top = pd.DataFrame(lista_fb).sort_values("❤️ Likes", ascending=False)
-        for _, row in df_fb_top.head(10).iterrows():
-            with st.container(border=True):
-                cols = st.columns([5, 1, 1, 1])
-                cols[0].markdown(f"📅 `{row['Fecha']}`  \n{row['Publicación']}")
-                cols[1].metric("❤️", f"{row['❤️ Likes']:,}" if row["❤️ Likes"] > 0 else "—")
-                cols[2].metric("💬", f"{row['💬 Comentarios']:,}")
-                cols[3].metric("🔁", f"{row['🔁 Compartidos']:,}" if row["🔁 Compartidos"] > 0 else "—")
-        with st.expander("📋 Ver todas las publicaciones de Facebook"):
-            st.dataframe(df_fb_top, width='stretch', hide_index=True)
+        tiene_stats = df_fb_top["❤️ Likes"].sum() > 0 or df_fb_top["💬 Comentarios"].sum() > 0
+        if not tiene_stats:
+            st.info(
+                "ℹ️ Los likes y compartidos individuales no están disponibles para esta página "
+                "(limitación de Meta API para páginas de nueva generación). "
+                f"El **engagement total del mes** fue de **{imp.get('engagement', 0):,} interacciones**, "
+                "visible en los indicadores de arriba."
+            )
+            with st.expander("📋 Ver publicaciones del mes (sin métricas de reacción)"):
+                st.dataframe(df_fb_top[["Fecha", "Publicación"]], width='stretch', hide_index=True)
+        else:
+            for _, row in df_fb_top.head(10).iterrows():
+                with st.container(border=True):
+                    cols = st.columns([5, 1, 1, 1])
+                    cols[0].markdown(f"📅 `{row['Fecha']}`  \n{row['Publicación']}")
+                    cols[1].metric("❤️", f"{row['❤️ Likes']:,}" if row["❤️ Likes"] > 0 else "—")
+                    cols[2].metric("💬", f"{row['💬 Comentarios']:,}")
+                    cols[3].metric("🔁", f"{row['🔁 Compartidos']:,}" if row["🔁 Compartidos"] > 0 else "—")
+            with st.expander("📋 Ver todas las publicaciones de Facebook"):
+                st.dataframe(df_fb_top, width='stretch', hide_index=True)
     else:
         st.info("Sin datos de publicaciones de Facebook.")
 
@@ -359,19 +370,27 @@ with tab_ig:
             st.plotly_chart(fig_b, width='stretch')
 
     st.markdown("---")
-    st.subheader("🖼️ Publicaciones recientes")
 
     media_data = datos_ig.get("media", {})
     if media_data.get("data"):
         lista_ig = []
+        # Lookup de visualizaciones por ID de post (de posts_data con plays)
+        plays_lookup = {}
+        for pd_item in imp_ig.get("posts_data", []):
+            pid = pd_item.get("id", "") or pd_item.get("ts", "")
+            plays_lookup[pid] = pd_item.get("plays", 0) or pd_item.get("reach", 0)
+        
         for post in media_data["data"]:
             cap = post.get("caption", "(Sin descripción)")
+            pid = post.get("id", "")
+            plays = plays_lookup.get(pid, 0) or plays_lookup.get(post.get("timestamp","")[:10], 0)
             lista_ig.append({
                 "Fecha":          post.get("timestamp","")[:10],
                 "Tipo":           post.get("media_type",""),
                 "Publicación":    cap[:140] + "..." if len(cap) > 140 else cap,
                 "❤️ Likes":       post.get("like_count", 0),
                 "💬 Comentarios": post.get("comments_count", 0),
+                "▶️ Visualiz.":   plays if plays > 0 else 0,
                 "🔗 Link":        post.get("permalink",""),
             })
         df_ig = pd.DataFrame(lista_ig)
