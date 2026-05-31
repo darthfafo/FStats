@@ -93,7 +93,7 @@ class FacebookCollector:
         Métricas de página disponibles en API v25.0.
         Nota: page_impressions fue deprecada; usamos page_impressions_unique (alcance único).
         """
-        since = int((datetime.now() - timedelta(days=31)).timestamp())
+        since = int((datetime.now() - timedelta(days=30)).timestamp())
         until = int(datetime.now().timestamp())
 
         result = {
@@ -157,7 +157,7 @@ class FacebookCollector:
 
     def get_fan_growth(self):
         """Intenta obtener crecimiento de seguidores (métricas disponibles en v25.0)."""
-        since = int((datetime.now() - timedelta(days=31)).timestamp())
+        since = int((datetime.now() - timedelta(days=30)).timestamp())
         until = int((datetime.now() - timedelta(days=1)).timestamp())
         # Probar métricas alternativas para fan growth
         for metric in ["page_daily_follows,page_daily_unfollows",

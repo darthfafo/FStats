@@ -67,7 +67,7 @@ class InstagramCollector:
           - time_series: usan period=day + since/until → devuelven values[] con valores diarios
           - total_value: necesitan metric_type=total_value → devuelven total_value.value
         """
-        since = int((datetime.now() - timedelta(days=31)).timestamp())
+        since = int((datetime.now() - timedelta(days=30)).timestamp())
         until = int(datetime.now().timestamp())
 
         result = {
@@ -212,7 +212,7 @@ class InstagramCollector:
         media      = self.get_recent_media(limit=limit)
         daily      = {}
         posts_data = []
-        limite     = datetime.now() - timedelta(days=31)
+        limite     = datetime.now() - timedelta(days=30)
 
         # ── Gráfico diario + datos por post ─────────────────────────
         for post in media.get("data", []):
