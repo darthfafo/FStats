@@ -86,8 +86,12 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-/* Ocultar navegación automática de Streamlit (app, portales no configurados) */
-[data-testid="stSidebarNav"] { display: none !important; }
+/* Ocultar navegación automática de Streamlit */
+[data-testid="stSidebarNav"],
+[data-testid="stSidebarNavItems"],
+[data-testid="stSidebarNavSeparator"],
+.css-1544g2n, .css-k1vhr4,
+section[data-testid="stSidebar"] ul { display: none !important; }
 
 .hero {
     background: linear-gradient(135deg, #0f172a, #1e3a5f);

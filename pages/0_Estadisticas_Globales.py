@@ -9,6 +9,7 @@ from collectors.instagram import InstagramCollector
 
 st.set_page_config(page_title="Estadísticas Globales", page_icon="📊", layout="wide")
 
+st.markdown(RESPONSIVE_CSS, unsafe_allow_html=True)
 sidebar_nav(current="")
 
 st.title("📊 Estadísticas Globales — Todos los portales")
