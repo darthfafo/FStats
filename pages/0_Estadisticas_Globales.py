@@ -173,19 +173,20 @@ if activos:
         if not color:
             color = FALLBACK[fallback_i % len(FALLBACK)]
             fallback_i += 1
-        if d["fb_daily"]:
-            df_fb = pd.DataFrame([{"Fecha":k,"Alcance":v} for k,v in sorted(d["fb_daily"].items())])
-            fig_trend.add_trace(go.Scatter(
-                x=df_fb["Fecha"], y=df_fb["Alcance"],
-                mode="lines", name=f"{d['nombre']} (FB)",
-                line=dict(color=color, width=2.5, dash="solid"),
-                opacity=0.95
-            ))
+        # IG = línea continua (datos más fuertes), FB = punteada
         if d["ig_daily"]:
             df_ig2 = pd.DataFrame([{"Fecha":k,"Alcance":v} for k,v in sorted(d["ig_daily"].items())])
             fig_trend.add_trace(go.Scatter(
                 x=df_ig2["Fecha"], y=df_ig2["Alcance"],
                 mode="lines", name=f"{d['nombre']} (IG)",
+                line=dict(color=color, width=2.5, dash="solid"),
+                opacity=0.95
+            ))
+        if d["fb_daily"]:
+            df_fb = pd.DataFrame([{"Fecha":k,"Alcance":v} for k,v in sorted(d["fb_daily"].items())])
+            fig_trend.add_trace(go.Scatter(
+                x=df_fb["Fecha"], y=df_fb["Alcance"],
+                mode="lines", name=f"{d['nombre']} (FB)",
                 line=dict(color=color, width=2.5, dash="dot"),
                 opacity=0.75
             ))
@@ -205,9 +206,10 @@ if activos:
     )
     st.plotly_chart(fig_trend, width='stretch')
     st.caption(
-        "📐 **Escala logarítmica**: cada división del eje Y representa 10× el valor anterior. "
-        "Esto permite comparar portales con audiencias muy distintas en el mismo gráfico. "
-        "Línea continua = Facebook (alcance único). Línea punteada = Instagram (reproducciones diarias)."
+        "📐 **Escala logarítmica**: cada división del eje Y representa 10× el valor anterior, "
+        "permitiendo ver portales con audiencias muy distintas en el mismo gráfico. "
+        "Línea continua = Instagram (reproducciones diarias). Línea punteada = Facebook (alcance único). "
+        "Los datos de IG solo aparecen desde que cada portal se conectó al panel."
     )
 
     st.markdown("---")
