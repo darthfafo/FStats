@@ -498,49 +498,61 @@ class Brief(FPDF):
         self._section("Top 10 publicaciones Instagram — ultimo mes", PINK_IG)
         top10 = sorted(posts, key=lambda x: x.get("likes",0), reverse=True)[:10]
         h_row = 14
+        h_row = 18   # un poco mas alto para caber todo
         self.set_auto_page_break(False)
         for i, p in enumerate(top10, 1):
-            portal = _s(p.get("portal",""))
-            fecha  = _s(p.get("ts",""))
-            texto  = _s(p.get("caption",""))
-            likes  = p.get("likes", 0)
-            comms  = p.get("comments", 0)
-            tipo   = p.get("tipo","")
-            tipo_s = "REEL" if tipo=="reel" else ("VID" if tipo=="video" else "IMG")
-            p_idx  = next((j for j,r in enumerate(resumenes)
-                           if r.get("nombre")==p.get("portal")), 0)
-            color  = _c(p.get("portal",""), p_idx)
-            y0     = self.get_y()
-            if y0 + h_row > self.h - 38:
+            portal    = _s(p.get("portal",""))
+            fecha     = _s(p.get("ts",""))
+            texto     = _s(p.get("caption",""))
+            likes     = p.get("likes", 0)
+            comms     = p.get("comments", 0)
+            permalink = p.get("permalink", "")
+            tipo      = p.get("tipo","")
+            tipo_s    = "REEL" if tipo=="reel" else ("VID" if tipo=="video" else "IMG")
+            p_idx     = next((j for j,r in enumerate(resumenes)
+                              if r.get("nombre")==p.get("portal")), 0)
+            color     = _c(p.get("portal",""), p_idx)
+            y0        = self.get_y()
+            if y0 + h_row > self.h - 42:
                 break
             self.set_fill_color(*CARD_BG)
             self.rect(self.l_margin, y0, 182, h_row, "F")
             self.set_fill_color(*color)
             self.rect(self.l_margin, y0, 3, h_row, "F")
+            # Numero ranking
             self.set_xy(self.l_margin+5, y0+1)
-            self.set_font("Helvetica", "B", 9)
+            self.set_font("Helvetica", "B", 10)
             self.set_text_color(*color)
-            self.cell(10, 5, f"#{i}")
+            self.cell(10, 6, f"#{i}")
+            # Portal + tipo + fecha
             self.set_xy(self.l_margin+16, y0+1)
-            self.set_font("Helvetica", "B", 7.5)
+            self.set_font("Helvetica", "B", 8)
             self.set_text_color(*TEXT_DARK)
-            self.cell(95, 4.5, f"{portal}  [{tipo_s}]  {fecha}"[:58])
-            self.set_xy(self.l_margin+16, y0+6.5)
-            self.set_font("Helvetica", "", 6)
+            self.cell(88, 5, f"{portal}  [{tipo_s}]  {fecha}"[:55])
+            # Link "Ver post" clickeable
+            if permalink:
+                self.set_xy(self.l_margin+16, y0+7)
+                self.set_font("Helvetica", "U", 7.5)
+                self.set_text_color(24, 119, 242)
+                self.cell(30, 5, "Ver publicacion", link=permalink)
+            # Caption
+            self.set_xy(self.l_margin+16+30+(2 if permalink else 0), y0+7)
+            self.set_font("Helvetica", "", 7)
             self.set_text_color(*TEXT_MID)
-            self.cell(95, 4, texto[:75])
-            mx = self.l_margin+120
-            for val, lbl in [(likes,"Likes"),(comms,"Comentarios")]:
+            self.cell(55, 5, texto[:50])
+            # Metricas: Likes y Comentarios
+            mx = self.l_margin + 118
+            for val, lbl in [(likes,"Likes"),(comms,"Coment.")]:
                 self.set_xy(mx, y0+1)
-                self.set_font("Helvetica", "B", 9)
+                self.set_font("Helvetica", "B", 9.5)
                 self.set_text_color(*TEXT_DARK)
-                self.cell(30, 5, _n(val), align="R")
-                self.set_xy(mx, y0+7)
-                self.set_font("Helvetica", "", 5)
+                self.cell(32, 6, _n(val), align="R")
+                self.set_xy(mx, y0+8)
+                self.set_font("Helvetica", "", 6.5)
                 self.set_text_color(*TEXT_LIGHT)
-                self.cell(30, 3.5, lbl, align="R")
-                mx += 31
-            self.set_y(y0 + h_row + 1.5)
+                self.cell(32, 4, lbl, align="R")
+                mx += 32
+            self.set_y(y0 + h_row + 2)
         self.set_auto_page_break(True, margin=14)
         self.ln(4)
 
@@ -614,14 +626,29 @@ def generar_brief(resumenes: list, totales: dict,
     total_eng = totales.get("total_eng", 0)
     total_seg = totales.get("total_seg", 0)
 
-    # PAGINA 1 — CONTEXTO + HERO + DONUT
+    # PAGINA 1 — HERO + KPIs + EXPLICACIONES + DONUT
     pdf.add_page()
 
-    pdf._section("Como se construye el total de impacto digital", HERO_BG)
+    # Hero con numero total
+    pdf._hero_box(
+        _n(total),
+        f"TOTAL VISUALIZACIONES | ULTIMO MES  |  FB {_p(total_fb,total)}% + IG {_p(total_ig,total)}%"
+    )
 
-    pdf.set_font("Helvetica", "B", 7)
+    # 4 KPIs principales
+    pdf._kpi_row([
+        (_n(total_fb),  "Alcance Facebook",       f"{_p(total_fb,total)}% del total",  BLUE_FB),
+        (_n(total_ig),  "Visualiz. Instagram",    f"{_p(total_ig,total)}% del total",  PINK_IG),
+        (_n(total_eng), "Interacciones FB + IG",  "engagement FB + cuentas activas IG", GREEN),
+        (_n(total_seg), "Seguidores totales",     f"{len(resumenes)} portales activos", (30,30,30)),
+    ])
+
+    # EXPLICACIONES despues de los KPIs
+    pdf._section("Como se interpretan estas estadisticas", HERO_BG)
+
+    pdf.set_font("Helvetica", "B", 8.5)
     pdf.set_text_color(*BLUE_FB)
-    pdf.cell(0, 5, "FACEBOOK | Alcance unico (personas reales)", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "FACEBOOK | Alcance unico (personas reales)", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 8.5)
     pdf.set_text_color(*TEXT_DARK)
     pdf.multi_cell(0, 5, _s(
@@ -630,11 +657,11 @@ def generar_brief(resumenes: list, totales: dict,
         "Esta metrica (page_impressions_unique) mide la AUDIENCIA REAL impactada, sin repeticiones. "
         "Es la forma mas rigurosa de medir alcance en redes sociales."
     ))
-    pdf.ln(2)
+    pdf.ln(3)
 
-    pdf.set_font("Helvetica", "B", 7)
+    pdf.set_font("Helvetica", "B", 8.5)
     pdf.set_text_color(*PINK_IG)
-    pdf.cell(0, 5, "INSTAGRAM | Reproducciones totales (visualizaciones de contenido)", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "INSTAGRAM | Reproducciones totales (visualizaciones de contenido)", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 8.5)
     pdf.set_text_color(*TEXT_DARK)
     pdf.multi_cell(0, 5, _s(
@@ -643,67 +670,44 @@ def generar_brief(resumenes: list, totales: dict,
         "multiples reproducciones al ver varios videos. Esta metrica (views total_value) "
         "refleja el VOLUMEN TOTAL de consumo de contenido de la cuenta."
     ))
-    pdf.ln(2)
+    pdf.ln(3)
 
-    pdf.set_font("Helvetica", "", 8)
+    pdf.set_font("Helvetica", "B", 8.5)
+    pdf.set_text_color(*GREEN)
+    pdf.cell(0, 6, "INTERACCIONES FB + IG | Engagement combinado", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", "", 8.5)
     pdf.set_text_color(*TEXT_DARK)
     pdf.multi_cell(0, 5, _s(
-        "El total combina ambas metricas: Facebook aporta PERSONAS REALES e Instagram aporta "
-        "VISUALIZACIONES. No son comparables directamente, pero juntas dan una imagen completa "
-        "del impacto digital. Todo el impacto es 100% ORGANICO, sin inversion publicitaria."
+        "Suma de interacciones en Facebook (likes + comentarios + compartidos en publicaciones) "
+        "e interacciones en Instagram (cuentas unicas que dieron like, comentaron o guardaron "
+        "algun contenido del mes). Mide la actividad activa de la audiencia mas alla del alcance pasivo."
     ))
-    pdf.ln(5)
+    pdf.ln(3)
 
-    pdf._hero_box(
-        _n(total),
-        f"TOTAL VISUALIZACIONES | ULTIMO MES  |  FB {_p(total_fb,total)}% + IG {_p(total_ig,total)}%"
-    )
+    pdf.set_font("Helvetica", "B", 8.5)
+    pdf.set_text_color(*TEXT_DARK)
+    pdf.cell(0, 6, "SEGUIDORES TOTALES | Audiencia acumulada entre portales", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", "", 8.5)
+    pdf.multi_cell(0, 5, _s(
+        "Suma de seguidores de Facebook e Instagram de todos los portales activos. "
+        "Representa la base de audiencia que recibe el contenido de forma directa y habitual. "
+        "Todo el impacto de este informe es 100% ORGANICO, sin inversion publicitaria."
+    ))
+    pdf.ln(4)
 
-    pdf._kpi_row([
-        (_n(total_fb),  "Alcance Facebook",    f"{_p(total_fb,total)}% del total",  BLUE_FB),
-        (_n(total_ig),  "Visualiz. Instagram", f"{_p(total_ig,total)}% del total",  PINK_IG),
-        (_n(total_eng), "Engagement FB total", "likes + comentarios + compartidos",   GREEN),
-        (_n(total_seg), "Seguidores totales",  f"{len(resumenes)} portales activos",  (30,30,30)),
-    ])
-
+    # DONUT con leyenda — sin barras duplicadas
     pdf._section("Participacion de cada portal en el impacto total", HERO_BG)
+    pdf.set_font("Helvetica", "", 8)
+    pdf.set_text_color(*TEXT_DARK)
+    pdf.cell(0, 5, "Porcentaje de visualizaciones aportado por cada portal sobre el total del mes.", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(2)
     y_g = pdf.get_y()
     r   = 30
     xc  = pdf.l_margin + 38
     yc  = y_g + r + 4
     pdf._donut(resumenes, total, xc, yc, r)
     pdf._donut_legend(resumenes, total, pdf.l_margin + 80, y_g + 5)
-    pdf.set_y(yc + r + 4)
-
-    # Barras de participacion — continua en pagina 1 (sin nueva pagina)
-    pdf.ln(2)
-    pdf._section("Estadisticas globales | Comparativa de portales", HERO_BG)
-    activos_sorted = sorted([d for d in resumenes if d.get("total_imp",0) > 0],
-                            key=lambda x: -x.get("total_imp",0))
-    for idx2, d2 in enumerate(activos_sorted):
-        color2 = _c(d2["nombre"], idx2)
-        pct2   = _p(d2.get("total_imp",0), total)
-        bar_w2 = 130 * pct2 / 100
-        y02    = pdf.get_y()
-        pdf.set_xy(pdf.l_margin, y02)
-        pdf.set_font("Helvetica", "B", 9.5)
-        pdf.set_text_color(*TEXT_DARK)
-        pdf.cell(52, 9, _s(d2["nombre"]))
-        pdf.set_fill_color(*color2)
-        pdf.rect(pdf.l_margin+52, y02+2, bar_w2, 4.5, "F")
-        pdf.set_xy(pdf.l_margin+52+bar_w2+2, y02)
-        pdf.set_font("Helvetica", "B", 9.5)
-        pdf.set_text_color(*color2)
-        pdf.cell(18, 9, f"{pct2}%")
-        pdf.set_xy(pdf.l_margin+52+bar_w2+21, y02)
-        pdf.set_font("Helvetica", "", 8.5)
-        pdf.set_text_color(*TEXT_MID)
-        pdf.cell(40, 9, _n(d2.get("total_imp",0)) + " viz.")
-        pdf.ln(10)
-    pdf.set_font("Helvetica", "", 8.5)
-    pdf.set_text_color(*TEXT_DARK)
-    pdf.multi_cell(0, 5, "La barra muestra la proporcion de visualizaciones totales aportada por cada portal durante el ultimo mes.")
-    pdf.ln(5)
+    pdf.set_y(yc + r + 5)
 
     # PAGINAS 2+ — UN PORTAL POR PAGINA
     for i, d in enumerate(resumenes):

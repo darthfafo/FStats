@@ -225,7 +225,7 @@ with st.spinner("Cargando datos de todos los portales..."):
 # Totales globales
 gran_total_imp = sum(r["total_imp"]   for r in resumenes)
 gran_total_seg = sum(r["total_seg"]   for r in resumenes)
-gran_total_eng = sum(r["total_eng"]   for r in resumenes)
+gran_total_eng = sum(r.get("fb_eng",0) + r.get("ig_engaged",0) for r in resumenes)
 gran_total_fb  = sum(r["fb_imp"]      for r in resumenes)
 gran_total_ig  = sum(r["ig_imp"]      for r in resumenes)
 tasa_eng       = (gran_total_eng / gran_total_seg * 100) if gran_total_seg > 0 else 0
