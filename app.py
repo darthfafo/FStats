@@ -157,6 +157,7 @@ def cargar_resumen(nombre, page_id, ig_id, access_token):
         "fb_imp":   0, "fb_reach": 0, "fb_seg": 0,
         "fb_eng":   0, "fb_vistas": 0,
         "ig_imp":   0, "ig_reach": 0, "ig_seg": 0, "ig_engaged": 0,
+        "fb_daily": {}, "ig_daily": {}, "ig_daily_seg": {},
     }
     try:
         fb        = FacebookCollector(page_id=page_id, access_token=access_token)
@@ -167,6 +168,7 @@ def cargar_resumen(nombre, page_id, ig_id, access_token):
         res["fb_reach"]  = imp_fb["total_reach"]
         res["fb_eng"]    = imp_fb.get("engagement", 0)
         res["fb_vistas"] = imp_fb.get("vistas", 0)
+        res["fb_daily"]  = imp_fb.get("daily", {})
     except Exception as e:
         print(f"[{nombre}] FB: {e}")
     try:
@@ -174,9 +176,11 @@ def cargar_resumen(nombre, page_id, ig_id, access_token):
         info_ig   = ig.get_account_info()
         res["ig_seg"] = info_ig.get("followers_count", 0)
         imp_ig    = ig.get_media_impressions(limit=25)
-        res["ig_imp"]     = imp_ig["total_imp"]
-        res["ig_reach"]   = imp_ig["total_reach"]
-        res["ig_engaged"] = imp_ig.get("engaged", 0)
+        res["ig_imp"]       = imp_ig["total_imp"]
+        res["ig_reach"]     = imp_ig["total_reach"]
+        res["ig_engaged"]   = imp_ig.get("engaged", 0)
+        res["ig_daily"]     = imp_ig.get("daily", {})
+        res["ig_daily_seg"] = imp_ig.get("daily_followers", {})
     except Exception as e:
         print(f"[{nombre}] IG: {e}")
 
@@ -192,7 +196,8 @@ with st.spinner("Cargando datos de todos los portales..."):
         if p.get("ig_only"):
             r = {"nombre": p["nombre"], "icono": p["icono"],
                  "fb_imp": 0, "fb_reach": 0, "fb_seg": 0, "fb_eng": 0, "fb_vistas": 0,
-                 "ig_imp": 0, "ig_reach": 0, "ig_seg": 0,
+                 "ig_imp": 0, "ig_reach": 0, "ig_seg": 0, "ig_engaged": 0,
+                 "fb_daily": {}, "ig_daily": {}, "ig_daily_seg": {},
                  "total_imp": 0, "total_reach": 0, "total_seg": 0, "total_eng": 0,
                  "pagina": p["pagina"]}
             try:
@@ -200,8 +205,11 @@ with st.spinner("Cargando datos de todos los portales..."):
                 info_ig = ig.get_account_info()
                 r["ig_seg"] = info_ig.get("followers_count", 0)
                 imp_ig = ig.get_media_impressions(limit=25)
-                r["ig_imp"]   = imp_ig["total_imp"]
-                r["ig_reach"] = imp_ig["total_reach"]
+                r["ig_imp"]       = imp_ig["total_imp"]
+                r["ig_reach"]     = imp_ig["total_reach"]
+                r["ig_engaged"]   = imp_ig.get("engaged", 0)
+                r["ig_daily"]     = imp_ig.get("daily", {})
+                r["ig_daily_seg"] = imp_ig.get("daily_followers", {})
             except Exception as e:
                 print(f"[{p['nombre']}] IG: {e}")
             r["total_imp"]   = r["ig_imp"]
