@@ -134,6 +134,97 @@ class Brief(FPDF):
         self.set_auto_page_break(True, margin=14)
         self.set_y(y0 + h + 3)
 
+    def _participation_stacked_bar(self, resumenes, total):
+        """Barra horizontal apilada mostrando participacion de cada portal."""
+        w = 182
+        x0, y0 = self.l_margin, self.get_y()
+        h = 14
+        self.set_auto_page_break(False)
+        x_cur = x0
+        for i, d in enumerate(resumenes):
+            pct = d.get("total_imp", 0) / total
+            if pct < 0.001:
+                continue
+            seg_w = w * pct
+            color = _c(d["nombre"], i)
+            self.set_fill_color(*color)
+            self.rect(x_cur, y0, seg_w, h, "F")
+            if seg_w > 20:
+                self.set_xy(x_cur+2, y0+1.5)
+                self.set_font("Helvetica", "B", 7)
+                self.set_text_color(*WHITE)
+                self.cell(seg_w-4, 4, f"{pct*100:.1f}%")
+                self.set_xy(x_cur+2, y0+7)
+                self.set_font("Helvetica", "", 5.5)
+                self.cell(seg_w-4, 4, _s(d["nombre"].split()[0]))
+            x_cur += seg_w
+        # Leyenda debajo en una fila
+        self.set_y(y0 + h + 3)
+        x_leg = self.l_margin
+        row = 0
+        for i, d in enumerate(resumenes):
+            pct = _p(d.get("total_imp",0), total)
+            color = _c(d["nombre"], i)
+            if x_leg + 90 > self.l_margin + 182:
+                x_leg = self.l_margin
+                row += 1
+                self.ln(9)
+            self.set_fill_color(*color)
+            self.rect(x_leg, self.get_y()+2, 4, 4, "F")
+            self.set_xy(x_leg+6, self.get_y())
+            self.set_font("Helvetica", "B", 7.5)
+            self.set_text_color(*TEXT_DARK)
+            self.cell(36, 8, _s(d["nombre"]))
+            self.set_font("Helvetica", "B", 7.5)
+            self.set_text_color(*color)
+            self.cell(12, 8, f"{pct}%")
+            self.set_font("Helvetica", "", 7)
+            self.set_text_color(*TEXT_MID)
+            self.cell(30, 8, _n(d.get("total_imp",0)))
+            x_leg += 90
+        self.set_auto_page_break(True, margin=14)
+        self.ln(9)
+
+    def _mini_log_chart(self, portales_data, x, y, w, h):
+        """Grafico de lineas logaritmico compact para multiples portales."""
+        all_vals = [v for d in portales_data for v in d.get("ig_daily",{}).values() if v > 0]
+        if not all_vals or len(all_vals) < 3:
+            return
+        log_min = math.log10(max(1, min(all_vals)))
+        log_max = math.log10(max(all_vals))
+        log_range = log_max - log_min or 1
+        pad = 7
+        ch = h - pad - 2
+        self.set_fill_color(*CARD_BG)
+        self.rect(x, y, w, h, "F")
+        self.set_xy(x+2, y+1.5)
+        self.set_font("Helvetica", "B", 6)
+        self.set_text_color(*TEXT_MID)
+        self.cell(w-4, 4, "Alcance diario IG por portal (escala logaritmica)")
+        for i, d in enumerate(portales_data):
+            ig_daily = d.get("ig_daily", {})
+            if not ig_daily:
+                continue
+            items = sorted(ig_daily.items())
+            n = len(items)
+            if n < 2:
+                continue
+            color = _c(d["nombre"], i)
+            self.set_draw_color(*color)
+            all_dates = [k for k, _ in items]
+            valid = [(k, v) for k, v in items if v > 0]
+            if len(valid) < 2:
+                continue
+            pts = []
+            for date, val in valid:
+                idx = all_dates.index(date)
+                px = x + (idx / max(n-1,1)) * w
+                log_v = math.log10(max(1, val))
+                py = y + pad + ch - (log_v - log_min) / log_range * ch
+                pts.append((px, py))
+            for j in range(len(pts)-1):
+                self.line(pts[j][0], pts[j][1], pts[j+1][0], pts[j+1][1])
+
     def _hero_box(self, numero, subtitulo):
         y0 = self.get_y()
         h  = 26
@@ -401,9 +492,10 @@ class Brief(FPDF):
                 (_n(fb_seg), "Seguidores", "fans de la pagina"),
             ], BLUE_FB)
             self._metric_note(
-                "Alcance unico: personas distintas que vieron al menos 1 publicacion (sin repeticion). "
-                "Engagement: suma de likes + comentarios + compartidos. "
-                "Tasa de engagement: que tan activa es la audiencia en proporcion a su tamano (1-3% = excelente)."
+                "Alcance unico: cuantas personas distintas vieron al menos una publicacion. "
+                "Engagement: total de likes + comentarios + compartidos del mes. "
+                "Eng/Seguidor: interacciones del mes dividido seguidores. Puede superar el 100% "
+                "si el portal publica mucho contenido y cada post genera interacciones."
             )
             if fb_daily:
                 yc_fb = self.get_y()
@@ -606,102 +698,102 @@ def generar_brief(resumenes: list, totales: dict,
     total_eng = totales.get("total_eng", 0)
     total_seg = totales.get("total_seg", 0)
 
-    # PAGINA 1 — HERO + KPIs + EXPLICACIONES + DONUT
+    # PAGINA 1 — COMPLETA
     pdf.add_page()
 
-    # Breve explicacion ANTES del numero
+    # ── Contexto breve antes del numero (sin jerga tecnica) ──────────
     pdf.set_font("Helvetica", "B", 9)
     pdf.set_text_color(*HERO_BG)
-    pdf.cell(0, 6, "Como se construye este numero", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Total visualizaciones | ultimo mes | todas las fuentes", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 8.5)
     pdf.set_text_color(*TEXT_DARK)
-    pdf.multi_cell(0, 5, _s(
-        "Este numero combina dos metricas: el ALCANCE UNICO de Facebook "
-        "(personas distintas que vieron el contenido) mas las REPRODUCCIONES de Instagram "
-        "(veces que se vio cualquier Reel, video o foto). Ambas fuentes son organicas, "
-        "sin inversion publicitaria. A continuacion el detalle de cada componente."
+    pdf.multi_cell(0, 4.8, _s(
+        "Este numero suma cuantas veces fue visto el contenido de todos los portales durante el ultimo mes, "
+        "combinando Facebook (personas distintas que vieron algo) e Instagram (reproducciones de videos y reels). "
+        "Todo el impacto es organico — sin publicidad pagada."
     ))
-    pdf.ln(4)
+    pdf.ln(3)
 
-    # Hero con numero total
+    # ── Hero box con numero grande ────────────────────────────────────
     pdf._hero_box(
         _n(total),
-        f"TOTAL VISUALIZACIONES | ULTIMO MES  |  FB {_p(total_fb,total)}% + IG {_p(total_ig,total)}%"
+        _s(f"Facebook alcance unico + Instagram visualizaciones totales  |  {len(resumenes)} portales activos")
     )
 
-    # 4 KPIs principales
+    # ── 4 KPIs ────────────────────────────────────────────────────────
     pdf._kpi_row([
-        (_n(total_fb),  "Alcance Facebook",       f"{_p(total_fb,total)}% del total",  BLUE_FB),
-        (_n(total_ig),  "Visualiz. Instagram",    f"{_p(total_ig,total)}% del total",  PINK_IG),
-        (_n(total_eng), "Interacciones FB + IG",  "engagement FB + cuentas activas IG", GREEN),
-        (_n(total_seg), "Seguidores totales",     f"{len(resumenes)} portales activos", (30,30,30)),
+        (_n(total_fb),  "Alcance Facebook",      f"{_p(total_fb,total)}% del total",  BLUE_FB),
+        (_n(total_ig),  "Visualiz. Instagram",   f"{_p(total_ig,total)}% del total",  PINK_IG),
+        (_n(total_eng), "Interacciones FB + IG", "likes, comentarios, guardados",      GREEN),
+        (_n(total_seg), "Seguidores totales",    f"{len(resumenes)} portales activos", (30,30,30)),
     ])
 
-    # EXPLICACIONES despues de los KPIs
-    pdf._section("Como se interpretan estas estadisticas", HERO_BG)
+    # ── Explicaciones compactas en 2 columnas (sin jerga tecnica) ─────
+    pdf._section("Que mide cada indicador", HERO_BG)
+    col_w = 88
+    xi, xd = pdf.l_margin, pdf.l_margin + col_w + 6
+    y_c = pdf.get_y()
 
-    pdf.set_font("Helvetica", "B", 8.5)
-    pdf.set_text_color(*BLUE_FB)
-    pdf.cell(0, 6, "FACEBOOK | Alcance unico (personas reales)", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font("Helvetica", "", 8.5)
+    def _exp(x, y, color, titulo, cuerpo):
+        pdf.set_xy(x, y)
+        pdf.set_font("Helvetica", "B", 7.5)
+        pdf.set_text_color(*color)
+        pdf.cell(col_w, 5, _s(titulo))
+        pdf.set_xy(x, y+5)
+        pdf.set_font("Helvetica", "", 7)
+        pdf.set_text_color(*TEXT_DARK)
+        pdf.multi_cell(col_w, 4, _s(cuerpo))
+        return pdf.get_y() + 2
+
+    y_l = _exp(xi, y_c, BLUE_FB, "FACEBOOK | Alcance real de personas",
+        "Cuantas personas distintas vieron al menos una publicacion en el mes. "
+        "Si alguien vio 10 posts, cuenta como 1. Sin repeticiones.")
+    y_l = _exp(xi, y_l, GREEN, "INTERACCIONES | Actividad del publico",
+        "Suma de likes, comentarios y compartidos en Facebook mas las cuentas "
+        "que interactuaron con algun contenido en Instagram durante el mes.")
+
+    y_r = _exp(xd, y_c, PINK_IG, "INSTAGRAM | Total de reproducciones",
+        "Cuantas veces se vio cualquier contenido (Reels, videos, fotos). "
+        "Una persona puede sumar varias reproducciones en el mes.")
+    y_r = _exp(xd, y_r, (30,30,30), "SEGUIDORES | Base de audiencia",
+        "Suma de seguidores de Facebook e Instagram de todos los portales. "
+        "Es la audiencia que recibe el contenido de forma directa y habitual.")
+
+    pdf.set_y(max(y_l, y_r) + 2)
+
+    # ── Grafico logaritmico de tendencia diaria ───────────────────────
+    pdf._section("Evolucion del alcance diario — Instagram", HERO_BG)
+    pdf.set_font("Helvetica", "", 7)
     pdf.set_text_color(*TEXT_DARK)
-    pdf.multi_cell(0, 5, _s(
-        "En Facebook contamos las personas DISTINTAS que vieron al menos una publicacion "
-        "de la pagina durante el ultimo mes. Si alguien vio 10 posts, cuenta como 1. "
-        "Esta metrica (page_impressions_unique) mide la AUDIENCIA REAL impactada, sin repeticiones. "
-        "Es la forma mas rigurosa de medir alcance en redes sociales."
+    pdf.multi_cell(0, 4, _s(
+        "Alcance diario de cada portal en Instagram a lo largo del mes. "
+        "La escala logaritmica permite comparar portales de muy distinto tamano en el mismo grafico. "
+        "Cada pico coincide con dias de publicaciones de alto rendimiento."
     ))
-    pdf.ln(3)
-
-    pdf.set_font("Helvetica", "B", 8.5)
-    pdf.set_text_color(*PINK_IG)
-    pdf.cell(0, 6, "INSTAGRAM | Reproducciones totales (visualizaciones de contenido)", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font("Helvetica", "", 8.5)
-    pdf.set_text_color(*TEXT_DARK)
-    pdf.multi_cell(0, 5, _s(
-        "En Instagram sumamos TODAS las veces que se vio cualquier contenido "
-        "(Reels, videos, fotos) en el ultimo mes. Una misma persona puede sumar "
-        "multiples reproducciones al ver varios videos. Esta metrica (views total_value) "
-        "refleja el VOLUMEN TOTAL de consumo de contenido de la cuenta."
-    ))
-    pdf.ln(3)
-
-    pdf.set_font("Helvetica", "B", 8.5)
-    pdf.set_text_color(*GREEN)
-    pdf.cell(0, 6, "INTERACCIONES FB + IG | Engagement combinado", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font("Helvetica", "", 8.5)
-    pdf.set_text_color(*TEXT_DARK)
-    pdf.multi_cell(0, 5, _s(
-        "Suma de interacciones en Facebook (likes + comentarios + compartidos en publicaciones) "
-        "e interacciones en Instagram (cuentas unicas que dieron like, comentaron o guardaron "
-        "algun contenido del mes). Mide la actividad activa de la audiencia mas alla del alcance pasivo."
-    ))
-    pdf.ln(3)
-
-    pdf.set_font("Helvetica", "B", 8.5)
-    pdf.set_text_color(*TEXT_DARK)
-    pdf.cell(0, 6, "SEGUIDORES TOTALES | Audiencia acumulada entre portales", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font("Helvetica", "", 8.5)
-    pdf.multi_cell(0, 5, _s(
-        "Suma de seguidores de Facebook e Instagram de todos los portales activos. "
-        "Representa la base de audiencia que recibe el contenido de forma directa y habitual. "
-        "Todo el impacto de este informe es 100% ORGANICO, sin inversion publicitaria."
-    ))
-    pdf.ln(4)
-
-    # DONUT con leyenda — sin barras duplicadas
-    pdf._section("Participacion de cada portal en el impacto total", HERO_BG)
-    pdf.set_font("Helvetica", "", 8)
-    pdf.set_text_color(*TEXT_DARK)
-    pdf.cell(0, 5, "Porcentaje de visualizaciones aportado por cada portal sobre el total del mes.", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(2)
-    y_g = pdf.get_y()
-    r   = 30
-    xc  = pdf.l_margin + 38
-    yc  = y_g + r + 4
-    pdf._donut(resumenes, total, xc, yc, r)
-    pdf._donut_legend(resumenes, total, pdf.l_margin + 80, y_g + 5)
-    pdf.set_y(yc + r + 5)
+    chart_y = pdf.get_y()
+    pdf._mini_log_chart(resumenes, pdf.l_margin, chart_y, 182, 26)
+    # Leyenda de colores del grafico
+    pdf.set_y(chart_y + 27)
+    x_leg2 = pdf.l_margin
+    for i, d in enumerate(resumenes):
+        color = _c(d["nombre"], i)
+        pdf.set_fill_color(*color)
+        pdf.rect(x_leg2, pdf.get_y()+2, 4, 4, "F")
+        pdf.set_xy(x_leg2+6, pdf.get_y())
+        pdf.set_font("Helvetica", "", 7)
+        pdf.set_text_color(*TEXT_DARK)
+        pdf.cell(42, 8, _s(d["nombre"]))
+        x_leg2 += 48
+    pdf.ln(9)
+
+    # ── Barra de participacion apilada (ancho completo) ───────────────
+    pdf._section("Participacion de cada portal en el impacto total del mes", HERO_BG)
+    pdf.set_font("Helvetica", "", 7)
+    pdf.set_text_color(*TEXT_DARK)
+    pdf.cell(0, 4, "Cada segmento representa el porcentaje de visualizaciones aportado por ese portal.", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(2)
+    pdf._participation_stacked_bar(resumenes, total)
 
     # PAGINAS 2+ — UN PORTAL POR PAGINA
     for i, d in enumerate(resumenes):
