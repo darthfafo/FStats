@@ -5,7 +5,10 @@ from datetime import datetime
 from config import PORTALES
 from collectors.facebook import FacebookCollector
 from collectors.instagram import InstagramCollector  # también usado para portales ig_only
-from pdf_report import generar_brief
+import importlib, pdf_report as _pdf_mod
+def generar_brief(resumenes, totales):
+    importlib.reload(_pdf_mod)
+    return _pdf_mod.generar_brief(resumenes, totales)
 
 st.set_page_config(
     page_title="Panel General",

@@ -1,5 +1,5 @@
 """
-Brief PDF - estilo oscuro igual al panel FStats.
+Brief PDF - estilo oscuro igual al panel FStats. v2
 """
 from fpdf import FPDF
 from datetime import datetime
