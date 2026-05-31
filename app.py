@@ -6,9 +6,62 @@ from config import PORTALES
 from collectors.facebook import FacebookCollector
 from collectors.instagram import InstagramCollector  # también usado para portales ig_only
 import importlib, pdf_report as _pdf_mod
-def generar_brief(resumenes, totales):
+from datetime import timedelta
+
+def generar_brief(resumenes, totales, top_ig=None, top_fb=None):
     importlib.reload(_pdf_mod)
-    return _pdf_mod.generar_brief(resumenes, totales)
+    return _pdf_mod.generar_brief(resumenes, totales, top_ig=top_ig, top_fb=top_fb)
+
+@st.cache_data(ttl=3600)
+def cargar_posts_pdf(nombre, page_id, ig_id, access_token, ig_only):
+    """Carga posts para el PDF (solo se llama al generar)."""
+    posts_ig, posts_fb = [], []
+    limite_str = (datetime.now() - timedelta(days=31)).strftime("%Y-%m-%d")
+    limite_dt  = datetime.now() - timedelta(days=31)
+    try:
+        ig = InstagramCollector(ig_id=ig_id, access_token=access_token)
+        all_m = ig.get_all_media(max_posts=500)
+        for p in all_m.get("data", []):
+            if p.get("timestamp", "")[:10] >= limite_str:
+                posts_ig.append({
+                    "portal":    nombre,
+                    "ts":        p.get("timestamp", "")[:10],
+                    "tipo":      "reel" if p.get("product_type") == "clips"
+                                 else p.get("media_type", "IMAGE").lower(),
+                    "likes":     p.get("like_count", 0),
+                    "comments":  p.get("comments_count", 0),
+                    "caption":   (p.get("caption") or "")[:80],
+                    "permalink": p.get("permalink", ""),
+                })
+    except Exception as e:
+        print(f"[{nombre}] PDF IG posts: {e}")
+    if not ig_only:
+        try:
+            fb = FacebookCollector(page_id=page_id, access_token=access_token)
+            raw = fb.get_recent_posts(limit=50)
+            for p in raw.get("data", []):
+                try:
+                    fecha = datetime.strptime(p.get("created_time", "")[:10], "%Y-%m-%d")
+                    if fecha < limite_dt:
+                        continue
+                    reac  = p.get("reactions") or p.get("likes") or {}
+                    likes = reac.get("summary", {}).get("total_count", 0)
+                    com   = p.get("comments", {}).get("summary", {}).get("total_count", 0)
+                    shares= p.get("shares", {}).get("count", 0)
+                    posts_fb.append({
+                        "portal":      nombre,
+                        "fecha":       p.get("created_time", "")[:10],
+                        "mensaje":     (p.get("message") or "")[:80],
+                        "likes":       likes,
+                        "comentarios": com,
+                        "compartidos": shares,
+                        "engagement":  likes + com + shares,
+                    })
+                except Exception:
+                    pass
+        except Exception as e:
+            print(f"[{nombre}] PDF FB posts: {e}")
+    return posts_ig, posts_fb
 
 st.set_page_config(
     page_title="Panel General",
@@ -263,8 +316,19 @@ if len(resumenes) > 1:
 with st.sidebar:
     st.markdown("---")
     if st.button("📄 Generar brief PDF", use_container_width=True, type="primary"):
-        with st.spinner("Generando PDF..."):
+        with st.spinner("Generando PDF... (puede tardar 30s por los posts)"):
             try:
+                # Cargar posts de cada portal para el top 10
+                all_posts_ig, all_posts_fb = [], []
+                for p in PORTALES_ACTIVOS:
+                    pig, pfb = cargar_posts_pdf(
+                        p["nombre"], p.get("facebook_page_id"),
+                        p.get("instagram_id"), p["access_token"],
+                        p.get("ig_only", False)
+                    )
+                    all_posts_ig.extend(pig)
+                    all_posts_fb.extend(pfb)
+
                 pdf_bytes = generar_brief(
                     resumenes=resumenes,
                     totales={
@@ -273,7 +337,9 @@ with st.sidebar:
                         "total_eng": gran_total_eng,
                         "total_fb":  gran_total_fb,
                         "total_ig":  gran_total_ig,
-                    }
+                    },
+                    top_ig=all_posts_ig,
+                    top_fb=all_posts_fb,
                 )
                 fecha = datetime.now().strftime("%Y%m%d")
                 st.sidebar.download_button(

@@ -74,7 +74,7 @@ class DarkBrief(FPDF):
     def footer(self):
         self.set_y(-10)
         self.set_font("Helvetica", "I", 6)
-        self.set_text_color(*SLATE)
+        self.set_text_color(*LIGHT)
         self.cell(0, 4,
                   f"FStats  |  Pagina {self.page_no()} de {{nb}}  |  Confidencial",
                   align="C")
@@ -93,7 +93,7 @@ class DarkBrief(FPDF):
         self.cell(0, 4, _s(label.upper()).replace("?", "|"), align="C", new_x="LMARGIN", new_y="NEXT")
         if sublabel:
             self.set_font("Helvetica", "", 6.5)
-            self.set_text_color(*SLATE)
+            self.set_text_color(*LIGHT)
             self.cell(0, 4, _s(sublabel), align="C", new_x="LMARGIN", new_y="NEXT")
         self.ln(3)
 
@@ -116,7 +116,7 @@ class DarkBrief(FPDF):
         # Sub
         self.set_xy(x + 3, y + 18)
         self.set_font("Helvetica", "", 5.5)
-        self.set_text_color(*SLATE)
+        self.set_text_color(*LIGHT)
         self.cell(w - 6, 4, _s(sub))
 
     def _kpi_grid(self, items):
@@ -221,25 +221,31 @@ class DarkBrief(FPDF):
         x0, y0 = self.l_margin, self.get_y()
         fb_w = w * fb / total
         ig_w = w * ig / total
-        h = 8
+        h = 12
         if fb_w > 0:
             self.set_fill_color(*BLUE)
             self.rect(x0, y0, fb_w, h, "F")
         if ig_w > 0:
             self.set_fill_color(*PINK)
             self.rect(x0 + fb_w, y0, ig_w, h, "F")
-        # Texto
         self.set_font("Helvetica", "B", 6.5)
         self.set_text_color(*WHITE)
         fb_pct = _p(fb, total)
         ig_pct = _p(ig, total)
-        if fb_w > 20:
-            self.set_xy(x0 + 2, y0 + 1.5)
-            self.cell(fb_w - 4, 5, f"{label_fb}  {fb_pct}%")
-        if ig_w > 20:
-            self.set_xy(x0 + fb_w + 2, y0 + 1.5)
-            self.cell(ig_w - 4, 5, f"{label_ig}  {ig_pct}%")
-        self.ln(h + 3)
+        if fb_w > 30:
+            self.set_xy(x0 + 2, y0 + 1)
+            self.cell(fb_w - 4, 4, f"{label_fb}  {fb_pct}%")
+            self.set_xy(x0 + 2, y0 + 5.5)
+            self.set_font("Helvetica", "", 5.5)
+            self.cell(fb_w - 4, 4, _n(fb))
+        if ig_w > 30:
+            self.set_xy(x0 + fb_w + 2, y0 + 1)
+            self.set_font("Helvetica", "B", 6.5)
+            self.cell(ig_w - 4, 4, f"{label_ig}  {ig_pct}%")
+            self.set_xy(x0 + fb_w + 2, y0 + 5.5)
+            self.set_font("Helvetica", "", 5.5)
+            self.cell(ig_w - 4, 4, _n(ig))
+        self.ln(h + 4)
 
     # ── Metricas en fila ──────────────────────────────────────────────
     def _metric_row(self, items, accent):
@@ -266,7 +272,7 @@ class DarkBrief(FPDF):
             # sub
             self.set_xy(x0 + 2, y0 + 19)
             self.set_font("Helvetica", "", 5.2)
-            self.set_text_color(*SLATE)
+            self.set_text_color(*LIGHT)
             self.cell(w - 4, 3, _s(sub))
             x0 += w
         self.set_y(y0 + h + 4)
@@ -311,7 +317,7 @@ class DarkBrief(FPDF):
         self.set_text_color(*WHITE)
         self.cell(0, 14, _n(t_imp), new_x="LMARGIN", new_y="NEXT")
         self.set_font("Helvetica", "", 7)
-        self.set_text_color(*SLATE)
+        self.set_text_color(*LIGHT)
         self.cell(0, 5, "visualizaciones totales (FB alcance unico + IG reproducciones) - ultimo mes",
                   new_x="LMARGIN", new_y="NEXT")
         self.ln(4)
@@ -356,8 +362,106 @@ class DarkBrief(FPDF):
         self.ln(5)
 
 
+    # ── Pagina Top 10 posts ───────────────────────────────────────────
+    def _top10_page(self, posts, titulo, icono, campo_valor, campo_val_label,
+                    campo2, campo2_label, campo3, campo3_label, accent):
+        """Pagina de top 10 publicaciones."""
+        if not posts:
+            return
+        self.add_page()
+        self._section_title(titulo, accent)
+
+        top10 = sorted(posts, key=lambda x: x.get(campo_valor, 0), reverse=True)[:10]
+
+        for i, p in enumerate(top10, 1):
+            portal  = _s(p.get("portal", ""))
+            fecha   = _s(p.get("ts") or p.get("fecha", ""))
+            texto   = _s(p.get("caption") or p.get("mensaje", ""))
+            v1 = p.get(campo_valor, 0)
+            v2 = p.get(campo2, 0)
+            v3 = p.get(campo3, 0)
+
+            # Tipo icono para IG
+            tipo = p.get("tipo", "")
+            tipo_icon = "[REEL]" if tipo == "reel" else ("[VID]" if tipo == "video" else "[IMG]")
+
+            # Color del portal
+            p_idx = next((j for j, r in enumerate(self._portales_ref)
+                          if r.get("nombre") == p.get("portal")), 0)
+            color = _c(p.get("portal", ""), p_idx)
+
+            y0 = self.get_y()
+            if y0 > 258:
+                break
+
+            # Fila
+            self.set_fill_color(*CARD)
+            self.rect(self.l_margin, y0, 182, 18, "F")
+            self.set_fill_color(*color)
+            self.rect(self.l_margin, y0, 3, 18, "F")
+
+            # Numero
+            self.set_xy(self.l_margin + 5, y0 + 2)
+            self.set_font("Helvetica", "B", 9)
+            self.set_text_color(*color)
+            self.cell(8, 5, f"#{i}")
+
+            # Portal + fecha
+            self.set_xy(self.l_margin + 14, y0 + 1.5)
+            self.set_font("Helvetica", "B", 7)
+            self.set_text_color(*WHITE)
+            self.cell(60, 4, f"{portal}  {tipo_icon}  {fecha}")
+
+            # Texto
+            self.set_xy(self.l_margin + 14, y0 + 6)
+            self.set_font("Helvetica", "", 6.2)
+            self.set_text_color(*LIGHT)
+            self.cell(100, 4, texto[:72])
+
+            # Metricas a la derecha
+            mx = self.l_margin + 120
+            for val, lbl, clr in [(v1, campo_val_label, WHITE),
+                                   (v2, campo2_label, LIGHT),
+                                   (v3, campo3_label, LIGHT)]:
+                self.set_xy(mx, y0 + 1.5)
+                self.set_font("Helvetica", "B", 8)
+                self.set_text_color(*clr)
+                self.cell(20, 5, _n(val), align="R")
+                self.set_xy(mx, y0 + 7)
+                self.set_font("Helvetica", "", 5)
+                self.set_text_color(*LIGHT)
+                self.cell(20, 3, lbl, align="R")
+                mx += 21
+
+            self.set_y(y0 + 20)
+
+        # Participacion por portal en el top10
+        self.ln(3)
+        self._section_title("Participacion de cada portal en este top 10", accent)
+        from collections import Counter
+        conteo = Counter(p.get("portal") for p in top10)
+        total_p = sum(conteo.values())
+        x0 = self.l_margin
+        for nombre, cnt in sorted(conteo.items(), key=lambda x: -x[1]):
+            pct_p = round(cnt / total_p * 100, 1)
+            p_idx = next((j for j, r in enumerate(self._portales_ref)
+                          if r.get("nombre") == nombre), 0)
+            color = _c(nombre, p_idx)
+            self.set_fill_color(*color)
+            self.rect(x0, self.get_y() + 1, 4, 4, "F")
+            self.set_xy(x0 + 6, self.get_y())
+            self.set_font("Helvetica", "B", 7.5)
+            self.set_text_color(*WHITE)
+            self.cell(60, 6, _s(nombre))
+            self.set_font("Helvetica", "", 7)
+            self.set_text_color(*color)
+            self.cell(20, 6, f"{cnt} posts  ({pct_p}%)")
+            self.ln(7)
+
+
 # ── Funcion publica ───────────────────────────────────────────────────
-def generar_brief(resumenes: list, totales: dict) -> bytes:
+def generar_brief(resumenes: list, totales: dict,
+                  top_ig: list = None, top_fb: list = None) -> bytes:
     total     = totales.get("total_imp", 1) or 1
     total_fb  = totales.get("total_fb", 0)
     total_ig  = totales.get("total_ig", 0)
@@ -365,6 +469,7 @@ def generar_brief(resumenes: list, totales: dict) -> bytes:
     total_seg = totales.get("total_seg", 0)
 
     pdf = DarkBrief()
+    pdf._portales_ref = resumenes  # referencia para colores en top10
     pdf.alias_nb_pages()
     pdf.set_margins(14, 14, 14)
     pdf.set_auto_page_break(auto=True, margin=14)
@@ -460,5 +565,31 @@ def generar_brief(resumenes: list, totales: dict) -> bytes:
 
     for i, d in enumerate(resumenes):
         pdf._portal_card(d, total, i)
+
+    # ── Top 10 Instagram ─────────────────────────────────────────────
+    if top_ig:
+        pdf._top10_page(
+            top_ig,
+            titulo="Top 10 publicaciones Instagram — ultimo mes",
+            icono="IG",
+            campo_valor="likes",      campo_val_label="Likes",
+            campo2="comments",        campo2_label="Comentarios",
+            campo3="likes",           campo3_label="",
+            accent=PINK,
+        )
+
+    # ── Top 10 Facebook ──────────────────────────────────────────────
+    if top_fb:
+        fb_con_datos = [p for p in top_fb if p.get("engagement", 0) > 0]
+        if fb_con_datos:
+            pdf._top10_page(
+                fb_con_datos,
+                titulo="Top 10 publicaciones Facebook — ultimo mes",
+                icono="FB",
+                campo_valor="engagement",  campo_val_label="Engagement",
+                campo2="likes",            campo2_label="Likes",
+                campo3="compartidos",      campo3_label="Compartidos",
+                accent=BLUE,
+            )
 
     return bytes(pdf.output())
