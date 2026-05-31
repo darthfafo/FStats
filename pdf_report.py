@@ -555,18 +555,20 @@ class Brief(FPDF):
             self.set_font("Helvetica", "", 7)
             self.set_text_color(*TEXT_MID)
             self.cell(55, 5, texto[:50])
-            # Metricas: Likes y Comentarios
-            mx = self.l_margin + 118
-            for val, lbl in [(likes,"Likes"),(comms,"Coment.")]:
+            # Metricas: Likes | Comentarios | Visualizaciones (plays)
+            plays = p.get("plays", 0)
+            plays_str = _n(plays) if plays > 0 else "N/D"
+            mx = self.l_margin + 119
+            for val, lbl in [(likes,"Likes"),(comms,"Coment."),(plays_str,"Visualiz.")]:
                 self.set_xy(mx, y0+1)
-                self.set_font("Helvetica", "B", 9.5)
+                self.set_font("Helvetica", "B", 9)
                 self.set_text_color(*TEXT_DARK)
-                self.cell(32, 6, _n(val), align="R")
+                self.cell(21, 6, val if isinstance(val, str) else _n(val), align="R")
                 self.set_xy(mx, y0+8)
-                self.set_font("Helvetica", "", 6.5)
+                self.set_font("Helvetica", "", 6)
                 self.set_text_color(*TEXT_LIGHT)
-                self.cell(32, 4, lbl, align="R")
-                mx += 32
+                self.cell(21, 4, lbl, align="R")
+                mx += 21
             self.set_y(y0 + h_row + 2)
         self.set_auto_page_break(True, margin=14)
         self.ln(4)
@@ -580,50 +582,8 @@ class Brief(FPDF):
             "de Instagram a usuarios que no siguen la cuenta, amplificando su alcance organico. "
             "Un Reel con 200.000 likes puede alcanzar 5 a 10 veces mas personas que el numero "
             "de seguidores del portal. Cada comentario indica que el contenido genero una "
-            "reaccion activa, lo que Instagram interpreta como senal de calidad."
-        ))
-        self.ln(4)
-
-        # ── Grafico de participacion visual ─────────────────────────
-        self._section("Participacion de cada portal en el top 10", PINK_IG)
-        from collections import Counter
-        conteo = Counter(p.get("portal") for p in top10)
-        total_p = sum(conteo.values())
-        portal_sorted = sorted(conteo.items(), key=lambda x: -x[1])
-
-        for nombre, cnt in portal_sorted:
-            p_idx = next((j for j,r in enumerate(resumenes)
-                          if r.get("nombre")==nombre), 0)
-            color = _c(nombre, p_idx)
-            pct_p = round(cnt/total_p*100, 1)
-            bar_w = 110 * pct_p / 100
-            y0 = self.get_y()
-            # Nombre del portal
-            self.set_xy(self.l_margin, y0)
-            self.set_font("Helvetica", "B", 9.5)
-            self.set_text_color(*TEXT_DARK)
-            self.cell(52, 10, _s(nombre))
-            # Barra de color
-            self.set_fill_color(*color)
-            self.rect(self.l_margin+52, y0+2.5, bar_w, 5, "F")
-            # Porcentaje en color
-            self.set_xy(self.l_margin+52+bar_w+3, y0)
-            self.set_font("Helvetica", "B", 9.5)
-            self.set_text_color(*color)
-            self.cell(22, 10, f"{pct_p}%")
-            # Conteo de posts
-            self.set_font("Helvetica", "", 8.5)
-            self.set_text_color(*TEXT_DARK)
-            self.cell(30, 10, f"{cnt} post{'s' if cnt>1 else ''}")
-            self.ln(11)
-
-        self.ln(3)
-        self.set_font("Helvetica", "", 8)
-        self.set_text_color(*TEXT_DARK)
-        self.multi_cell(0, 5, _s(
-            "El portal con mayor presencia en el top es el que mejor ha logrado conectar "
-            "con su audiencia a traves de contenido de alto impacto emocional o relevancia local. "
-            "La frecuencia de publicacion y el uso de formatos virales (Reels) son factores clave."
+            "reaccion activa, lo que Instagram interpreta como senal de calidad. "
+            "Las Visualizaciones muestran el total de reproducciones del video o reel."
         ))
 
 
