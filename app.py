@@ -20,19 +20,23 @@ def cargar_posts_pdf(nombre, page_id, ig_id, access_token, ig_only):
     limite_dt  = datetime.now() - timedelta(days=31)
     try:
         ig = InstagramCollector(ig_id=ig_id, access_token=access_token)
-        # Obtener plays (visualizaciones) de posts recientes via media impressions
+        # Obtener plays (visualizaciones) por ID exacto del post
         plays_lookup = {}
         try:
             imp_data = ig.get_media_impressions(limit=100)
             for pd_item in imp_data.get("posts_data", []):
-                ts_key = pd_item.get("ts", "")
-                plays_lookup[ts_key] = pd_item.get("plays", 0) or pd_item.get("reach", 0)
+                post_id = pd_item.get("id", "")
+                if post_id:
+                    # plays para Reels, reach para otros
+                    val = pd_item.get("plays", 0) or pd_item.get("reach", 0)
+                    plays_lookup[post_id] = val
         except Exception:
             pass
         all_m = ig.get_all_media(max_posts=500)
         for p in all_m.get("data", []):
             ts = p.get("timestamp", "")[:10]
             if ts >= limite_str:
+                post_id = p.get("id", "")
                 posts_ig.append({
                     "portal":    nombre,
                     "ts":        ts,
@@ -40,7 +44,7 @@ def cargar_posts_pdf(nombre, page_id, ig_id, access_token, ig_only):
                                  else p.get("media_type", "IMAGE").lower(),
                     "likes":     p.get("like_count", 0),
                     "comments":  p.get("comments_count", 0),
-                    "plays":     plays_lookup.get(ts, 0),
+                    "plays":     plays_lookup.get(post_id, 0),
                     "caption":   (p.get("caption") or "")[:80],
                     "permalink": p.get("permalink", ""),
                 })

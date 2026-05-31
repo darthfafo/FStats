@@ -229,6 +229,7 @@ class InstagramCollector:
                 if val > 0:
                     daily[ts] = daily.get(ts, 0) + val
                 posts_data.append({
+                    "id":        post.get("id", ""),   # ID exacto para matching
                     "ts":        ts,
                     "tipo":      "reel" if is_reel else media_type.lower(),
                     "plays":     imp,
