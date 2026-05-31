@@ -222,10 +222,27 @@ if activos:
                 opacity=0.7
             ))
 
+    # Verificar si realmente hay brechas significativas en los datos
+    from datetime import datetime as _dt2
+    _hoy = _dt2.now()
+    tiene_brechas = any(
+        len(d.get("ig_daily", {})) < 25
+        for d in activos if d.get("ig_daily")
+    )
+
     fig_trend.update_layout(
-        legend_title="Portal · Red",
-        legend=dict(font=dict(size=11)),
-        margin=dict(l=0,r=0,t=10,b=40),
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="top",
+            y=-0.12,
+            xanchor="left",
+            x=0,
+            font=dict(size=10.5),
+            bgcolor="rgba(0,0,0,0)",
+            title=None,
+        ),
+        margin=dict(l=0, r=0, t=10, b=130),
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
         xaxis=dict(gridcolor="rgba(255,255,255,0.08)", showgrid=True),
@@ -239,17 +256,24 @@ if activos:
     )
     st.plotly_chart(fig_trend, width='stretch')
 
-    # Nota explicativa dinámica
-    nota_base = (
-        "📐 **Escala logarítmica** — cada división = 10× el valor anterior. "
-        "Permite comparar portales con audiencias muy distintas. "
-        "**Línea continua** = Instagram · **Punteada** = Facebook. "
-        "Los puntos (•) marcan cada día con dato disponible; una brecha indica día sin datos."
-    )
+    # Nota explicativa — solo lo relevante
+    partes = [
+        "📐 **Escala logarítmica**: cada división = 10× el valor anterior, "
+        "permite comparar portales con audiencias muy distintas.",
+        "**Línea continua** = Instagram (reproducciones diarias) · **Punteada** = Facebook (alcance único).",
+    ]
+    if tiene_brechas:
+        partes.append("Los puntos (•) marcan días con dato; una brecha indica día sin datos.")
     if notas_inicio:
-        nota_base += "  \n⚠️ Inicio tardío de datos: " + " | ".join(notas_inicio) + \
-                     " (la API de Meta solo provee histórico desde que el portal se conectó al panel)."
-    st.caption(nota_base)
+        partes.append(
+            "⚠️ Inicio tardío: " + " | ".join(notas_inicio) +
+            " — Meta solo provee histórico desde la conexión al panel."
+        )
+    partes.append(
+        "ℹ️ Los datos del día actual pueden no estar disponibles para todos los portales "
+        "hasta que la API los procese (suele tardar horas)."
+    )
+    st.caption("  \n".join(partes))
 
     st.markdown("---")
 
