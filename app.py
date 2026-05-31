@@ -23,7 +23,7 @@ def cargar_posts_pdf(nombre, page_id, ig_id, access_token, ig_only):
         # Obtener plays (visualizaciones) por ID exacto del post
         plays_lookup = {}
         try:
-            imp_data = ig.get_media_impressions(limit=100)
+            imp_data = ig.get_media_impressions(limit=200, days=35)
             for pd_item in imp_data.get("posts_data", []):
                 post_id = pd_item.get("id", "")
                 if post_id:

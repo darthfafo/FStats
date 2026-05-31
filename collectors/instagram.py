@@ -201,18 +201,19 @@ class InstagramCollector:
 
         return 0, 0
 
-    def get_media_impressions(self, limit=25):
+    def get_media_impressions(self, limit=25, days=30):
         """
         Estrategia:
         - Totales (hero): siempre usa account-level insights (reach de cuenta = métrica real 30d).
         - Gráfico diario: usa reach por post (media-level), más granular.
         - Reels: usa ig_reels_aggregated_all_plays_count para el gráfico diario.
         - posts_data: lista por post con plays/reach/likes para gráficos de top contenidos.
+        - days: ventana de dias a considerar (default 30, extender para cubrir posts mas antiguos).
         """
         media      = self.get_recent_media(limit=limit)
         daily      = {}
         posts_data = []
-        limite     = datetime.now() - timedelta(days=30)
+        limite     = datetime.now() - timedelta(days=days)
 
         # ── Gráfico diario + datos por post ─────────────────────────
         for post in media.get("data", []):
