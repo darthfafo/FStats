@@ -166,51 +166,90 @@ if activos:
     }
     FALLBACK = ["#a855f7","#fbbf24","#14b8a6"]
 
+    # Calcular fecha de inicio global (para marcar portales con datos tardíos)
+    from datetime import datetime as _dt, timedelta as _td
+    fecha_inicio_global = (_dt.now() - _td(days=29)).strftime("%Y-%m-%d")
+
     fig_trend = go.Figure()
+    notas_inicio = []   # para el caption explicativo
     fallback_i = 0
+
     for d in activos:
         color = PORTAL_COLOR.get(d["nombre"])
         if not color:
             color = FALLBACK[fallback_i % len(FALLBACK)]
             fallback_i += 1
-        # IG = línea continua (datos más fuertes), FB = punteada
+
+        # IG = línea continua + marcadores en cada punto
         if d["ig_daily"]:
-            df_ig2 = pd.DataFrame([{"Fecha":k,"Alcance":v} for k,v in sorted(d["ig_daily"].items())])
+            items_ig = sorted(d["ig_daily"].items())
+            fechas_ig = [k for k,v in items_ig]
+            vals_ig   = [v for k,v in items_ig]
+            primer_ig = fechas_ig[0] if fechas_ig else None
+            # Nombre con fecha de inicio si arranca tarde
+            nombre_ig = d["nombre"] + " (IG)"
+            if primer_ig and primer_ig > fecha_inicio_global:
+                dia = _dt.strptime(primer_ig, "%Y-%m-%d").strftime("%-d/%-m") if hasattr(_dt, 'strftime') else primer_ig[8:10]+"/"+primer_ig[5:7]
+                nombre_ig += f" · desde {primer_ig[8:10]}/{primer_ig[5:7]}"
+                notas_inicio.append(f"**{d['nombre']} IG**: datos desde {primer_ig[8:10]}/{primer_ig[5:7]}")
             fig_trend.add_trace(go.Scatter(
-                x=df_ig2["Fecha"], y=df_ig2["Alcance"],
-                mode="lines", name=f"{d['nombre']} (IG)",
-                line=dict(color=color, width=2.5, dash="solid"),
+                x=fechas_ig, y=vals_ig,
+                mode="lines+markers",
+                name=nombre_ig,
+                connectgaps=False,
+                line=dict(color=color, width=2),
+                marker=dict(size=4, color=color, opacity=0.7),
                 opacity=0.95
             ))
+
+        # FB = línea punteada + marcadores pequeños
         if d["fb_daily"]:
-            df_fb = pd.DataFrame([{"Fecha":k,"Alcance":v} for k,v in sorted(d["fb_daily"].items())])
+            items_fb = sorted(d["fb_daily"].items())
+            fechas_fb = [k for k,v in items_fb]
+            vals_fb   = [v for k,v in items_fb]
+            primer_fb = fechas_fb[0] if fechas_fb else None
+            nombre_fb = d["nombre"] + " (FB)"
+            if primer_fb and primer_fb > fecha_inicio_global:
+                nombre_fb += f" · desde {primer_fb[8:10]}/{primer_fb[5:7]}"
+                notas_inicio.append(f"**{d['nombre']} FB**: datos desde {primer_fb[8:10]}/{primer_fb[5:7]}")
             fig_trend.add_trace(go.Scatter(
-                x=df_fb["Fecha"], y=df_fb["Alcance"],
-                mode="lines", name=f"{d['nombre']} (FB)",
-                line=dict(color=color, width=2.5, dash="dot"),
-                opacity=0.75
+                x=fechas_fb, y=vals_fb,
+                mode="lines+markers",
+                name=nombre_fb,
+                connectgaps=False,
+                line=dict(color=color, width=1.5, dash="dot"),
+                marker=dict(size=3, color=color, opacity=0.5),
+                opacity=0.7
             ))
 
     fig_trend.update_layout(
         legend_title="Portal · Red",
+        legend=dict(font=dict(size=11)),
         margin=dict(l=0,r=0,t=10,b=40),
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
-        xaxis=dict(gridcolor="rgba(255,255,255,0.1)"),
+        xaxis=dict(gridcolor="rgba(255,255,255,0.08)", showgrid=True),
         yaxis=dict(
             type="log",
-            title="Alcance (escala logarítmica)",
-            gridcolor="rgba(255,255,255,0.1)",
+            title="Alcance (escala log.)",
+            gridcolor="rgba(255,255,255,0.08)",
             tickformat=".2s",
         ),
+        hovermode="x unified",
     )
     st.plotly_chart(fig_trend, width='stretch')
-    st.caption(
-        "📐 **Escala logarítmica**: cada división del eje Y representa 10× el valor anterior, "
-        "permitiendo ver portales con audiencias muy distintas en el mismo gráfico. "
-        "Línea continua = Instagram (reproducciones diarias). Línea punteada = Facebook (alcance único). "
-        "Los datos de IG solo aparecen desde que cada portal se conectó al panel."
+
+    # Nota explicativa dinámica
+    nota_base = (
+        "📐 **Escala logarítmica** — cada división = 10× el valor anterior. "
+        "Permite comparar portales con audiencias muy distintas. "
+        "**Línea continua** = Instagram · **Punteada** = Facebook. "
+        "Los puntos (•) marcan cada día con dato disponible; una brecha indica día sin datos."
     )
+    if notas_inicio:
+        nota_base += "  \n⚠️ Inicio tardío de datos: " + " | ".join(notas_inicio) + \
+                     " (la API de Meta solo provee histórico desde que el portal se conectó al panel)."
+    st.caption(nota_base)
 
     st.markdown("---")
 
