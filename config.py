@@ -85,9 +85,12 @@ def sidebar_nav(current="", show_update=True, extra_widgets=None):
 
 def _secret(key, default="PENDIENTE"):
     try:
-        return st.secrets[key]
+        val = st.secrets[key]
     except Exception:
-        return os.getenv(key, default)
+        val = os.getenv(key, default)
+    # Una env var presente pero vacía (típico en CI cuando falta el secret)
+    # no debe pisar el valor por defecto.
+    return val if val not in (None, "") else default
 
 PORTALES = [
     {

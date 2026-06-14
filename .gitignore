@@ -29,6 +29,10 @@ diagnostico.py
 # Datos locales
 data/
 
+# Warehouse — bases DuckDB locales (los datos viven en MotherDuck, nunca en git)
+*.duckdb
+*.duckdb.wal
+
 # Sistema
 .DS_Store
 Thumbs.db

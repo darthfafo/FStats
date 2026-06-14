@@ -1,0 +1,61 @@
+name: Ingesta diaria de métricas
+
+# Corre la ingesta hacia MotherDuck una vez por día y permite dispararla a mano.
+on:
+  schedule:
+    # 06:00 UTC = 03:00 Argentina. Cron de GitHub usa SIEMPRE UTC.
+    - cron: "0 6 * * *"
+  workflow_dispatch: {}
+
+# Evita corridas solapadas si una tarda más de lo previsto.
+concurrency:
+  group: fstats-ingest
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Ejecutar ingesta
+        run: python -m warehouse.run_ingestion
+        env:
+          MOTHERDUCK_TOKEN: ${{ secrets.MOTHERDUCK_TOKEN }}
+
+          # Chubut Noticias
+          META_PAGE_ACCESS_TOKEN: ${{ secrets.META_PAGE_ACCESS_TOKEN }}
+          META_PAGE_ID: ${{ secrets.META_PAGE_ID }}
+          META_INSTAGRAM_ID: ${{ secrets.META_INSTAGRAM_ID }}
+
+          # Atento Chubut
+          META_PAGE_ACCESS_TOKEN_ATENTO: ${{ secrets.META_PAGE_ACCESS_TOKEN_ATENTO }}
+          META_PAGE_ID_ATENTO: ${{ secrets.META_PAGE_ID_ATENTO }}
+          META_INSTAGRAM_ID_ATENTO: ${{ secrets.META_INSTAGRAM_ID_ATENTO }}
+
+          # La Calle Online
+          META_PAGE_ACCESS_TOKEN_LACALLE: ${{ secrets.META_PAGE_ACCESS_TOKEN_LACALLE }}
+          META_PAGE_ID_LACALLE: ${{ secrets.META_PAGE_ID_LACALLE }}
+          META_INSTAGRAM_ID_LACALLE: ${{ secrets.META_INSTAGRAM_ID_LACALLE }}
+
+          # El Americano
+          META_PAGE_ACCESS_TOKEN_AMERICANO: ${{ secrets.META_PAGE_ACCESS_TOKEN_AMERICANO }}
+          META_PAGE_ID_AMERICANO: ${{ secrets.META_PAGE_ID_AMERICANO }}
+          META_INSTAGRAM_ID_AMERICANO: ${{ secrets.META_INSTAGRAM_ID_AMERICANO }}
+
+          # VISTE ESTO? (solo IG)
+          META_PAGE_ACCESS_TOKEN_VISTE: ${{ secrets.META_PAGE_ACCESS_TOKEN_VISTE }}
+          META_INSTAGRAM_ID_VISTE: ${{ secrets.META_INSTAGRAM_ID_VISTE }}
+
+          # Boca en Linea (solo IG)
+          META_PAGE_ACCESS_TOKEN_BOCA: ${{ secrets.META_PAGE_ACCESS_TOKEN_BOCA }}
+          META_INSTAGRAM_ID_BOCA: ${{ secrets.META_INSTAGRAM_ID_BOCA }}
