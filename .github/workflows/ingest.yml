@@ -27,35 +27,30 @@ jobs:
       - name: Instalar dependencias
         run: pip install -r requirements.txt
 
+      # Un único secret (FSTATS_SECRETS_TOML) con el mismo contenido TOML que
+      # ya está en Streamlit + la línea MOTHERDUCK_TOKEN. Acá lo parseamos y
+      # exportamos cada clave como variable de entorno para los pasos siguientes.
+      - name: Cargar credenciales
+        env:
+          FSTATS_SECRETS_TOML: ${{ secrets.FSTATS_SECRETS_TOML }}
+        run: |
+          python - <<'PY'
+          import os, tomllib
+          raw = os.environ.get("FSTATS_SECRETS_TOML", "")
+          if not raw.strip():
+              raise SystemExit("Falta el secret FSTATS_SECRETS_TOML (ver README del warehouse).")
+          data = tomllib.loads(raw)
+          n = 0
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as f:
+              for k, v in data.items():
+                  if not isinstance(v, (str, int, float)):
+                      continue  # ignora secciones/tablas anidadas
+                  v = str(v)
+                  print(f"::add-mask::{v}")   # enmascara el valor en los logs
+                  f.write(f"{k}={v}\n")
+                  n += 1
+          print(f"Credenciales cargadas: {n}")
+          PY
+
       - name: Ejecutar ingesta
         run: python -m warehouse.run_ingestion
-        env:
-          MOTHERDUCK_TOKEN: ${{ secrets.MOTHERDUCK_TOKEN }}
-
-          # Chubut Noticias
-          META_PAGE_ACCESS_TOKEN: ${{ secrets.META_PAGE_ACCESS_TOKEN }}
-          META_PAGE_ID: ${{ secrets.META_PAGE_ID }}
-          META_INSTAGRAM_ID: ${{ secrets.META_INSTAGRAM_ID }}
-
-          # Atento Chubut
-          META_PAGE_ACCESS_TOKEN_ATENTO: ${{ secrets.META_PAGE_ACCESS_TOKEN_ATENTO }}
-          META_PAGE_ID_ATENTO: ${{ secrets.META_PAGE_ID_ATENTO }}
-          META_INSTAGRAM_ID_ATENTO: ${{ secrets.META_INSTAGRAM_ID_ATENTO }}
-
-          # La Calle Online
-          META_PAGE_ACCESS_TOKEN_LACALLE: ${{ secrets.META_PAGE_ACCESS_TOKEN_LACALLE }}
-          META_PAGE_ID_LACALLE: ${{ secrets.META_PAGE_ID_LACALLE }}
-          META_INSTAGRAM_ID_LACALLE: ${{ secrets.META_INSTAGRAM_ID_LACALLE }}
-
-          # El Americano
-          META_PAGE_ACCESS_TOKEN_AMERICANO: ${{ secrets.META_PAGE_ACCESS_TOKEN_AMERICANO }}
-          META_PAGE_ID_AMERICANO: ${{ secrets.META_PAGE_ID_AMERICANO }}
-          META_INSTAGRAM_ID_AMERICANO: ${{ secrets.META_INSTAGRAM_ID_AMERICANO }}
-
-          # VISTE ESTO? (solo IG)
-          META_PAGE_ACCESS_TOKEN_VISTE: ${{ secrets.META_PAGE_ACCESS_TOKEN_VISTE }}
-          META_INSTAGRAM_ID_VISTE: ${{ secrets.META_INSTAGRAM_ID_VISTE }}
-
-          # Boca en Linea (solo IG)
-          META_PAGE_ACCESS_TOKEN_BOCA: ${{ secrets.META_PAGE_ACCESS_TOKEN_BOCA }}
-          META_INSTAGRAM_ID_BOCA: ${{ secrets.META_INSTAGRAM_ID_BOCA }}
