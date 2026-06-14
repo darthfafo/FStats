@@ -277,6 +277,76 @@ if activos:
 
     st.markdown("---")
 
+    # ── Histórico acumulado desde el warehouse (MotherDuck) ──────────
+    # A diferencia del gráfico de arriba (API en vivo, máx 30 días), este se
+    # nutre de la base histórica y sigue creciendo indefinidamente día a día.
+    st.subheader("📈 Alcance diario — histórico acumulado (base de datos)")
+    try:
+        import warehouse.reader as wreader
+
+        fig_hist = go.Figure()
+        _fi = 0
+        hay_hist = False
+        for d in activos:
+            color = PORTAL_COLOR.get(d["nombre"])
+            if not color:
+                color = FALLBACK[_fi % len(FALLBACK)]
+                _fi += 1
+
+            # IG = alcance (reach) diario · línea continua
+            df_ig = wreader.daily_metric(d["nombre"], "ig", "reach")
+            if not df_ig.empty:
+                hay_hist = True
+                fig_hist.add_trace(go.Scatter(
+                    x=df_ig["metric_date"], y=df_ig["metric_value"],
+                    mode="lines+markers", name=d["nombre"] + " (IG)",
+                    connectgaps=False,
+                    line=dict(color=color, width=2),
+                    marker=dict(size=4, color=color, opacity=0.7),
+                ))
+
+            # FB = alcance único diario · línea punteada
+            df_fb = wreader.daily_metric(d["nombre"], "fb", "page_impressions_unique")
+            if not df_fb.empty:
+                hay_hist = True
+                fig_hist.add_trace(go.Scatter(
+                    x=df_fb["metric_date"], y=df_fb["metric_value"],
+                    mode="lines+markers", name=d["nombre"] + " (FB)",
+                    connectgaps=False,
+                    line=dict(color=color, width=1.5, dash="dot"),
+                    marker=dict(size=3, color=color, opacity=0.5),
+                ))
+
+        if hay_hist:
+            fig_hist.update_layout(
+                showlegend=True,
+                legend=dict(orientation="h", yanchor="top", y=-0.12, xanchor="left",
+                            x=0, font=dict(size=10.5), bgcolor="rgba(0,0,0,0)", title=None),
+                margin=dict(l=0, r=0, t=10, b=130),
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                xaxis=dict(gridcolor="rgba(255,255,255,0.08)", showgrid=True),
+                yaxis=dict(type="log", title="Alcance (escala log.)",
+                           gridcolor="rgba(255,255,255,0.08)", tickformat=".2s"),
+                hovermode="x unified",
+            )
+            st.plotly_chart(fig_hist, width='stretch')
+            st.caption(
+                "🗄️ A diferencia del gráfico anterior (API en vivo, máximo 30 días), "
+                "este se nutre de la base de datos histórica: se actualiza cada día y "
+                "**va a seguir creciendo indefinidamente**, acumulando todo el histórico."
+            )
+        else:
+            st.info("La base histórica todavía no tiene datos de alcance para mostrar.")
+
+    except Exception:
+        st.info(
+            "📦 La base de datos histórica todavía no está conectada. Agregá "
+            "`MOTHERDUCK_TOKEN` en los *secrets* de Streamlit (Settings → Secrets) "
+            "para ver el histórico acumulado que se va guardando cada día."
+        )
+
+    st.markdown("---")
+
     # ── Segmentación por tipo de contenido (IG, todos los portales) ─
     st.subheader("🎬 Tipo de contenido más efectivo — Instagram (todos los portales)")
 
