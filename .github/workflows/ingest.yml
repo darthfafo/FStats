@@ -28,28 +28,49 @@ jobs:
         run: pip install -r requirements.txt
 
       # Un único secret (FSTATS_SECRETS_TOML) con el mismo contenido TOML que
-      # ya está en Streamlit + la línea MOTHERDUCK_TOKEN. Acá lo parseamos y
+      # ya está en Streamlit + la línea MOTHERDUCK_TOKEN. Lo parseamos línea a
+      # línea (tolerante a duplicados y secciones, a diferencia de tomllib) y
       # exportamos cada clave como variable de entorno para los pasos siguientes.
       - name: Cargar credenciales
         env:
           FSTATS_SECRETS_TOML: ${{ secrets.FSTATS_SECRETS_TOML }}
         run: |
           python - <<'PY'
-          import os, tomllib
+          import os, re
           raw = os.environ.get("FSTATS_SECRETS_TOML", "")
           if not raw.strip():
               raise SystemExit("Falta el secret FSTATS_SECRETS_TOML (ver README del warehouse).")
-          data = tomllib.loads(raw)
-          n = 0
+
+          pair = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+?)\s*$")
+          data, dups = {}, []
+          for line in raw.splitlines():
+              s = line.strip()
+              if not s or s.startswith("#") or s.startswith("["):
+                  continue  # comentario o cabecera de sección [tabla]
+              m = pair.match(line)
+              if not m:
+                  continue
+              key, val = m.group(1), m.group(2).strip()
+              # Valor entre comillas: tomamos hasta la comilla de cierre
+              # (descarta comentarios inline tipo  KEY = "x"  # nota).
+              if val[:1] in ('"', "'"):
+                  end = val.find(val[0], 1)
+                  if end != -1:
+                      val = val[1:end]
+              if key in data:
+                  dups.append(key)
+              data[key] = val
+
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as f:
-              for k, v in data.items():
-                  if not isinstance(v, (str, int, float)):
-                      continue  # ignora secciones/tablas anidadas
-                  v = str(v)
-                  print(f"::add-mask::{v}")   # enmascara el valor en los logs
-                  f.write(f"{k}={v}\n")
-                  n += 1
-          print(f"Credenciales cargadas: {n}")
+              for key, val in data.items():
+                  print(f"::add-mask::{val}")   # enmascara el valor en los logs
+                  f.write(f"{key}={val}\n")
+
+          print(f"Credenciales cargadas: {len(data)}")
+          print("Claves:", ", ".join(sorted(data)))   # nombres, no valores
+          if dups:
+              print("AVISO claves duplicadas (se usó la última):",
+                    ", ".join(sorted(set(dups))))
           PY
 
       - name: Ejecutar ingesta
