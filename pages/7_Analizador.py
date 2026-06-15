@@ -22,8 +22,8 @@ uploaded = st.file_uploader("🎬 Video (mp4 / mov / m4v)", type=["mp4", "mov", 
 caption = st.text_area("📝 Caption / copy (opcional)", height=80,
                        placeholder="El texto que acompañaría al reel...")
 c1, c2 = st.columns(2)
-transcribir = c1.checkbox("Transcribir audio", value=True,
-                          help="Requiere faster-whisper instalado. Si no está, se omite.")
+transcribir = c1.checkbox("Transcribir audio (no afecta el score)", value=False,
+                          help="Solo informativo. Whisper es lento y el score no lo usa.")
 guardar = c2.checkbox("Guardar análisis en la base", value=True)
 
 if uploaded and st.button("⚡ Analizar", type="primary"):

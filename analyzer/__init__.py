@@ -10,7 +10,7 @@ import os
 
 
 def analyze_video(video_path, *, caption="", source="upload", portal_id=None,
-                  post_id=None, persist=True, transcribe_audio=True):
+                  post_id=None, persist=True, transcribe_audio=False):
     """
     Corre el pipeline completo sobre un archivo de video.
 
