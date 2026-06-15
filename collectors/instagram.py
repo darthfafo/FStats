@@ -60,6 +60,24 @@ class InstagramCollector:
         print(f"[IG] get_all_media: {len(all_posts)} posts obtenidos")
         return {"data": all_posts[:max_posts]}
 
+    def get_media_url(self, post_id):
+        """
+        URL del archivo de media de un post propio (Graph API).
+
+        Para Reels/videos devuelve el mp4 servido por el CDN de Meta. La URL es
+        firmada y EXPIRA, así que hay que descargar el archivo en el momento.
+        Devuelve dict con {media_url, thumbnail_url, media_type, product_type}.
+        """
+        data = self._get(post_id, {
+            "fields": "media_url,thumbnail_url,media_type,product_type"
+        })
+        return {
+            "media_url":     data.get("media_url", ""),
+            "thumbnail_url": data.get("thumbnail_url", ""),
+            "media_type":    data.get("media_type", ""),
+            "product_type":  data.get("product_type", ""),
+        }
+
     def get_account_insights(self):
         """
         Métricas a nivel de cuenta Instagram (v25.0).

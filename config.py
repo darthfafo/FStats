@@ -65,6 +65,11 @@ def sidebar_nav(current="", show_update=True, extra_widgets=None):
         # Estadísticas globales
         if st.button("📊 Estadísticas Globales", use_container_width=True, key="nav_stats"):
             st.switch_page("pages/0_Estadisticas_Globales.py")
+        # Analizador de viralidad
+        if st.button("🚀 Analizador", use_container_width=True, key="nav_analizador"):
+            st.switch_page("pages/7_Analizador.py")
+        if st.button("🔁 Realimentación", use_container_width=True, key="nav_realim"):
+            st.switch_page("pages/8_Realimentacion.py")
         st.markdown("---")
         st.caption("PORTALES")
         for icono, nombre, pagina in _NAV_PORTALES:
