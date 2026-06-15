@@ -33,17 +33,21 @@ class InstagramCollector:
         })
 
     def get_recent_media(self, limit=30):
-        return self._get(f"{self.ig_id}/media", {
-            # product_type="clips" identifica los Reels (media_type siempre devuelve "VIDEO")
-            "fields": "id,caption,media_type,product_type,timestamp,like_count,comments_count,permalink",
+        # El campo correcto es media_product_type = "REELS" para Reels (media_type
+        # siempre devuelve "VIDEO"). Lo normalizamos a product_type para el resto.
+        data = self._get(f"{self.ig_id}/media", {
+            "fields": "id,caption,media_type,media_product_type,timestamp,like_count,comments_count,permalink",
             "limit":  limit
         })
+        for m in data.get("data", []):
+            m["product_type"] = m.get("media_product_type") or m.get("product_type") or ""
+        return data
 
     def get_all_media(self, max_posts=500):
         """Pagina por todos los posts para encontrar el top histórico por likes."""
         all_posts = []
         params = {
-            "fields": "id,caption,media_type,product_type,timestamp,like_count,comments_count,permalink",
+            "fields": "id,caption,media_type,media_product_type,timestamp,like_count,comments_count,permalink",
             "limit": 100,
             "access_token": self.access_token,
         }
@@ -57,6 +61,8 @@ class InstagramCollector:
             next_url = data.get("paging", {}).get("next")
             url = next_url
             params = {}  # la URL "next" ya trae todos los params
+        for m in all_posts:
+            m["product_type"] = m.get("media_product_type") or m.get("product_type") or ""
         print(f"[IG] get_all_media: {len(all_posts)} posts obtenidos")
         return {"data": all_posts[:max_posts]}
 
@@ -168,27 +174,30 @@ class InstagramCollector:
     def _get_media_metric(self, post_id, media_type, product_type=""):
         """
         Intenta obtener métricas de un post individual.
-        Detecta Reels por product_type="clips" (media_type siempre es "VIDEO").
-        Devuelve (imp, reach) o (0, 0).
+        Detecta Reels por media_product_type="REELS" (media_type siempre es "VIDEO").
+        Devuelve (imp, reach) o (0, 0). imp = views (reproducciones) en Reels.
         """
-        es_reel = (media_type == "REEL") or (product_type == "clips")
+        es_reel = (str(media_type).upper() in ("REEL", "REELS")) or \
+                  (str(product_type).upper() in ("CLIPS", "REELS"))
 
         if es_reel:
+            # 'plays' fue deprecado en Reels (abr 2025) → la métrica es 'views'.
             intentos = [
+                "views,reach",
                 "ig_reels_aggregated_all_plays_count,reach",
                 "plays,reach",
                 "reach,total_interactions",
                 "reach",
             ]
-            imp_keys = {"ig_reels_aggregated_all_plays_count", "plays"}
+            imp_keys = {"views", "ig_reels_aggregated_all_plays_count", "plays"}
             tipo_label = "REEL"
-        elif media_type == "VIDEO":
-            # Videos normales (no Reels): video_views no funciona en v25.0
+        elif str(media_type).upper() == "VIDEO":
             intentos = [
+                "views,reach",
                 "reach,total_interactions",
                 "reach",
             ]
-            imp_keys = {"total_interactions"}
+            imp_keys = {"views", "total_interactions"}
             tipo_label = "VIDEO"
         else:
             # IMAGE, CAROUSEL_ALBUM
@@ -206,7 +215,12 @@ class InstagramCollector:
                 imp = reach = 0
                 for m in resp.get("data", []):
                     vals = m.get("values", [])
-                    val  = vals[0].get("value", 0) if vals else m.get("value", 0)
+                    if vals:
+                        val = vals[0].get("value", 0)
+                    elif isinstance(m.get("total_value"), dict):
+                        val = m["total_value"].get("value", 0)   # forma total_value (p.ej. views)
+                    else:
+                        val = m.get("value", 0)
                     name = m["name"]
                     if name in imp_keys:
                         imp = val
