@@ -223,6 +223,10 @@ def _heuristic(features, transcript="", caption=""):
     # El visual (gancho + claridad) pesa más que el audio.
     score = clamp(0.35 * sub["gancho"] + 0.30 * sub["ritmo"] +
                   0.20 * sub["claridad"] + 0.15 * sub["audio"])
+    # El título también cuenta (la gente lo lee): mezclamos con el gancho del copy.
+    cs = f.get("copy_score")
+    if cs is not None and f.get("copy_has"):
+        score = clamp(0.85 * score + 0.15 * cs)
     return {"score": score, "subscores": sub, "model": "heuristic",
             "explanation": "Score heurístico (sin LLM): gancho visual (cortes, "
                            "movimiento, caras, colorido), ritmo, claridad visual "

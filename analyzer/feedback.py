@@ -156,10 +156,13 @@ def _analyze_and_store(ig, item, pid, is_winner):
             os.remove(tmp)
 
     features, frames = feats_mod.extract_features(dest)
-    # Sin transcripción acá: no alimenta el score y Whisper es el paso más caro de
-    # la ingesta en lote. La forma del video + el audio (librosa) ya están.
-    result = score_mod.score_video(features, caption=item.get("caption", ""),
-                                   frames_b64=frames)
+    # El copy/título también es señal de aprendizaje (la gente lo lee). El caption
+    # ya viene del warehouse, no hay que re-bajar nada.
+    from analyzer import copy as copy_mod
+    caption = item.get("caption", "")
+    features.update(copy_mod.copy_features(caption))
+    # Sin transcripción acá: no alimenta el score y Whisper es el paso más caro.
+    result = score_mod.score_video(features, caption=caption, frames_b64=frames)
     run_id = store.insert_run(
         source="warehouse", features=features, score_result=result,
         video_sha256=sha, video_path=dest,

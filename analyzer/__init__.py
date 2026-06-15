@@ -22,6 +22,11 @@ def analyze_video(video_path, *, caption="", source="upload", portal_id=None,
 
     features, frames = feats_mod.extract_features(video_path)
 
+    # Las features del copy/título también entran (la gente lee el título además
+    # del video), para que el modelo aprenda cuánto pesa.
+    from analyzer import copy as copy_mod
+    features.update(copy_mod.copy_features(caption))
+
     transcript = ""
     if transcribe_audio:
         from analyzer import transcribe as tr_mod
