@@ -43,11 +43,15 @@ def _select(portal_nombre, where, order, percentile, limit):
             WITH reels AS (
                 SELECT post_id, caption, permalink, reach, plays,
                        like_count, comments_count,
-                       CASE WHEN reach > 0
-                            THEN (COALESCE(like_count,0)+COALESCE(comments_count,0))::DOUBLE / reach
+                       -- "audiencia" del reel: reach si lo hay, si no las reproducciones
+                       -- (los reels se miden por plays, y muchas veces reach viene 0).
+                       CASE WHEN greatest(COALESCE(reach,0), COALESCE(plays,0)) > 0
+                            THEN (COALESCE(like_count,0)+COALESCE(comments_count,0))::DOUBLE
+                                 / greatest(COALESCE(reach,0), COALESCE(plays,0))
                             ELSE 0 END AS eng_rate
                 FROM ig_posts
-                WHERE portal_id = ? AND is_reel = TRUE AND reach > 0
+                WHERE portal_id = ? AND is_reel = TRUE
+                  AND (COALESCE(reach,0) > 0 OR COALESCE(plays,0) > 0)
             ),
             ranked AS (
                 SELECT *,
@@ -80,6 +84,36 @@ def select_winners(portal_nombre, percentile=0.8, limit=None):
 def select_losers(portal_nombre, percentile=0.2, limit=None):
     """Reels con success en el bottom (≤ percentile)."""
     return _select(portal_nombre, "<=", "ASC", percentile, limit)
+
+
+def diagnose(portal_nombre):
+    """
+    Conteos del warehouse para entender por qué la selección puede dar 0:
+    cuántos posts/reels hay para el portal, cuántos con reach/plays, y qué
+    portal_ids existen realmente en ig_posts (para detectar un id que no matchea).
+    """
+    pid = _portal_id(portal_nombre)
+    con = get_connection(read_only=True)
+    try:
+        row = con.execute(
+            """SELECT count(*),
+                      count(*) FILTER (WHERE is_reel),
+                      count(*) FILTER (WHERE is_reel AND COALESCE(reach,0) > 0),
+                      count(*) FILTER (WHERE is_reel AND COALESCE(plays,0) > 0)
+               FROM ig_posts WHERE portal_id = ?""", [pid]).fetchone()
+        portales = con.execute(
+            """SELECT portal_id, count(*) AS posts,
+                      count(*) FILTER (WHERE is_reel) AS reels
+               FROM ig_posts GROUP BY portal_id ORDER BY posts DESC""").fetchall()
+    finally:
+        con.close()
+    return {
+        "portal_id_buscado": pid,
+        "posts": row[0], "reels": row[1],
+        "reels_con_reach": row[2], "reels_con_plays": row[3],
+        "portales_en_warehouse": [
+            {"portal_id": p[0], "posts": p[1], "reels": p[2]} for p in portales],
+    }
 
 
 def _download(url, dest):

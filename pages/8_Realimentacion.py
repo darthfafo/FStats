@@ -67,6 +67,16 @@ if st.button("👀 Ver ganadores y perdedores"):
         st.write(f"📉 **{len(l)}** perdedores (éxito ≤ {bottom_pct:.2f})")
         if l:
             st.dataframe(pd.DataFrame(l)[cols].head(100), width="stretch", hide_index=True)
+        if not w and not l:
+            from analyzer.feedback import diagnose
+            d = diagnose(nombre)
+            st.warning(
+                f"Sin resultados. En el warehouse, para `{d['portal_id_buscado']}`: "
+                f"{d['posts']} posts · {d['reels']} reels · "
+                f"{d['reels_con_reach']} con reach>0 · {d['reels_con_plays']} con plays>0.")
+            st.caption("portal_ids que existen en ig_posts (revisá si el de arriba coincide):")
+            st.dataframe(pd.DataFrame(d["portales_en_warehouse"]),
+                         width="stretch", hide_index=True)
     except Exception as e:
         st.error(f"Error consultando el warehouse: {e}")
 
