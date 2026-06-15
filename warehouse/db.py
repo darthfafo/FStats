@@ -244,6 +244,20 @@ CREATE TABLE IF NOT EXISTS raw_analyzer_outcomes (
     label_source    TEXT,          -- p.ej. 'warehouse_percentile'
     ingested_at     TIMESTAMP DEFAULT now()
 );
+
+-- Respaldo del modelo entrenado (regresor). Append-only: cada entrenamiento es
+-- una fila, y el más reciente es el vigente. El modelo serializado (joblib) va
+-- como BLOB para sobrevivir a reinicios del contenedor (disco efimero en la nube).
+CREATE TABLE IF NOT EXISTS raw_analyzer_model (
+    model_blob   BLOB,
+    feature_keys TEXT,             -- JSON con FEATURE_KEYS usadas
+    n            INTEGER,
+    n_pos        INTEGER,
+    n_neg        INTEGER,
+    cv_auc       DOUBLE,
+    trained_at   TIMESTAMP,
+    ingested_at  TIMESTAMP DEFAULT now()
+);
 """
 
 _ANALYZER_VIEWS_SQL = """
@@ -268,6 +282,13 @@ FROM (
     ) AS rn
     FROM raw_analyzer_outcomes
 ) WHERE rn = 1;
+
+-- Modelo vigente: el último entrenamiento respaldado.
+CREATE OR REPLACE VIEW analyzer_model AS
+SELECT model_blob, feature_keys, n, n_pos, n_neg, cv_auc, trained_at
+FROM raw_analyzer_model
+ORDER BY ingested_at DESC
+LIMIT 1;
 """
 
 
