@@ -93,7 +93,7 @@ def _download(url, dest):
 
 def _analyze_and_store(ig, item, pid, is_winner):
     """Baja, analiza y guarda un reel con su etiqueta real. None si OK, o (post_id, error)."""
-    from analyzer import features as feats_mod, transcribe as tr_mod, score as score_mod
+    from analyzer import features as feats_mod, score as score_mod
 
     media = ig.get_media_url(item["post_id"])
     url = media.get("media_url")
@@ -110,10 +110,10 @@ def _analyze_and_store(ig, item, pid, is_winner):
             os.remove(tmp)
 
     features, frames = feats_mod.extract_features(dest)
-    # Transcripción: dato secundario, no alimenta el score; opcional.
-    transcript = tr_mod.transcribe(dest).get("text", "")
-    result = score_mod.score_video(features, transcript=transcript,
-                                   caption=item.get("caption", ""), frames_b64=frames)
+    # Sin transcripción acá: no alimenta el score y Whisper es el paso más caro de
+    # la ingesta en lote. La forma del video + el audio (librosa) ya están.
+    result = score_mod.score_video(features, caption=item.get("caption", ""),
+                                   frames_b64=frames)
     run_id = store.insert_run(
         source="warehouse", features=features, score_result=result,
         video_sha256=sha, video_path=dest,
