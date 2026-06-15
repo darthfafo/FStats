@@ -30,14 +30,19 @@ def analyze_video(video_path, *, caption="", source="upload", portal_id=None,
     result = score_mod.score_video(
         features, transcript=transcript, caption=caption, frames_b64=frames)
 
-    run_id = None
+    run_id, persist_error = None, None
     if persist:
-        sha, dest = store.save_video(video_path)
-        run_id = store.insert_run(
-            source=source, features=features, score_result=result,
-            video_sha256=sha, video_path=dest,
-            filename=os.path.basename(video_path),
-            portal_id=portal_id, post_id=post_id)
+        # El guardado es best-effort: si la base no está disponible (falta token,
+        # etc.) el análisis se devuelve igual, solo sin persistir.
+        try:
+            sha, dest = store.save_video(video_path)
+            run_id = store.insert_run(
+                source=source, features=features, score_result=result,
+                video_sha256=sha, video_path=dest,
+                filename=os.path.basename(video_path),
+                portal_id=portal_id, post_id=post_id)
+        except Exception as e:
+            persist_error = str(e)
 
     return {"features": features, "transcript": transcript,
-            "score_result": result, "run_id": run_id}
+            "score_result": result, "run_id": run_id, "persist_error": persist_error}

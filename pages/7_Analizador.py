@@ -77,6 +77,9 @@ if uploaded and st.button("⚡ Analizar", type="primary"):
                 st.write(res["transcript"])
         if res.get("run_id"):
             st.caption(f"Guardado · run_id `{res['run_id']}`")
+        elif res.get("persist_error"):
+            st.caption("ℹ️ No se guardó en la base (modo sin warehouse), pero el "
+                       "análisis es válido.")
 
 st.markdown("---")
 st.subheader("🗂️ Análisis recientes")

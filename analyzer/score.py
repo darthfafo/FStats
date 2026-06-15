@@ -127,21 +127,30 @@ def _parse_json(text):
 
 
 def _heuristic(features, transcript="", caption=""):
-    """Score sin LLM: reglas simples sobre las features. Marca model='heuristic'."""
+    """
+    Score sin LLM, basado en el CONTENIDO VISUAL de los fotogramas + ritmo + audio.
+    La transcripción NO influye en el puntaje (señal secundaria). Es un arranque;
+    el score calibrado lo da el regresor entrenado con interacción real.
+    """
     f = features or {}
+    ff = f.get("first_frame") or {}
     clamp = lambda x: int(max(0, min(100, x)))
 
-    gancho = 50 + 8 * f.get("cuts_in_hook", 0) + \
-        min(f.get("motion_hook", 0), 30) + (10 if f.get("is_vertical") else -10)
+    # Gancho visual: arranque con cortes/movimiento, vertical, cara y color llamativo.
+    gancho = (45 + 8 * f.get("cuts_in_hook", 0) + min(f.get("motion_hook", 0), 30)
+              + (10 if f.get("is_vertical") else -10)
+              + (12 if f.get("face_in_hook") else 0)
+              + min(f.get("colorfulness_mean", 0) / 4, 12))
+
+    # Ritmo: cortes por segundo + ritmo sonoro + penalización por duración mala.
     ritmo = 55 + 20 * min(f.get("cuts_per_sec", 0), 2)
-    # Si hay análisis de audio, el ritmo sonoro (onsets/seg) también suma.
     if f.get("audio_available"):
         ritmo += 5 * min(f.get("audio_onset_rate", 0), 4)
     dur = f.get("duration_sec", 0) or 0
     if dur and (dur < 5 or dur > 45):
         ritmo -= 20
 
-    # Audio: usa las features de librosa si están; si no, el flag de loudness de ffmpeg.
+    # Audio: features de librosa si están; si no, el flag de loudness de ffmpeg.
     if f.get("audio_available"):
         audio = 40 + int(50 * f.get("audio_voiced_ratio", 0)) + \
             (10 if f.get("has_voice") else 0)
@@ -152,14 +161,19 @@ def _heuristic(features, transcript="", caption=""):
     else:
         audio = 50
 
-    claridad = 70 if (transcript or caption or f.get("has_voice")) else 45
+    # Claridad VISUAL: ¿se entiende sin audio? texto en pantalla, caras, contraste.
+    claridad = (40 + 250 * f.get("text_region_score", 0)
+                + 25 * f.get("face_frames_ratio", 0)
+                + 40 * (ff.get("contrast") or 0))
 
     sub = {"gancho": clamp(gancho), "ritmo": clamp(ritmo),
            "audio": clamp(audio), "claridad": clamp(claridad)}
+    # El visual (gancho + claridad) pesa más que el audio.
     score = clamp(0.35 * sub["gancho"] + 0.30 * sub["ritmo"] +
-                  0.20 * sub["audio"] + 0.15 * sub["claridad"])
+                  0.20 * sub["claridad"] + 0.15 * sub["audio"])
     return {"score": score, "subscores": sub, "model": "heuristic",
-            "explanation": "Score heurístico (sin LLM): basado en cortes del gancho, "
-                           "movimiento, ritmo, duración y presencia de audio/texto. "
-                           "Instalá Ollama y un modelo de visión (p.ej. "
-                           "`ollama pull llama3.2-vision`) para el análisis completo."}
+            "explanation": "Score heurístico (sin LLM): gancho visual (cortes, "
+                           "movimiento, caras, colorido), ritmo, claridad visual "
+                           "(texto en pantalla, caras, contraste) y audio. La "
+                           "transcripción no influye. Entrená el regresor para un "
+                           "score calibrado con la interacción real de la gente."}

@@ -23,9 +23,15 @@ MODEL_PATH = os.path.join(
 # (p.ej. "first_frame.brightness"). Los booleanos se mapean a 0/1; los faltantes
 # quedan NaN y los completa el imputer del pipeline.
 FEATURE_KEYS = [
+    # dinámica / ritmo
     "duration_sec", "aspect_ratio", "is_vertical", "fps",
     "cuts_total", "cuts_per_sec", "cuts_in_hook", "motion_mean", "motion_hook",
     "first_frame.brightness", "first_frame.contrast", "first_frame.saturation",
+    # visuales del contenido (lo que más correlaciona con el enganche)
+    "faces_max", "faces_mean", "face_frames_ratio", "face_in_hook",
+    "edge_density_mean", "colorfulness_mean", "saturation_mean",
+    "text_region_score", "color_variety",
+    # audio
     "lufs_integrated", "has_audio",
     "audio_rms_db", "audio_tempo_bpm", "audio_onset_rate",
     "audio_spectral_centroid_hz", "audio_zcr", "audio_voiced_ratio", "has_voice",
