@@ -75,13 +75,13 @@ class InstagramCollector:
         Devuelve dict con {media_url, thumbnail_url, media_type, product_type}.
         """
         data = self._get(post_id, {
-            "fields": "media_url,thumbnail_url,media_type,product_type"
+            "fields": "media_url,thumbnail_url,media_type,media_product_type"
         })
         return {
             "media_url":     data.get("media_url", ""),
             "thumbnail_url": data.get("thumbnail_url", ""),
             "media_type":    data.get("media_type", ""),
-            "product_type":  data.get("product_type", ""),
+            "product_type":  data.get("media_product_type") or "",
         }
 
     def get_account_insights(self):
@@ -251,8 +251,9 @@ class InstagramCollector:
         for post in media.get("data", []):
             ts           = post.get("timestamp", "")[:10]
             media_type   = post.get("media_type", "IMAGE")
-            product_type = post.get("product_type", "")
-            is_reel      = (product_type == "clips" or media_type == "REEL")
+            product_type = post.get("product_type", "") or post.get("media_product_type", "")
+            is_reel      = (str(product_type).upper() in ("REELS", "CLIPS")
+                            or str(media_type).upper() in ("REEL", "REELS"))
             try:
                 fecha = datetime.strptime(ts, "%Y-%m-%d")
                 if fecha < limite:
