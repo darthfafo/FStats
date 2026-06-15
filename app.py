@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
-from config import PORTALES, fb_source, ig_source
+from config import PORTALES, fb_source, ig_source, sidebar_nav
 import importlib, pdf_report as _pdf_mod
 from datetime import timedelta
 
@@ -140,10 +140,6 @@ section[data-testid="stSidebar"] ul { display: none !important; }
     div[style*="padding:28px 32px"] {
         padding: 20px 16px !important;
     }
-    /* Ocultar sidebar en mobile para dar más espacio */
-    section[data-testid="stSidebar"] {
-        display: none;
-    }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -158,37 +154,8 @@ def portal_activo(p):
 
 PORTALES_ACTIVOS = [p for p in PORTALES if portal_activo(p)]
 
-# ── Sidebar ────────────────────────────────────────────────────────
-with st.sidebar:
-    st.title("📊 Panel General")
-    st.markdown("---")
-    # Navegación a cada portal activo
-    iconos_portales = {
-        "Chubut Noticias": "📰", "Atento Chubut": "📡",
-        "La Calle Online": "🗞️", "El Americano": "🌎",
-        "VISTE ESTO?": "👁️", "Boca en Linea": "🇸🇪",
-    }
-    if st.button("📊 Estadísticas Globales", use_container_width=True):
-        st.switch_page("pages/0_Estadisticas_Globales.py")
-    for p in PORTALES_ACTIVOS:
-        icono = iconos_portales.get(p["nombre"], "📄")
-        if st.button(f"{icono} {p['nombre']}", use_container_width=True, key=f"nav_{p['nombre']}"):
-            st.switch_page(p["pagina"])
-    st.markdown("---")
-    if st.session_state.get("fstats_live", False):
-        st.caption("🟢 Datos EN VIVO (API)")
-        if st.button("⚡ Volver a modo rápido", use_container_width=True):
-            st.session_state["fstats_live"] = False
-            st.cache_data.clear()
-            st.rerun()
-    else:
-        if st.button("🔄 Actualizar (en vivo)", use_container_width=True):
-            st.session_state["fstats_live"] = True
-            st.cache_data.clear()
-            st.rerun()
-    st.markdown(f"*{datetime.now().strftime('%d/%m/%Y %H:%M')}*")
-    st.markdown("---")
-    st.caption(f"{len(PORTALES_ACTIVOS)} portal(es) activo(s)")
+# ── Sidebar (navegación unificada con el resto del panel) ──────────
+sidebar_nav(current="")
 
 # ── Carga de datos ─────────────────────────────────────────────────
 @st.cache_data(ttl=3600)

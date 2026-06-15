@@ -58,25 +58,17 @@ def sidebar_nav(current="", show_update=True, extra_widgets=None):
     from datetime import datetime as _dt
     with st.sidebar:
         st.markdown("### 📊 FStats")
-        st.markdown("---")
-        # Panel general
-        if st.button("🏠 Panel general", use_container_width=True, key="nav_home"):
-            st.switch_page("app.py")
-        # Estadísticas globales
-        if st.button("📊 Estadísticas Globales", use_container_width=True, key="nav_stats"):
-            st.switch_page("pages/0_Estadisticas_Globales.py")
-        # Analizador de viralidad
-        if st.button("🚀 Analizador", use_container_width=True, key="nav_analizador"):
-            st.switch_page("pages/7_Analizador.py")
-        if st.button("🔁 Realimentación", use_container_width=True, key="nav_realim"):
-            st.switch_page("pages/8_Realimentacion.py")
+        # Navegación con page_link: es un ancla nativa, mucho más confiable en
+        # móvil que button + switch_page (que a veces pedía doble toque o perdía
+        # el estado del sidebar). page_link resalta sola la página activa.
+        st.page_link("app.py", label="🏠 Panel general")
+        st.page_link("pages/0_Estadisticas_Globales.py", label="📊 Estadísticas Globales")
+        st.page_link("pages/7_Analizador.py", label="🚀 Analizador")
+        st.page_link("pages/8_Realimentacion.py", label="🔁 Realimentación")
         st.markdown("---")
         st.caption("PORTALES")
         for icono, nombre, pagina in _NAV_PORTALES:
-            btn_type = "primary" if nombre == current else "secondary"
-            if st.button(f"{icono} {nombre}", use_container_width=True,
-                         key=f"nav_{nombre}", type=btn_type):
-                st.switch_page(pagina)
+            st.page_link(pagina, label=f"{icono} {nombre}")
         st.markdown("---")
         # Widgets extra (botón PDF, etc.)
         if extra_widgets:
