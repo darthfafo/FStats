@@ -122,30 +122,97 @@ def train():
     except Exception:
         cv_auc = None
 
+    import datetime
     pipe.fit(X, y)
-    os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
-    joblib.dump({"pipe": pipe, "keys": FEATURE_KEYS, "n": len(y),
-                 "n_pos": n_pos, "n_neg": n_neg, "cv_auc": cv_auc}, MODEL_PATH)
+    obj = {"pipe": pipe, "keys": FEATURE_KEYS, "n": len(y),
+           "n_pos": n_pos, "n_neg": n_neg, "cv_auc": cv_auc,
+           "trained_at": datetime.datetime.now()}
+
+    saved_db = _save_to_db(obj)                 # respaldo persistente (BLOB)
+    try:                                        # caché local rápido (best-effort)
+        os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
+        joblib.dump(obj, MODEL_PATH)
+    except Exception:
+        pass
+    _CACHE.clear()
+
+    respaldo = ("respaldado en la base" if saved_db
+                else "guardado solo local (no se pudo respaldar en la base)")
     return {"ok": True, "n": len(y), "n_pos": n_pos, "n_neg": n_neg,
-            "cv_auc": cv_auc,
+            "cv_auc": cv_auc, "saved_db": saved_db,
             "message": f"Modelo entrenado con {len(y)} reels "
-                       f"({n_pos} ganadores / {n_neg} perdedores)."
-                       + (f" AUC validación: {cv_auc:.2f}" if cv_auc else "")}
+                       f"({n_pos} ganadores / {n_neg} perdedores)"
+                       + (f", AUC {cv_auc:.2f}" if cv_auc else "")
+                       + f". {respaldo.capitalize()}."}
 
 
 _CACHE = {}
 
 
-def load_model():
-    """Carga el modelo entrenado (cacheado por mtime). None si no existe."""
-    if not os.path.exists(MODEL_PATH):
+def _save_to_db(obj):
+    """Serializa el modelo (joblib) y lo guarda como BLOB en la base. True si OK."""
+    import io
+    import json
+    import joblib
+    try:
+        buf = io.BytesIO()
+        joblib.dump(obj, buf)
+        con = get_connection()
+        try:
+            con.execute(
+                """INSERT INTO raw_analyzer_model
+                   (model_blob, feature_keys, n, n_pos, n_neg, cv_auc,
+                    trained_at, ingested_at)
+                   VALUES (?,?,?,?,?,?,?, now())""",
+                [buf.getvalue(), json.dumps(obj.get("keys")), obj.get("n"),
+                 obj.get("n_pos"), obj.get("n_neg"), obj.get("cv_auc"),
+                 obj.get("trained_at")])
+            con.commit()
+        finally:
+            con.close()
+        return True
+    except Exception:
+        return False
+
+
+def _load_from_db():
+    """Modelo vigente desde la base, cacheado por trained_at. None si no hay/falla."""
+    try:
+        con = get_connection(read_only=True)
+        try:
+            row = con.execute("SELECT trained_at FROM analyzer_model").fetchone()
+            if not row:
+                return None
+            stamp = row[0]
+            if _CACHE.get("stamp") == stamp and _CACHE.get("obj") is not None:
+                return _CACHE["obj"]
+            blob = con.execute("SELECT model_blob FROM analyzer_model").fetchone()[0]
+        finally:
+            con.close()
+    except Exception:
         return None
-    mtime = os.path.getmtime(MODEL_PATH)
-    if _CACHE.get("mtime") != mtime:
+    try:
+        import io
         import joblib
-        _CACHE["model"] = joblib.load(MODEL_PATH)
-        _CACHE["mtime"] = mtime
-    return _CACHE.get("model")
+        obj = joblib.load(io.BytesIO(bytes(blob)))
+        _CACHE["stamp"], _CACHE["obj"] = stamp, obj
+        return obj
+    except Exception:
+        return None
+
+
+def load_model():
+    """Modelo vigente. Fuente de verdad: la base; fallback: caché local en disco."""
+    obj = _load_from_db()
+    if obj is not None:
+        return obj
+    if os.path.exists(MODEL_PATH):
+        try:
+            import joblib
+            return joblib.load(MODEL_PATH)
+        except Exception:
+            return None
+    return None
 
 
 def model_info():
