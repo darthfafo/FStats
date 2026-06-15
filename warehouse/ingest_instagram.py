@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from collectors.instagram import InstagramCollector
 from warehouse.db import get_connection, portal_id as _portal_id
@@ -92,7 +93,15 @@ def _ingest_account_info(con, ig, portal_id, ig_id):
 
 
 def _ingest_posts(con, ig, portal_id):
-    media = ig.get_recent_media(limit=100)
+    # Profundidad configurable. 100 = recientes (default nocturno). Un valor mayor
+    # trae el HISTÓRICO paginado: así el modelo entrena con los ganadores de siempre,
+    # no solo con los últimos posts. Backfill: correr una vez con IG_INGEST_MAX_POSTS alto.
+    max_posts = int(os.getenv("IG_INGEST_MAX_POSTS", "100"))
+    deep = max_posts > 100
+    if deep:
+        media = ig.get_all_media(max_posts=max_posts)
+    else:
+        media = ig.get_recent_media(limit=max_posts)
     posts = media.get("data", [])
     if not posts:
         print(f"[IG/{portal_id}] posts: no posts returned")
@@ -108,12 +117,16 @@ def _ingest_posts(con, ig, portal_id):
 
             content_type = "reel" if is_reel else media_type.lower()
 
-            # Métrica por post (plays/reach) — llamada cara que aquí, en la
-            # ingesta nocturna, no molesta. Si falla, se guarda 0/0.
-            try:
-                plays, reach = ig._get_media_metric(p.get("id", ""), media_type, product_type)
-            except Exception:
+            # Métrica por post (plays/reach). En backfill histórico solo pedimos
+            # métricas de los reels (lo que usa el modelo) para ahorrar miles de
+            # llamadas a la API; los no-reels viejos se guardan con 0/0.
+            if deep and not is_reel:
                 plays, reach = 0, 0
+            else:
+                try:
+                    plays, reach = ig._get_media_metric(p.get("id", ""), media_type, product_type)
+                except Exception:
+                    plays, reach = 0, 0
 
             con.execute(
                 """INSERT INTO raw_ig_posts

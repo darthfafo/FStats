@@ -5,7 +5,12 @@ on:
   schedule:
     # 06:00 UTC = 03:00 Argentina. Cron de GitHub usa SIEMPRE UTC.
     - cron: "0 6 * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      max_posts:
+        description: "Posts por portal (100 = recientes; 500 = histórico profundo, tarda más). Backfill: correr una vez con un valor alto."
+        default: "100"
+        required: false
 
 # Evita corridas solapadas si una tarda más de lo previsto.
 concurrency:
@@ -15,7 +20,7 @@ concurrency:
 jobs:
   ingest:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
 
@@ -74,4 +79,6 @@ jobs:
           PY
 
       - name: Ejecutar ingesta
+        env:
+          IG_INGEST_MAX_POSTS: ${{ github.event.inputs.max_posts || '100' }}
         run: python -m warehouse.run_ingestion
