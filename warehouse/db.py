@@ -204,6 +204,74 @@ FROM (
 
 
 # ---------------------------------------------------------------------------
+# Analizador de viralidad (Parte 2)
+#
+# Mismo patrón raw append-only + vista dedup que el resto del warehouse.
+#   - raw_analyzer_runs:     un análisis (upload manual o reel ganador del
+#                            warehouse) con sus features, score y explicación.
+#   - raw_analyzer_outcomes: el resultado REAL asociado a un run (reach/plays
+#                            reales, label de ganador) para calibrar el modelo.
+# Los binarios de video NO viven acá: se guardan en data/analyzer/<sha>.mp4 y
+# la base solo referencia el hash/ruta.
+# ---------------------------------------------------------------------------
+_ANALYZER_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS raw_analyzer_runs (
+    run_id        TEXT,
+    source        TEXT,            -- 'upload' | 'warehouse'
+    portal_id     TEXT,            -- nullable (uploads sueltos no tienen portal)
+    post_id       TEXT,            -- nullable (uploads no atados a un reel)
+    video_sha256  TEXT,
+    video_path    TEXT,
+    filename      TEXT,
+    model         TEXT,
+    score         DOUBLE,
+    subscores     TEXT,            -- JSON: {gancho, ritmo, audio, claridad}
+    explanation   TEXT,
+    features      TEXT,            -- JSON con las features deterministas
+    duration_sec  DOUBLE,
+    created_at    TIMESTAMP,
+    ingested_at   TIMESTAMP DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS raw_analyzer_outcomes (
+    run_id          TEXT,
+    portal_id       TEXT,
+    post_id         TEXT,
+    real_reach      BIGINT DEFAULT 0,
+    real_plays      BIGINT DEFAULT 0,
+    real_engagement BIGINT DEFAULT 0,
+    is_winner       BOOLEAN,
+    label_source    TEXT,          -- p.ej. 'warehouse_percentile'
+    ingested_at     TIMESTAMP DEFAULT now()
+);
+"""
+
+_ANALYZER_VIEWS_SQL = """
+CREATE OR REPLACE VIEW analyzer_runs AS
+SELECT run_id, source, portal_id, post_id, video_sha256, video_path, filename,
+       model, score, subscores, explanation, features, duration_sec, created_at
+FROM (
+    SELECT *, row_number() OVER (
+        PARTITION BY run_id
+        ORDER BY ingested_at DESC
+    ) AS rn
+    FROM raw_analyzer_runs
+) WHERE rn = 1;
+
+CREATE OR REPLACE VIEW analyzer_outcomes AS
+SELECT run_id, portal_id, post_id, real_reach, real_plays, real_engagement,
+       is_winner, label_source
+FROM (
+    SELECT *, row_number() OVER (
+        PARTITION BY run_id
+        ORDER BY ingested_at DESC
+    ) AS rn
+    FROM raw_analyzer_outcomes
+) WHERE rn = 1;
+"""
+
+
+# ---------------------------------------------------------------------------
 # Conexión
 # ---------------------------------------------------------------------------
 def _use_local():
@@ -259,7 +327,8 @@ def get_connection(read_only=False):
 
 def initialize(con):
     """Crea las tablas raw, aplica migraciones y refresca las vistas de lectura."""
-    for block in (_SCHEMA_SQL, _MIGRATIONS_SQL, _VIEWS_SQL):
+    for block in (_SCHEMA_SQL, _MIGRATIONS_SQL, _VIEWS_SQL,
+                  _ANALYZER_SCHEMA_SQL, _ANALYZER_VIEWS_SQL):
         for statement in block.split(";"):
             stmt = statement.strip()
             if stmt:

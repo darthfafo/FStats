@@ -5,3 +5,18 @@ requests>=2.31.0
 python-dotenv>=1.0.0
 fpdf2>=2.7.0
 duckdb>=1.0.0
+
+# Analizador de viralidad (100% open source, sin APIs pagas)
+opencv-python-headless>=4.9.0
+numpy>=1.24.0
+# Análisis de audio open source (energía, tempo, onsets, brillo espectral, voz/silencio)
+librosa>=0.10.0
+soundfile>=0.12.0
+# Regresor de viralidad (aprende de los reels ganadores/perdedores reales)
+scikit-learn>=1.3.0
+joblib>=1.3.0
+# Scoring: Ollama (modelo de visión local) vía HTTP con `requests` (ya incluido).
+#   Instalar Ollama aparte: https://ollama.com  +  `ollama pull llama3.2-vision`
+# Transcripción local (Whisper open source vía faster-whisper). Opcional: si no
+# está, se omite el transcript. Requiere además el binario ffmpeg en el sistema.
+faster-whisper>=1.0.0
