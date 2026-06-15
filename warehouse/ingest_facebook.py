@@ -85,21 +85,18 @@ def _ingest_page_insights(con, fb, portal_id, page_id):
                     [portal_id, page_id, metric_name, date_str, int(value)]
                 )
 
-    total_map = {
-        "page_impressions_unique": insights.get("alcance", 0),
-        "page_post_engagements":   insights.get("engagement", 0),
-        "page_views_total":        insights.get("vistas", 0),
-    }
-
+    # Solo guardamos como total las métricas SIN serie diaria (vistas). Los
+    # totales de alcance/engagement NO se guardan: se calculan sumando el diario
+    # en la lectura (igual que la API), evitando colisionar con la serie diaria.
     today_str = datetime.now().strftime("%Y-%m-%d")
-    for metric_name, total in total_map.items():
-        if total and total > 0:
-            con.execute(
-                """INSERT INTO raw_fb_page_insights
-                   (portal_id, page_id, metric_name, metric_date, metric_value, ingested_at)
-                   VALUES (?, ?, ?, ?, ?, now())""",
-                [portal_id, page_id, metric_name, today_str, int(total)]
-            )
+    vistas = insights.get("vistas", 0)
+    if vistas and vistas > 0:
+        con.execute(
+            """INSERT INTO raw_fb_page_insights
+               (portal_id, page_id, metric_name, metric_date, metric_value, ingested_at)
+               VALUES (?, ?, ?, ?, ?, now())""",
+            [portal_id, page_id, "page_views_total", today_str, int(vistas)]
+        )
 
     print(f"[FB/{portal_id}] page_insights: daily rows inserted")
 
