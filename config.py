@@ -77,9 +77,19 @@ def sidebar_nav(current="", show_update=True, extra_widgets=None):
         if extra_widgets:
             extra_widgets()
         if show_update:
-            if st.button("🔄 Actualizar", use_container_width=True, key="nav_update"):
-                st.cache_data.clear()
-                st.rerun()
+            if st.session_state.get("fstats_live", False):
+                st.caption("🟢 Datos EN VIVO (API)")
+                if st.button("⚡ Volver a modo rápido", use_container_width=True,
+                             key="nav_fast"):
+                    st.session_state["fstats_live"] = False
+                    st.cache_data.clear()
+                    st.rerun()
+            else:
+                if st.button("🔄 Actualizar (en vivo)", use_container_width=True,
+                             key="nav_update"):
+                    st.session_state["fstats_live"] = True
+                    st.cache_data.clear()
+                    st.rerun()
         st.caption(_dt.now().strftime("%d/%m/%Y %H:%M"))
 
 
@@ -160,3 +170,38 @@ PORTALES = [
         "pagina":           "pages/6_Boca_En_Linea.py"
     },
 ]
+
+
+# ── Fuente de datos: warehouse (rápido) por defecto, API en vivo si live=True ──
+import functools
+
+
+@functools.lru_cache(maxsize=1)
+def _warehouse_disponible():
+    """Probe único por proceso: ¿se puede leer del warehouse?"""
+    try:
+        from warehouse import sources
+        sources._q("SELECT 1")
+        return True
+    except Exception:
+        return False
+
+
+def fb_source(nombre, page_id, token, live=False):
+    """Collector de Facebook: warehouse por defecto, API real si live=True
+    (o si el warehouse no está disponible)."""
+    if not live and _warehouse_disponible():
+        from warehouse.sources import WarehouseFacebookCollector
+        return WarehouseFacebookCollector(nombre=nombre, page_id=page_id, access_token=token)
+    from collectors.facebook import FacebookCollector
+    return FacebookCollector(page_id=page_id, access_token=token)
+
+
+def ig_source(nombre, ig_id, token, live=False):
+    """Collector de Instagram: warehouse por defecto, API real si live=True
+    (o si el warehouse no está disponible)."""
+    if not live and _warehouse_disponible():
+        from warehouse.sources import WarehouseInstagramCollector
+        return WarehouseInstagramCollector(nombre=nombre, ig_id=ig_id, access_token=token)
+    from collectors.instagram import InstagramCollector
+    return InstagramCollector(ig_id=ig_id, access_token=token)
