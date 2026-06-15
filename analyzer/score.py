@@ -126,6 +126,58 @@ def _parse_json(text):
     return json.loads(text)
 
 
+def describe(features):
+    """
+    Traduce las features a una explicación corta por cada subscore, para que el
+    puntaje no quede aislado. Devuelve dict {gancho, ritmo, audio, claridad}.
+    """
+    f = features or {}
+    ff = f.get("first_frame") or {}
+
+    # Gancho: qué pasa en los primeros segundos.
+    g = []
+    n = f.get("cuts_in_hook", 0)
+    g.append(f"{n} corte(s) en los primeros 3s" if n else "arranque sin cortes (puede ser lento)")
+    g.append("cara al inicio ✅" if f.get("face_in_hook") else "sin cara al inicio")
+    g.append("vertical ✅" if f.get("is_vertical") else "no es vertical ⚠️")
+    if f.get("colorfulness_mean", 0) >= 30:
+        g.append("colores llamativos")
+
+    # Ritmo: dinamismo y duración.
+    r = []
+    r.append(f"{f.get('cuts_per_sec', 0):.1f} cortes/seg")
+    dur = f.get("duration_sec", 0) or 0
+    if dur:
+        r.append(f"dura {dur:.0f}s " + ("(ideal 7-40s) ✅" if 7 <= dur <= 40
+                                        else "(fuera del rango ideal 7-40s) ⚠️"))
+    if f.get("audio_available") and f.get("audio_onset_rate"):
+        r.append(f"ritmo sonoro {f.get('audio_onset_rate', 0):.1f}/s")
+
+    # Audio.
+    a = []
+    if f.get("audio_available"):
+        a.append(f"{int(f.get('audio_voiced_ratio', 0) * 100)}% con sonido")
+        a.append("con voz ✅" if f.get("has_voice") else "sin voz clara")
+    elif f.get("has_audio"):
+        a.append("tiene audio")
+    elif f.get("has_audio") is False:
+        a.append("sin audio o casi en silencio ⚠️")
+    else:
+        a.append("audio no analizado (falta ffmpeg)")
+
+    # Claridad visual: ¿se entiende sin sonido?
+    c = []
+    c.append("texto en pantalla ✅" if f.get("text_region_score", 0) > 0.02
+             else "sin texto en pantalla")
+    fr = f.get("face_frames_ratio", 0)
+    c.append(f"caras en {int(fr * 100)}% de los frames" if fr else "sin caras")
+    if (ff.get("contrast") or 0) >= 0.2:
+        c.append("buen contraste")
+
+    return {"gancho": " · ".join(g), "ritmo": " · ".join(r),
+            "audio": " · ".join(a), "claridad": " · ".join(c)}
+
+
 def _heuristic(features, transcript="", caption=""):
     """
     Score sin LLM, basado en el CONTENIDO VISUAL de los fotogramas + ritmo + audio.
