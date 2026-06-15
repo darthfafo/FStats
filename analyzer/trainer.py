@@ -35,6 +35,9 @@ FEATURE_KEYS = [
     "lufs_integrated", "has_audio",
     "audio_rms_db", "audio_tempo_bpm", "audio_onset_rate",
     "audio_spectral_centroid_hz", "audio_zcr", "audio_voiced_ratio", "has_voice",
+    # copy / título (lo que la gente lee además del video)
+    "copy_score", "copy_hook", "copy_question", "copy_ellipsis",
+    "copy_power_words", "copy_has_number", "copy_has_emoji", "copy_len",
 ]
 
 _MIN_PER_CLASS = 5   # mínimo de ganadores y de perdedores para entrenar
