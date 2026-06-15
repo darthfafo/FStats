@@ -58,12 +58,43 @@ if uploaded and st.button("⚡ Analizar", type="primary"):
         </div>""", unsafe_allow_html=True)
 
         subs = sr.get("subscores", {}) or {}
+        from analyzer.score import describe
+        desc = describe(res["features"])
+        meta = [
+            ("gancho", "🎣 Gancho",
+             "¿Los primeros 3s capturan la atención? Cortes y movimiento al inicio, "
+             "una cara temprana, formato vertical y colores llamativos."),
+            ("ritmo", "🥁 Ritmo",
+             "¿Sostiene la atención? Cortes por segundo, duración apropiada (7-40s) "
+             "y ritmo del audio. Penaliza monotonía o videos muy largos."),
+            ("audio", "🔊 Audio",
+             "¿Hay sonido con energía y presencia de voz? El audio aporta enganche."),
+            ("claridad", "💡 Claridad",
+             "¿Se entiende sin sonido? Texto en pantalla, caras y buen contraste."),
+        ]
         cols = st.columns(4)
-        for col, (k, label) in zip(cols, [("gancho", "🎣 Gancho"), ("ritmo", "🥁 Ritmo"),
-                                          ("audio", "🔊 Audio"), ("claridad", "💡 Claridad")]):
-            col.metric(label, subs.get(k, 0))
+        for col, (k, label, h) in zip(cols, meta):
+            col.metric(label, subs.get(k, 0), help=h)
+            col.caption(desc.get(k, ""))
 
         st.info(sr.get("explanation", ""))
+
+        # ── Análisis del copy / título ──────────────────────────────────────
+        st.markdown("##### 📝 Análisis del copy / título")
+        from analyzer.copy import analyze_copy
+        cp = analyze_copy(caption)
+        if cp["has_copy"]:
+            cc1, cc2 = st.columns([1, 3])
+            cc1.metric("🎣 Gancho del copy", f"{cp['score']}/100",
+                       help="¿El título engancha? Curiosidad, pregunta, intriga, "
+                            "palabras de impacto.")
+            with cc2:
+                for fnd in cp["found"]:
+                    st.markdown(f"- ✅ {fnd}")
+                if not cp["found"]:
+                    st.markdown("- ⚠️ El copy no tiene ganchos detectables.")
+        for tip in cp["tips"]:
+            st.markdown(f"- 💡 {tip}")
         if sr.get("model") == "heuristic":
             st.warning("⚠️ Score heurístico (sin LLM). Instalá Ollama y un modelo de "
                        "visión (`ollama pull llama3.2-vision`) para el análisis completo.")
