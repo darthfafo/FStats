@@ -19,8 +19,11 @@ def _color(score):
 
 
 uploaded = st.file_uploader("🎬 Video (mp4 / mov / m4v)", type=["mp4", "mov", "m4v"])
-caption = st.text_area("📝 Caption / copy (opcional)", height=80,
+caption = st.text_area("📝 Caption / copy actual (opcional)", height=70,
                        placeholder="El texto que acompañaría al reel...")
+descripcion = st.text_area(
+    "📋 ¿Qué pasa en el video? (para generarte un copy completo)", height=70,
+    placeholder="Ej: Un perro rescata a un nene que se estaba ahogando en el río.")
 c1, c2 = st.columns(2)
 transcribir = c1.checkbox("Transcribir audio (no afecta el score)", value=False,
                           help="Solo informativo. Whisper es lento y el score no lo usa.")
@@ -86,10 +89,10 @@ if uploaded and st.button("⚡ Analizar", type="primary"):
         # ── Título / copy (la gente lo lee además del video) ──
         st.markdown("#### 📝 Título / copy")
         st.caption("Es lo que la gente lee además del video, así que pesa en el potencial.")
-        from analyzer.copy import analyze_copy, suggest_copies
+        from analyzer.copy import analyze_copy, generate_copy
         cp = analyze_copy(caption)
         cc1, cc2 = st.columns([1, 3])
-        cc1.metric("🎣 Gancho del título",
+        cc1.metric("🎣 Gancho del título actual",
                    f"{cp['score']}/100" if cp["has_copy"] else "—",
                    help="¿El título engancha? Curiosidad, pregunta, intriga, palabras de impacto.")
         with cc2:
@@ -98,13 +101,20 @@ if uploaded and st.button("⚡ Analizar", type="primary"):
             for tip in cp["tips"]:
                 st.markdown(f"- 💡 {tip}")
 
-        sugs = suggest_copies(caption)
-        if sugs:
-            st.markdown("**✨ Títulos sugeridos** (de más a menos gancho):")
-            for s in sugs:
-                st.markdown(f"- **{s['score']}/100** — {s['copy']}")
-        elif not (caption or "").strip():
-            st.caption("Escribí un caption arriba y te propongo títulos con gancho.")
+        # ── Copy completo sugerido (título + descripción + cierre) ──
+        st.markdown("#### ✨ Copy sugerido (título + descripción + cierre)")
+        fuente = (descripcion or "").strip() or (caption or "").strip()
+        gen = generate_copy(fuente)
+        if gen:
+            st.caption("Listo para editar y publicar (de más a menos gancho):")
+            for g in gen:
+                with st.container(border=True):
+                    st.markdown(f"**{g['titulo']}**")
+                    st.write(g["descripcion"])
+                    st.markdown(f"_{g['cierre']}_")
+                    st.caption(f"Gancho del copy: {g['score']}/100")
+        else:
+            st.caption("Completá «¿Qué pasa en el video?» arriba para generar un copy completo.")
 
         # ── Detalle técnico ──
         st.caption(f"Motor: **{modelo}**" + (" · entrená el modelo para calibrar con tus datos"

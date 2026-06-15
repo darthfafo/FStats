@@ -152,3 +152,62 @@ def suggest_copies(caption, n=5):
         cands.append({"copy": txt, "score": analyze_copy(txt)["score"]})
     cands.sort(key=lambda x: x["score"], reverse=True)
     return cands[:n]
+
+
+# ── Copy completo de 3 partes (título + descripción + cierre) ────────────────
+_TITLE_TPL = [
+    "{t}… y no vas a creer lo que pasó",
+    "{t}: el momento que se hizo viral",
+    "Mirá lo que pasó: {t}",
+    "{t} — lo que nadie esperaba",
+    "URGENTE: {t}",
+    "Lo que muestra este video: {t}",
+]
+_DESC_TPL = [
+    "En el video se ve todo: {d}. Imperdible.",
+    "Quedó grabado: {d}. No te lo pierdas.",
+    "Mirá el momento exacto: {d}.",
+    "Esto fue lo que pasó: {d}. Dale play. ▶️",
+]
+_CLOSE_TPL = [
+    "¿Qué harías vos en esa situación?",
+    "¿Lo viste venir?",
+    "¿Qué opinás? Dejá tu comentario 👇",
+    "¿Te animarías a hacer lo mismo?",
+    "¿Estás de acuerdo?",
+    "¿Vos qué pensás?",
+]
+
+
+def _short(text, maxlen=60):
+    text = (text or "").strip()
+    if len(text) <= maxlen:
+        return text
+    return text[:maxlen].rsplit(" ", 1)[0].rstrip(" .,…-—:")
+
+
+def generate_copy(description, n=3):
+    """
+    A partir de una DESCRIPCIÓN de lo que pasa en el video, devuelve copys de 3
+    partes: {titulo, descripcion, cierre, score}. Rankeados por el gancho del
+    conjunto. Plantillas (sin LLM): es un andamiaje para editar, no escritura libre.
+    """
+    d = (description or "").strip().rstrip(" .…")
+    if not d:
+        return []
+    t = _short(_tema(d) or d, 60)
+    combos, seen, out = [], set(), []
+    for i in range(len(_TITLE_TPL)):
+        titulo = _TITLE_TPL[i].format(t=t)
+        titulo = (titulo[0].upper() + titulo[1:]) if titulo else titulo
+        descripcion = _DESC_TPL[i % len(_DESC_TPL)].format(d=d)
+        cierre = _CLOSE_TPL[i % len(_CLOSE_TPL)]
+        full = f"{titulo}. {descripcion} {cierre}"
+        combos.append({"titulo": titulo, "descripcion": descripcion,
+                       "cierre": cierre, "score": analyze_copy(full)["score"]})
+    for c in sorted(combos, key=lambda x: x["score"], reverse=True):
+        if c["titulo"].lower() in seen:
+            continue
+        seen.add(c["titulo"].lower())
+        out.append(c)
+    return out[:n]
