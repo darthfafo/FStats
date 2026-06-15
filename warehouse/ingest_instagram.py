@@ -101,9 +101,10 @@ def _ingest_posts(con, ig, portal_id):
     inserted = 0
     for p in posts:
         try:
-            product_type = p.get("product_type", "")
+            product_type = p.get("product_type", "") or p.get("media_product_type", "")
             media_type = p.get("media_type", "IMAGE")
-            is_reel = (product_type == "clips" or media_type == "REEL")
+            is_reel = (str(product_type).upper() in ("REELS", "CLIPS")
+                       or str(media_type).upper() in ("REEL", "REELS"))
 
             content_type = "reel" if is_reel else media_type.lower()
 

@@ -77,6 +77,10 @@ if st.button("👀 Ver ganadores y perdedores"):
             st.caption("portal_ids que existen en ig_posts (revisá si el de arriba coincide):")
             st.dataframe(pd.DataFrame(d["portales_en_warehouse"]),
                          width="stretch", hide_index=True)
+            st.caption("tipos de contenido guardados para este portal "
+                       "(si los reels aparecen como product_type 'REELS' pero "
+                       "reels=0 arriba, falta re-ingestar con el colector arreglado):")
+            st.dataframe(pd.DataFrame(d["tipos"]), width="stretch", hide_index=True)
     except Exception as e:
         st.error(f"Error consultando el warehouse: {e}")
 

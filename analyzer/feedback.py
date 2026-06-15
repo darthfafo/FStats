@@ -105,6 +105,15 @@ def diagnose(portal_nombre):
             """SELECT portal_id, count(*) AS posts,
                       count(*) FILTER (WHERE is_reel) AS reels
                FROM ig_posts GROUP BY portal_id ORDER BY posts DESC""").fetchall()
+        # Qué media_type/product_type hay realmente en los datos de este portal
+        # (revela si Meta devolvió 'REELS' y si plays/reach vienen poblados).
+        tipos = con.execute(
+            """SELECT COALESCE(media_type,'?'), COALESCE(product_type,'?'),
+                      count(*),
+                      count(*) FILTER (WHERE COALESCE(plays,0) > 0),
+                      count(*) FILTER (WHERE COALESCE(reach,0) > 0)
+               FROM ig_posts WHERE portal_id = ?
+               GROUP BY 1, 2 ORDER BY 3 DESC""", [pid]).fetchall()
     finally:
         con.close()
     return {
@@ -113,6 +122,9 @@ def diagnose(portal_nombre):
         "reels_con_reach": row[2], "reels_con_plays": row[3],
         "portales_en_warehouse": [
             {"portal_id": p[0], "posts": p[1], "reels": p[2]} for p in portales],
+        "tipos": [
+            {"media_type": t[0], "product_type": t[1], "n": t[2],
+             "con_plays": t[3], "con_reach": t[4]} for t in tipos],
     }
 
 
