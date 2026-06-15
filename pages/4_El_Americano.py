@@ -2,9 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
-from config import PORTALES, RESPONSIVE_CSS, sidebar_nav
-from collectors.facebook import FacebookCollector
-from collectors.instagram import InstagramCollector
+from config import PORTALES, RESPONSIVE_CSS, sidebar_nav, fb_source, ig_source
 
 st.set_page_config(page_title="El Americano", page_icon="🌎", layout="wide")
 
@@ -68,8 +66,8 @@ META_PAGE_ACCESS_TOKEN_AMERICANO=TOKEN_QUE_MANDE_EL_ADMIN""", language="bash")
     st.stop()
 
 @st.cache_data(ttl=3600)
-def cargar_fb(page_id, token):
-    fb = FacebookCollector(page_id=page_id, access_token=token)
+def cargar_fb(nombre, page_id, token, live=False):
+    fb = fb_source(nombre, page_id, token, live)
     return {
         "info":        fb.get_page_info(),
         "impresiones": fb.get_posts_impressions(),
@@ -78,24 +76,25 @@ def cargar_fb(page_id, token):
     }
 
 @st.cache_data(ttl=3600)
-def cargar_ig(ig_id, token):
-    ig = InstagramCollector(ig_id=ig_id, access_token=token)
+def cargar_ig(nombre, ig_id, token, live=False):
+    ig = ig_source(nombre, ig_id, token, live)
     return {
         "info":        ig.get_account_info(),
         "impresiones": ig.get_media_impressions(limit=25),
         "media":       ig.get_all_media(max_posts=500),
     }
 
+live = st.session_state.get("fstats_live", False)
 with st.spinner("Cargando estadísticas..."):
     try:
-        datos    = cargar_fb(portal["facebook_page_id"], portal["access_token"])
+        datos    = cargar_fb(portal["nombre"], portal["facebook_page_id"], portal["access_token"], live)
         error_fb = None
     except Exception as e:
         datos    = {"info": {}, "impresiones": {"total_imp": 0, "total_reach": 0, "daily": {}},
                     "fan_growth": {"data": []}, "posts": {"data": []}}
         error_fb = str(e)
     try:
-        datos_ig = cargar_ig(portal["instagram_id"], portal["access_token"])
+        datos_ig = cargar_ig(portal["nombre"], portal["instagram_id"], portal["access_token"], live)
         error_ig = None
     except Exception as e:
         datos_ig = {"info": {}, "impresiones": {"total_imp": 0, "total_reach": 0, "daily": {}, "posts_data": []},

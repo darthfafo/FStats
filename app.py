@@ -2,9 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
-from config import PORTALES
-from collectors.facebook import FacebookCollector
-from collectors.instagram import InstagramCollector  # también usado para portales ig_only
+from config import PORTALES, fb_source, ig_source
 import importlib, pdf_report as _pdf_mod
 from datetime import timedelta
 
@@ -13,13 +11,13 @@ def generar_brief(resumenes, totales, top_ig=None, top_fb=None):
     return _pdf_mod.generar_brief(resumenes, totales, top_ig=top_ig, top_fb=top_fb)
 
 @st.cache_data(ttl=3600)
-def cargar_posts_pdf(nombre, page_id, ig_id, access_token, ig_only):
+def cargar_posts_pdf(nombre, page_id, ig_id, access_token, ig_only, live=False):
     """Carga posts para el PDF (solo se llama al generar)."""
     posts_ig, posts_fb = [], []
     limite_str = (datetime.now() - timedelta(days=31)).strftime("%Y-%m-%d")
     limite_dt  = datetime.now() - timedelta(days=31)
     try:
-        ig = InstagramCollector(ig_id=ig_id, access_token=access_token)
+        ig = ig_source(nombre, ig_id, access_token, live)
         # Obtener plays (visualizaciones) por ID exacto del post
         plays_lookup = {}
         try:
@@ -52,7 +50,7 @@ def cargar_posts_pdf(nombre, page_id, ig_id, access_token, ig_only):
         print(f"[{nombre}] PDF IG posts: {e}")
     if not ig_only:
         try:
-            fb = FacebookCollector(page_id=page_id, access_token=access_token)
+            fb = fb_source(nombre, page_id, access_token, live)
             raw = fb.get_recent_posts(limit=50)
             for p in raw.get("data", []):
                 try:
@@ -177,16 +175,24 @@ with st.sidebar:
         if st.button(f"{icono} {p['nombre']}", use_container_width=True, key=f"nav_{p['nombre']}"):
             st.switch_page(p["pagina"])
     st.markdown("---")
-    if st.button("🔄 Actualizar datos", use_container_width=True):
-        st.cache_data.clear()
-        st.rerun()
+    if st.session_state.get("fstats_live", False):
+        st.caption("🟢 Datos EN VIVO (API)")
+        if st.button("⚡ Volver a modo rápido", use_container_width=True):
+            st.session_state["fstats_live"] = False
+            st.cache_data.clear()
+            st.rerun()
+    else:
+        if st.button("🔄 Actualizar (en vivo)", use_container_width=True):
+            st.session_state["fstats_live"] = True
+            st.cache_data.clear()
+            st.rerun()
     st.markdown(f"*{datetime.now().strftime('%d/%m/%Y %H:%M')}*")
     st.markdown("---")
     st.caption(f"{len(PORTALES_ACTIVOS)} portal(es) activo(s)")
 
 # ── Carga de datos ─────────────────────────────────────────────────
 @st.cache_data(ttl=3600)
-def cargar_resumen(nombre, page_id, ig_id, access_token):
+def cargar_resumen(nombre, page_id, ig_id, access_token, live=False):
     res = {
         "nombre":   nombre,
         "fb_imp":   0, "fb_reach": 0, "fb_seg": 0,
@@ -195,7 +201,7 @@ def cargar_resumen(nombre, page_id, ig_id, access_token):
         "fb_daily": {}, "ig_daily": {}, "ig_daily_seg": {},
     }
     try:
-        fb        = FacebookCollector(page_id=page_id, access_token=access_token)
+        fb        = fb_source(nombre, page_id, access_token, live)
         info      = fb.get_page_info()
         res["fb_seg"] = info.get("followers_count", 0)
         imp_fb    = fb.get_posts_impressions()
@@ -207,7 +213,7 @@ def cargar_resumen(nombre, page_id, ig_id, access_token):
     except Exception as e:
         print(f"[{nombre}] FB: {e}")
     try:
-        ig        = InstagramCollector(ig_id=ig_id, access_token=access_token)
+        ig        = ig_source(nombre, ig_id, access_token, live)
         info_ig   = ig.get_account_info()
         res["ig_seg"] = info_ig.get("followers_count", 0)
         imp_ig    = ig.get_media_impressions(limit=25)
@@ -225,6 +231,7 @@ def cargar_resumen(nombre, page_id, ig_id, access_token):
     res["total_eng"]   = res["fb_eng"]
     return res
 
+live = st.session_state.get("fstats_live", False)
 with st.spinner("Cargando datos de todos los portales..."):
     resumenes = []
     for p in PORTALES_ACTIVOS:
@@ -236,7 +243,7 @@ with st.spinner("Cargando datos de todos los portales..."):
                  "total_imp": 0, "total_reach": 0, "total_seg": 0, "total_eng": 0,
                  "pagina": p["pagina"]}
             try:
-                ig = InstagramCollector(ig_id=p["instagram_id"], access_token=p["access_token"])
+                ig = ig_source(p["nombre"], p["instagram_id"], p["access_token"], live)
                 info_ig = ig.get_account_info()
                 r["ig_seg"] = info_ig.get("followers_count", 0)
                 imp_ig = ig.get_media_impressions(limit=25)
@@ -252,7 +259,7 @@ with st.spinner("Cargando datos de todos los portales..."):
             r["total_seg"]   = r["ig_seg"]
         else:
             r = cargar_resumen(p["nombre"], p["facebook_page_id"],
-                               p["instagram_id"], p["access_token"])
+                               p["instagram_id"], p["access_token"], live)
             r["icono"]  = p["icono"]
             r["pagina"] = p["pagina"]
         resumenes.append(r)
@@ -367,7 +374,7 @@ with st.sidebar:
                     pig, pfb = cargar_posts_pdf(
                         p["nombre"], p.get("facebook_page_id"),
                         p.get("instagram_id"), p["access_token"],
-                        p.get("ig_only", False)
+                        p.get("ig_only", False), live
                     )
                     all_posts_ig.extend(pig)
                     all_posts_fb.extend(pfb)

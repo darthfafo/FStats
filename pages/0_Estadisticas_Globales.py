@@ -3,9 +3,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
-from config import PORTALES, RESPONSIVE_CSS, sidebar_nav
-from collectors.facebook import FacebookCollector
-from collectors.instagram import InstagramCollector
+from config import PORTALES, RESPONSIVE_CSS, sidebar_nav, fb_source, ig_source
 
 st.set_page_config(page_title="Estadísticas Globales", page_icon="📊", layout="wide")
 
@@ -21,13 +19,13 @@ def pendiente(v):
     return v in ("PENDIENTE", "", None)
 
 @st.cache_data(ttl=3600)
-def cargar_portal(nombre, page_id, ig_id, token, ig_only=False):
+def cargar_portal(nombre, page_id, ig_id, token, ig_only=False, live=False):
     r = {"nombre": nombre, "fb_seg":0,"fb_imp":0,"fb_eng":0,"fb_vistas":0,
          "ig_seg":0,"ig_imp":0,"ig_reach":0,"ig_engaged":0,
          "fb_daily":{},"ig_daily":{},"posts_ig":[],"posts_fb":[],"all_media_ig":[]}
     if not ig_only and not pendiente(page_id) and not pendiente(token):
         try:
-            fb = FacebookCollector(page_id=page_id, access_token=token)
+            fb = fb_source(nombre, page_id, token, live)
             info = fb.get_page_info()
             r["fb_seg"] = info.get("followers_count", 0)
             imp = fb.get_posts_impressions()
@@ -41,7 +39,7 @@ def cargar_portal(nombre, page_id, ig_id, token, ig_only=False):
             print(f"[{nombre}] FB: {e}")
     if not pendiente(ig_id) and not pendiente(token):
         try:
-            ig = InstagramCollector(ig_id=ig_id, access_token=token)
+            ig = ig_source(nombre, ig_id, token, live)
             info_ig = ig.get_account_info()
             r["ig_seg"] = info_ig.get("followers_count", 0)
             imp_ig = ig.get_media_impressions(limit=25)
@@ -73,6 +71,7 @@ def cargar_portal(nombre, page_id, ig_id, token, ig_only=False):
     r["tasa_eng"]  = round(r["fb_eng"] / r["fb_seg"] * 100, 2) if r["fb_seg"] else 0
     return r
 
+live = st.session_state.get("fstats_live", False)
 with st.spinner("Cargando datos de todos los portales..."):
     datos_portales = []
     for p in PORTALES:
@@ -85,7 +84,7 @@ with st.spinner("Cargando datos de todos los portales..."):
                                    "total_imp":0,"total_seg":0,"tasa_eng":0})
         else:
             d = cargar_portal(p["nombre"], p.get("facebook_page_id"),
-                              p.get("instagram_id"), token, p.get("ig_only", False))
+                              p.get("instagram_id"), token, p.get("ig_only", False), live)
             datos_portales.append(d)
 
 activos = [d for d in datos_portales if not d.get("pendiente") and d["total_imp"] > 0]

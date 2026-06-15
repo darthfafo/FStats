@@ -2,8 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
-from config import PORTALES, RESPONSIVE_CSS, sidebar_nav
-from collectors.instagram import InstagramCollector
+from config import PORTALES, RESPONSIVE_CSS, sidebar_nav, ig_source
 
 st.set_page_config(page_title="Boca en Linea", page_icon="🇸🇪", layout="wide")
 
@@ -51,17 +50,18 @@ META_PAGE_ACCESS_TOKEN_BOCA=TOKEN_QUE_MANDE_EL_ADMIN""", language="bash")
     st.stop()
 
 @st.cache_data(ttl=3600)
-def cargar_ig(ig_id, token):
-    ig = InstagramCollector(ig_id=ig_id, access_token=token)
+def cargar_ig(nombre, ig_id, token, live=False):
+    ig = ig_source(nombre, ig_id, token, live)
     return {
         "info":        ig.get_account_info(),
         "impresiones": ig.get_media_impressions(limit=25),
         "media":       ig.get_all_media(max_posts=500),
     }
 
+live = st.session_state.get("fstats_live", False)
 with st.spinner("Cargando estadísticas de Instagram..."):
     try:
-        datos_ig = cargar_ig(portal["instagram_id"], portal["access_token"])
+        datos_ig = cargar_ig(portal["nombre"], portal["instagram_id"], portal["access_token"], live)
         error_ig = None
     except Exception as e:
         datos_ig = {"info": {}, "impresiones": {"total_imp": 0, "total_reach": 0,
