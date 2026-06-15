@@ -87,6 +87,8 @@ CREATE TABLE IF NOT EXISTS raw_ig_posts (
     permalink      TEXT,
     content_type   TEXT,
     is_reel        BOOLEAN,
+    plays          INTEGER DEFAULT 0,
+    reach          INTEGER DEFAULT 0,
     ingested_at    TIMESTAMP DEFAULT now()
 );
 
@@ -98,6 +100,20 @@ CREATE TABLE IF NOT EXISTS raw_ig_account_info (
     media_count     INTEGER,
     ingested_at     TIMESTAMP DEFAULT now()
 );
+
+CREATE TABLE IF NOT EXISTS raw_fb_fan_growth (
+    portal_id    TEXT,
+    metric_date  DATE,
+    new_follows  INTEGER DEFAULT 0,
+    ingested_at  TIMESTAMP DEFAULT now()
+);
+"""
+
+# Migraciones idempotentes para bases ya creadas (CREATE TABLE IF NOT EXISTS no
+# agrega columnas nuevas a una tabla existente).
+_MIGRATIONS_SQL = """
+ALTER TABLE raw_ig_posts ADD COLUMN IF NOT EXISTS plays INTEGER DEFAULT 0;
+ALTER TABLE raw_ig_posts ADD COLUMN IF NOT EXISTS reach INTEGER DEFAULT 0;
 """
 
 # ---------------------------------------------------------------------------
@@ -143,13 +159,23 @@ FROM (
 CREATE OR REPLACE VIEW ig_posts AS
 SELECT portal_id, post_id, caption, media_type, product_type,
        published_date, like_count, comments_count, permalink,
-       content_type, is_reel
+       content_type, is_reel, plays, reach
 FROM (
     SELECT *, row_number() OVER (
         PARTITION BY portal_id, post_id
         ORDER BY ingested_at DESC
     ) AS rn
     FROM raw_ig_posts
+) WHERE rn = 1;
+
+CREATE OR REPLACE VIEW fb_fan_growth AS
+SELECT portal_id, metric_date, new_follows
+FROM (
+    SELECT *, row_number() OVER (
+        PARTITION BY portal_id, metric_date
+        ORDER BY ingested_at DESC
+    ) AS rn
+    FROM raw_fb_fan_growth
 ) WHERE rn = 1;
 
 -- Snapshot diario de seguidores: una fila por portal y día (el último del día).
@@ -232,8 +258,8 @@ def get_connection(read_only=False):
 
 
 def initialize(con):
-    """Crea (si no existen) las 6 tablas raw y refresca las vistas de lectura."""
-    for block in (_SCHEMA_SQL, _VIEWS_SQL):
+    """Crea las tablas raw, aplica migraciones y refresca las vistas de lectura."""
+    for block in (_SCHEMA_SQL, _MIGRATIONS_SQL, _VIEWS_SQL):
         for statement in block.split(";"):
             stmt = statement.strip()
             if stmt:

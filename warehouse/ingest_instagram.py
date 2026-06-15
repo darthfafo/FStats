@@ -107,12 +107,19 @@ def _ingest_posts(con, ig, portal_id):
 
             content_type = "reel" if is_reel else media_type.lower()
 
+            # Métrica por post (plays/reach) — llamada cara que aquí, en la
+            # ingesta nocturna, no molesta. Si falla, se guarda 0/0.
+            try:
+                plays, reach = ig._get_media_metric(p.get("id", ""), media_type, product_type)
+            except Exception:
+                plays, reach = 0, 0
+
             con.execute(
                 """INSERT INTO raw_ig_posts
                    (portal_id, post_id, caption, media_type, product_type,
                     published_date, like_count, comments_count, permalink,
-                    content_type, is_reel, ingested_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())""",
+                    content_type, is_reel, plays, reach, ingested_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())""",
                 [
                     portal_id,
                     p.get("id", ""),
@@ -125,6 +132,8 @@ def _ingest_posts(con, ig, portal_id):
                     p.get("permalink", ""),
                     content_type,
                     is_reel,
+                    int(plays or 0),
+                    int(reach or 0),
                 ]
             )
             inserted += 1

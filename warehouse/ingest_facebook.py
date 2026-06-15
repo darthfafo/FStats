@@ -31,8 +31,37 @@ def ingest_facebook(portal):
     except Exception as e:
         print(f"[FB/{nombre}] posts error: {e}")
 
+    try:
+        _ingest_fan_growth(con, fb, pid)
+    except Exception as e:
+        print(f"[FB/{nombre}] fan_growth error: {e}")
+
     con.commit()
     con.close()
+
+
+def _ingest_fan_growth(con, fb, portal_id):
+    """Nuevos seguidores por día (page_daily_follows / fan_adds)."""
+    raw = fb.get_fan_growth()
+    por_dia = {}
+    for m in raw.get("data", []):
+        name = m.get("name", "")
+        if "follow" in name or "fan_adds" in name:
+            for v in m.get("values", []):
+                fecha = v.get("end_time", "")[:10]
+                if fecha:
+                    por_dia[fecha] = por_dia.get(fecha, 0) + v.get("value", 0)
+
+    inserted = 0
+    for fecha, valor in por_dia.items():
+        con.execute(
+            """INSERT INTO raw_fb_fan_growth
+               (portal_id, metric_date, new_follows, ingested_at)
+               VALUES (?, ?, ?, now())""",
+            [portal_id, fecha, int(valor)]
+        )
+        inserted += 1
+    print(f"[FB/{portal_id}] fan_growth: {inserted} días")
 
 
 def _ingest_page_insights(con, fb, portal_id, page_id):
