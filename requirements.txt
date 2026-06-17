@@ -4,7 +4,9 @@ plotly>=5.20.0
 requests>=2.31.0
 python-dotenv>=1.0.0
 fpdf2>=2.7.0
-duckdb>=1.0.0
+# Fijado: MotherDuck aún no soporta duckdb 1.5.4 (máx 1.5.3). NO subir sin
+# confirmar que MotherDuck ya soporta la nueva versión, o se rompe la conexión.
+duckdb==1.5.3
 
 # Analizador de viralidad (100% open source, sin APIs pagas)
 opencv-python-headless>=4.9.0
