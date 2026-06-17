@@ -170,17 +170,23 @@ PORTALES = [
 
 
 # ── Fuente de datos: warehouse (rápido) por defecto, API en vivo si live=True ──
-import functools
+_warehouse_ok = None  # None = sin probar; True = anduvo (se cachea); False no se cachea
 
 
-@functools.lru_cache(maxsize=1)
 def _warehouse_disponible():
-    """Probe único por proceso: ¿se puede leer del warehouse?"""
+    """¿Se puede leer del warehouse? Solo cachea el ÉXITO: si falla, reintenta
+    en la próxima llamada (evita quedar pegado en 'no disponible' si el token se
+    arregló después de arrancar). Loguea el error real para diagnóstico."""
+    global _warehouse_ok
+    if _warehouse_ok:
+        return True
     try:
         from warehouse import sources
         sources._q("SELECT 1")
+        _warehouse_ok = True
         return True
-    except Exception:
+    except Exception as e:
+        print(f"[warehouse] no disponible (se usará API en vivo): {e!r}")
         return False
 
 
