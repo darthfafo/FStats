@@ -151,7 +151,10 @@ PORTALES = [
         "ig_only":          False,
         "facebook_page_id": _secret("META_PAGE_ID_AMERICANO",          "542904062233857"),
         "instagram_id":     _secret("META_INSTAGRAM_ID_AMERICANO",     "17841472028591526"),
-        "access_token":     _secret("META_PAGE_ACCESS_TOKEN_AMERICANO", "PENDIENTE"),
+        # Mismo administrador que La Calle Online: si no hay un token propio de
+        # El Americano, reutilizamos el de La Calle (tiene permiso sobre esta cuenta).
+        "access_token":     _secret("META_PAGE_ACCESS_TOKEN_AMERICANO",
+                                    _secret("META_PAGE_ACCESS_TOKEN_LACALLE", "PENDIENTE")),
         "color_fb":         "#1877F2",
         "color_ig":         "#E1306C",
         "pagina":           "pages/4_El_Americano.py"
