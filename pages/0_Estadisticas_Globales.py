@@ -4,6 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
 from config import PORTALES, RESPONSIVE_CSS, sidebar_nav, fb_source, ig_source
+from audience import contribucion_audiencia
 
 st.set_page_config(page_title="Estadísticas Globales", page_icon="📊", layout="wide")
 
@@ -127,6 +128,104 @@ for d in datos_portales:
 
 df_tabla = pd.DataFrame(filas)
 st.dataframe(df_tabla, width='stretch', hide_index=True)
+
+st.markdown("---")
+
+# ── Contribución de seguidores a la audiencia ────────────────────────
+st.subheader("👥 Contribución de seguidores a la audiencia")
+
+if activos:
+    contrib = contribucion_audiencia(activos)
+    cf = contrib["filas"]
+
+    k1, k2, k3 = st.columns(3)
+    k1.metric("🎯 Audiencia única alcanzada", f"{contrib['total_alcance']:,}",
+              help="Personas únicas alcanzadas en el período (alcance único FB + IG).")
+    k2.metric("📣 Factor de amplificación", f"{contrib['amplificacion_global']:.1f}×",
+              help="Audiencia alcanzada ÷ base de seguidores. >1× = llegás a más "
+                   "gente que tu base de seguidores.")
+    k3.metric("🌐 Audiencia de no-seguidores", f"{contrib['pct_no_seg_global']*100:.0f}%",
+              help="Cota mínima del alcance que cae fuera de tu base de seguidores. "
+                   "El valor real puede ser mayor.")
+
+    col_a, col_b = st.columns(2)
+
+    # Gráfico 1: base de seguidores vs audiencia alcanzada, por portal.
+    with col_a:
+        df_sa = pd.DataFrame([
+            {"Portal": f["nombre"], "👥 Seguidores": f["seguidores"],
+             "🎯 Audiencia": f["alcance"]}
+            for f in cf
+        ])
+        df_sa_m = df_sa.melt(id_vars="Portal",
+                             value_vars=["👥 Seguidores", "🎯 Audiencia"],
+                             var_name="Métrica", value_name="Personas")
+        fig_sa = px.bar(df_sa_m, x="Personas", y="Portal", color="Métrica",
+                        orientation="h", barmode="group",
+                        color_discrete_map={"👥 Seguidores": "#64748B",
+                                            "🎯 Audiencia": "#22C55E"},
+                        title="Base de seguidores vs audiencia alcanzada")
+        fig_sa.update_layout(margin=dict(l=0, r=0, t=40, b=0),
+                             yaxis=dict(autorange="reversed"), legend_title="",
+                             height=max(220, 60 * len(cf)),
+                             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                             legend=dict(orientation="h", y=-0.2))
+        st.plotly_chart(fig_sa, width='stretch')
+
+    # Gráfico 2: índice de aporte (cuánto pesa en audiencia vs en seguidores).
+    with col_b:
+        df_ap = pd.DataFrame([
+            {"Portal": f["nombre"], "Índice": f["indice_aporte"]}
+            for f in sorted(cf, key=lambda x: x["indice_aporte"], reverse=True)
+            if f["seguidores"] > 0
+        ])
+        if not df_ap.empty:
+            df_ap["color"] = df_ap["Índice"].apply(
+                lambda v: "#22C55E" if v >= 1 else "#EA580C")
+            fig_ap = go.Figure(go.Bar(
+                x=df_ap["Índice"], y=df_ap["Portal"], orientation="h",
+                marker_color=df_ap["color"],
+                text=[f"{v:.2f}×" for v in df_ap["Índice"]], textposition="auto"))
+            fig_ap.add_vline(x=1, line_dash="dot", line_color="rgba(255,255,255,0.5)")
+            fig_ap.update_layout(
+                title="Índice de aporte a la audiencia",
+                margin=dict(l=0, r=0, t=40, b=0),
+                yaxis=dict(autorange="reversed"),
+                height=max(220, 60 * len(df_ap)),
+                xaxis_title="cuota de audiencia ÷ cuota de seguidores",
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
+            st.plotly_chart(fig_ap, width='stretch')
+
+    # Detalle por portal.
+    df_det = pd.DataFrame([
+        {
+            "Portal":              f["nombre"],
+            "👥 Seguidores":       f["seguidores"],
+            "🎯 Audiencia":        f["alcance"],
+            "📣 Amplificación":    f"{f['amplificacion']:.1f}×",
+            "🌐 % no-seguidores":  f"{f['pct_no_seg']*100:.0f}%",
+            "📊 % de la audiencia": f"{f['share_audiencia']*100:.0f}%",
+            "🧭 Índice de aporte": f"{f['indice_aporte']:.2f}×" if f["seguidores"] else "—",
+        }
+        for f in cf
+    ])
+    st.dataframe(df_det, width='stretch', hide_index=True)
+
+    st.caption(
+        "📣 **Factor de amplificación** = audiencia alcanzada ÷ base de seguidores. "
+        "Más de 1× significa que el contenido llega a más personas que tu propia "
+        "base de seguidores.  \n"
+        "🌐 **% de no-seguidores** es una **cota mínima**: como el alcance cuenta "
+        "personas únicas, todo lo que supera tu base de seguidores son personas "
+        "que (en su mayoría) no te siguen. El valor real puede ser mayor.  \n"
+        "🧭 **Índice de aporte** = cuánto pesa el portal en la audiencia total frente "
+        "a cuánto pesa en seguidores. Mayor a 1 = atrae más audiencia de la que su "
+        "base de seguidores sugeriría.  \n"
+        "ℹ️ FB e IG se suman como audiencias separadas; una persona que sigue ambas "
+        "puede contarse en las dos."
+    )
+else:
+    st.info("No hay portales activos con datos de audiencia para analizar todavía.")
 
 st.markdown("---")
 
