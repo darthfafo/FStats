@@ -5,6 +5,16 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
+def _es_error_permiso(e):
+    """¿El error de la API es por permisos/scopes faltantes del token? (code 10
+    o code 190 / 'permission'). Si lo es, no tiene sentido reintentar otras
+    métricas con el mismo token: van a fallar igual."""
+    msg = str(e).lower()
+    return ("code 190" in msg or "code 10" in msg or "permission" in msg
+            or "must be granted" in msg)
+
+
 class InstagramCollector:
     def __init__(self, ig_id=None, access_token=None, resolve_username=True):
         self.ig_id        = ig_id        or os.getenv("META_INSTAGRAM_ID")
@@ -255,6 +265,9 @@ class InstagramCollector:
                 print(f"[IG] ✓ reach by follow_type {dia_str}: {out.get(dia_str)}")
             except Exception as e:
                 print(f"[IG] ✗ reach by follow_type {dia}: {e}")
+                if _es_error_permiso(e):
+                    print("[IG] reach by follow_type: el token no tiene permisos; corto.")
+                    break
         return out
 
     def get_demographics(self,
@@ -303,6 +316,13 @@ class InstagramCollector:
                             break
                     except Exception as e:
                         print(f"[IG] ✗ {metric}/{breakdown}/{tf}: {e}")
+                        if _es_error_permiso(e):
+                            # El token no tiene los permisos de demografía: abortamos
+                            # toda la demografía (16 llamadas que fallarían igual).
+                            print("[IG] demografía no disponible: el token no tiene "
+                                  "los permisos necesarios (pages_read_engagement / "
+                                  "instagram_manage_insights). Se omite.")
+                            return out
                 if dims:
                     out[audience_type][breakdown] = dims
         return out

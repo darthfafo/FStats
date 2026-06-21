@@ -5,6 +5,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
+def _es_error_permiso(e):
+    """¿El error de la API es por permisos/scopes faltantes del token? (code 10
+    o code 190 / 'permission'). Si lo es, no sirve reintentar otros endpoints."""
+    msg = str(e).lower()
+    return ("code 190" in msg or "code 10" in msg or "permission" in msg
+            or "must be granted" in msg)
+
+
 class FacebookCollector:
     def __init__(self, page_id=None, access_token=None):
         self.page_id           = page_id      or os.getenv("META_PAGE_ID")
@@ -124,6 +133,11 @@ class FacebookCollector:
                         return result
             except Exception as e:
                 print(f"[FB] ✗ {endpoint} con reactions: {e}")
+                if _es_error_permiso(e):
+                    print("[FB] El token no tiene permisos para leer los posts de la "
+                          "página (pages_read_engagement / pages_read_user_content). "
+                          "Se omiten los posts.")
+                    return {"data": [], "error": str(e)}
 
         # Si falla, obtener posts sin reactions y luego enriquecer con Batch API
         intentos_basicos = [
