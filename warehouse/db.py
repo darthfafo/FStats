@@ -107,6 +107,34 @@ CREATE TABLE IF NOT EXISTS raw_fb_fan_growth (
     new_follows  INTEGER DEFAULT 0,
     ingested_at  TIMESTAMP DEFAULT now()
 );
+
+-- Alcance diario desglosado por tipo de seguidor (seguidores / no-seguidores /
+-- desconocido). Permite seguir la evolución de la audiencia NO seguidora y su
+-- aporte al alcance total. Una fila por portal, día y follow_type.
+CREATE TABLE IF NOT EXISTS raw_ig_reach_by_follow_type (
+    portal_id    TEXT,
+    ig_id        TEXT,
+    metric_date  DATE,
+    follow_type  TEXT,          -- 'follower' | 'non_follower' | 'unknown'
+    reach_value  BIGINT,
+    ingested_at  TIMESTAMP DEFAULT now()
+);
+
+-- Demografía (geo / edad / género) de la audiencia. audience_type distingue a
+-- los seguidores ('follower') de la audiencia que interactúa ('engaged', que
+-- incluye no-seguidores). Snapshot por día: la demografía cambia lento, así que
+-- guardamos una foto diaria y la última vigente alcanza para mostrar, pero el
+-- histórico queda para ver evolución.
+CREATE TABLE IF NOT EXISTS raw_ig_demographics (
+    portal_id     TEXT,
+    ig_id         TEXT,
+    audience_type TEXT,         -- 'follower' | 'engaged'
+    breakdown     TEXT,         -- 'age' | 'city' | 'country' | 'gender'
+    dimension     TEXT,         -- p.ej. '25-34', 'Buenos Aires, Chubut', 'AR', 'F'
+    value         BIGINT,
+    snapshot_date DATE,
+    ingested_at   TIMESTAMP DEFAULT now()
+);
 """
 
 # Migraciones idempotentes para bases ya creadas (CREATE TABLE IF NOT EXISTS no
@@ -199,6 +227,28 @@ FROM (
                ORDER BY ingested_at DESC
            ) AS rn
     FROM raw_ig_account_info
+) WHERE rn = 1;
+
+-- Alcance por tipo de seguidor: última versión por portal/día/follow_type.
+CREATE OR REPLACE VIEW ig_reach_by_follow_type AS
+SELECT portal_id, ig_id, metric_date, follow_type, reach_value
+FROM (
+    SELECT *, row_number() OVER (
+        PARTITION BY portal_id, metric_date, follow_type
+        ORDER BY ingested_at DESC
+    ) AS rn
+    FROM raw_ig_reach_by_follow_type
+) WHERE rn = 1;
+
+-- Demografía: última versión por portal/audiencia/breakdown/dimensión/día.
+CREATE OR REPLACE VIEW ig_demographics AS
+SELECT portal_id, ig_id, audience_type, breakdown, dimension, value, snapshot_date
+FROM (
+    SELECT *, row_number() OVER (
+        PARTITION BY portal_id, audience_type, breakdown, dimension, snapshot_date
+        ORDER BY ingested_at DESC
+    ) AS rn
+    FROM raw_ig_demographics
 ) WHERE rn = 1;
 """
 
