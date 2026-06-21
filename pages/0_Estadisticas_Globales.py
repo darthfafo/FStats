@@ -605,70 +605,95 @@ if activos:
 
     st.markdown("---")
 
-    # ── Segmentación por tipo de contenido (IG, todos los portales) ─
-    st.subheader("🎬 Tipo de contenido más efectivo — Instagram (todos los portales)")
+    # ── Rendimiento de reels por portal ──────────────────────────────
+    st.subheader("🎬 Rendimiento de reels por portal")
+    st.caption(
+        "Reproducciones y alcance promedio por reel en cada portal, para ver qué "
+        "portal logra reels que más circulan y aprender del que mejor rinde. "
+        "Sobre los reels con métricas cargadas."
+    )
 
     todos_posts_ig = []
     for d in activos:
         for post in d["posts_ig"]:
             todos_posts_ig.append({**post, "portal": d["nombre"]})
 
+    reels_portal = {}
+    for d in activos:
+        reels = [p for p in d.get("posts_ig", []) if p.get("tipo") == "reel"]
+        if not reels:
+            continue
+        con_plays = [p for p in reels if (p.get("plays") or 0) > 0]
+        reels_portal[d["nombre"]] = {
+            "n":         len(reels),
+            "avg_plays": (sum(p.get("plays", 0) for p in con_plays) / len(con_plays)) if con_plays else 0,
+            "avg_reach": sum(p.get("reach", 0) for p in reels) / len(reels),
+            "best":      max(reels, key=lambda p: (p.get("plays", 0) or p.get("reach", 0))),
+        }
+
+    if reels_portal:
+        orden_r = sorted(reels_portal.items(), key=lambda kv: kv[1]["avg_plays"], reverse=True)
+        df_rm = pd.DataFrame([
+            {"Portal": n, "Métrica": etq, "Promedio": int(val)}
+            for n, v in orden_r
+            for etq, val in (("▶️ Reproduc./reel", v["avg_plays"]),
+                             ("🎯 Alcance/reel", v["avg_reach"]))
+        ])
+        fig_r = px.bar(df_rm, x="Promedio", y="Portal", color="Métrica",
+                       orientation="h", barmode="group",
+                       color_discrete_map={"▶️ Reproduc./reel": "#c026d3",
+                                           "🎯 Alcance/reel": "#0ea5e9"})
+        fig_r.update_layout(margin=dict(l=0, r=0, t=10, b=40),
+                            yaxis=dict(autorange="reversed"),
+                            height=max(220, 64 * len(reels_portal)), legend_title="",
+                            legend=dict(orientation="h", y=-0.25),
+                            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
+        st.plotly_chart(fig_r, width='stretch')
+
+        df_det_r = pd.DataFrame([
+            {
+                "Portal":            n,
+                "🎬 Reels":          v["n"],
+                "▶️ Reproduc./reel": f"{int(v['avg_plays']):,}",
+                "🎯 Alcance/reel":   f"{int(v['avg_reach']):,}",
+                "🏆 Mejor reel":     f"{(v['best'].get('plays', 0) or v['best'].get('reach', 0)):,} · "
+                                     f"{(v['best'].get('caption', '') or '')[:40]}",
+            }
+            for n, v in orden_r
+        ])
+        st.dataframe(df_det_r, width='stretch', hide_index=True)
+    else:
+        st.info("Todavía no hay reels con métricas cargadas para comparar.")
+
+    # ── Top 10 IG último mes (por difusión: reproducciones/alcance) ──
     if todos_posts_ig:
-        df_posts = pd.DataFrame(todos_posts_ig)
-
-        col_tipo1, col_tipo2 = st.columns(2)
-        with col_tipo1:
-            res_tipo = df_posts.groupby("tipo").agg(
-                count=("likes","count"),
-                avg_likes=("likes","mean"),
-                avg_plays=("plays","mean"),
-                total_reach=("reach","sum")
-            ).reset_index()
-            res_tipo["tipo_label"] = res_tipo["tipo"].map(
-                {"reel":"🎬 Reel","video":"▶️ Video","image":"📷 Imagen","carousel_album":"🖼️ Carrusel"}).fillna(res_tipo["tipo"])
-            fig_t = px.bar(res_tipo, x="tipo_label", y="avg_plays",
-                           title="Plays/Alcance promedio por tipo",
-                           color="tipo_label",
-                           color_discrete_sequence=["#c026d3","#7c3aed","#0ea5e9","#f59e0b"])
-            fig_t.update_layout(showlegend=False, margin=dict(l=0,r=0,t=40,b=0), xaxis_title="")
-            st.plotly_chart(fig_t, width='stretch')
-
-        with col_tipo2:
-            fig_pie = px.pie(res_tipo, values="count", names="tipo_label",
-                             title="Distribución de contenido publicado",
-                             color_discrete_sequence=["#c026d3","#7c3aed","#0ea5e9","#f59e0b"])
-            fig_pie.update_layout(margin=dict(l=0,r=0,t=40,b=0))
-            st.plotly_chart(fig_pie, width='stretch')
-
-        # ── Top 10 IG último mes ─────────────────────────────────
         st.markdown("---")
         st.subheader("📸 Top 10 publicaciones Instagram — último mes")
-        # Usar all_media_ig (hasta 500 posts) filtrado a 30 días, ordenado por likes
-        # posts_ig solo tiene 25 posts recientes y puede perder posts virales más viejos
+        st.caption("Ordenadas por **difusión real**: reproducciones (reels) o "
+                   "alcance (otros formatos), no por likes.")
         from datetime import timedelta
         limite_ig = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
-        todos_30d_ig = []
-        for d in activos:
-            for post in d.get("all_media_ig", []):
-                if post.get("ts", "") >= limite_ig:
-                    todos_30d_ig.append({**post, "portal": d["nombre"]})
 
-        # Fallback: si no hay all_media_ig, usar posts_ig
-        fuente_30d = todos_30d_ig if todos_30d_ig else todos_posts_ig
-        top10_ig = sorted(fuente_30d, key=lambda x: x.get("likes", 0), reverse=True)[:10]
+        def _difusion(p):
+            return (p.get("plays", 0) or 0) or (p.get("reach", 0) or 0)
 
-        if top10_ig:
+        cand_ig = [p for p in todos_posts_ig if p.get("ts", "") >= limite_ig]
+        if not cand_ig:
+            cand_ig = todos_posts_ig
+        top10_ig = sorted(cand_ig, key=_difusion, reverse=True)[:10]
+
+        if top10_ig and _difusion(top10_ig[0]) > 0:
             for i, post in enumerate(top10_ig, 1):
-                icono = "🎬" if post["tipo"]=="reel" else "▶️" if post["tipo"]=="video" else "🖼️" if post["tipo"]=="carousel_album" else "📷"
+                icono = "🎬" if post["tipo"] == "reel" else "▶️" if post["tipo"] == "video" else "🖼️" if post["tipo"] == "carousel_album" else "📷"
                 with st.container(border=True):
-                    cols = st.columns([0.4, 3.5, 1, 1, 0.5])
+                    cols = st.columns([0.4, 3.3, 1.1, 1, 0.5])
                     cols[0].markdown(f"**#{i}**")
                     cols[1].markdown(f"{icono} **{post['portal']}** · `{post['ts']}`  \n{post.get('caption','')[:100]}")
-                    cols[2].metric("❤️ Likes",       f"{post.get('likes',0):,}")
-                    cols[3].metric("💬 Comentarios", f"{post.get('comments',0):,}")
+                    cols[2].metric("▶️ Difusión", f"{_difusion(post):,}")
+                    cols[3].metric("❤️ Likes", f"{post.get('likes',0):,}")
                     cols[4].markdown(f"[🔗]({post.get('permalink','')})" if post.get("permalink") else "")
         else:
-            st.info("Sin datos de publicaciones en los último mes.")
+            st.info("Sin métricas de difusión cargadas todavía (corré la ingesta para verlas).")
 
     # ── Top 10 FB último mes ─────────────────────────────────────
     st.markdown("---")
