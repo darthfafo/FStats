@@ -68,6 +68,46 @@ def followers_history(nombre, plataforma):
 
 
 @_cache
+def reach_by_follow_type(nombre):
+    """
+    Histórico de alcance diario por tipo de seguidor (Instagram).
+
+    Devuelve columnas: metric_date (date), follow_type (text), reach_value (int).
+    follow_type ∈ {'follower', 'non_follower', 'unknown'}.
+    """
+    return _query(
+        """SELECT metric_date, follow_type, reach_value
+           FROM ig_reach_by_follow_type
+           WHERE portal_id = ?
+           ORDER BY metric_date""",
+        [portal_id(nombre)],
+    )
+
+
+@_cache
+def demographics(nombre, audience_type, breakdown):
+    """
+    Última foto de demografía de un portal (Instagram).
+
+    audience_type: 'follower' (seguidores) | 'engaged' (audiencia que interactúa).
+    breakdown: 'age' | 'city' | 'country' | 'gender'.
+    Devuelve columnas: dimension (text), value (int), ordenadas por value desc.
+    """
+    pid = portal_id(nombre)
+    return _query(
+        """SELECT dimension, value
+           FROM ig_demographics
+           WHERE portal_id = ? AND audience_type = ? AND breakdown = ?
+             AND snapshot_date = (
+                 SELECT max(snapshot_date) FROM ig_demographics
+                 WHERE portal_id = ? AND audience_type = ? AND breakdown = ?
+             )
+           ORDER BY value DESC""",
+        [pid, audience_type, breakdown, pid, audience_type, breakdown],
+    )
+
+
+@_cache
 def posts(nombre, plataforma):
     """Posts deduplicados de un portal (último estado conocido de cada uno)."""
     view = "fb_posts" if plataforma == "fb" else "ig_posts"

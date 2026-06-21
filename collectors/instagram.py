@@ -171,6 +171,97 @@ class InstagramCollector:
 
         return result
 
+    def get_reach_by_follow_type(self, days=3):
+        """
+        Alcance diario desglosado por tipo de seguidor.
+
+        Usa la métrica `reach` con breakdown=follow_type (metric_type=total_value).
+        Para cada uno de los últimos `days` días pide una ventana de un día, así
+        obtenemos el alcance de seguidores vs no-seguidores POR DÍA y vamos
+        acumulando histórico corrida a corrida.
+
+        Devuelve {'YYYY-MM-DD': {'follower': n, 'non_follower': m, 'unknown': k}}.
+        """
+        out = {}
+        for i in range(1, days + 1):
+            dia   = datetime.now().date() - timedelta(days=i)
+            desde = datetime(dia.year, dia.month, dia.day)
+            since = int(desde.timestamp())
+            until = int((desde + timedelta(days=1)).timestamp())
+            try:
+                resp = self._get(f"{self.ig_id}/insights", {
+                    "metric":      "reach",
+                    "period":      "day",
+                    "metric_type": "total_value",
+                    "breakdown":   "follow_type",
+                    "since":       since,
+                    "until":       until,
+                })
+                dia_str = dia.strftime("%Y-%m-%d")
+                for m in resp.get("data", []):
+                    tv = m.get("total_value", {})
+                    for bd in tv.get("breakdowns", []):
+                        for res in bd.get("results", []):
+                            dv = (res.get("dimension_values") or ["unknown"])[0]
+                            ft = str(dv).strip().lower() or "unknown"
+                            val = int(res.get("value", 0) or 0)
+                            out.setdefault(dia_str, {})[ft] = (
+                                out.get(dia_str, {}).get(ft, 0) + val)
+                print(f"[IG] ✓ reach by follow_type {dia_str}: {out.get(dia_str)}")
+            except Exception as e:
+                print(f"[IG] ✗ reach by follow_type {dia}: {e}")
+        return out
+
+    def get_demographics(self,
+                         timeframes=("this_month", "this_week"),
+                         breakdowns=("age", "gender", "country", "city")):
+        """
+        Demografía de la audiencia: seguidores (follower_demographics) y audiencia
+        que interactúa (engaged_audience_demographics, incluye no-seguidores).
+
+        period=lifetime + metric_type=total_value + timeframe + breakdown. Probamos
+        timeframes en orden hasta obtener datos (Meta deprecó last_30_days etc; en
+        v25 valen this_month / this_week). Requiere ≥100 seguidores/interacciones.
+
+        Devuelve {audience_type: {breakdown: {dimension: value}}}.
+        """
+        metrics = {
+            "follower": "follower_demographics",
+            "engaged":  "engaged_audience_demographics",
+        }
+        out = {}
+        for audience_type, metric in metrics.items():
+            out[audience_type] = {}
+            for breakdown in breakdowns:
+                dims = None
+                for tf in timeframes:
+                    try:
+                        resp = self._get(f"{self.ig_id}/insights", {
+                            "metric":      metric,
+                            "period":      "lifetime",
+                            "metric_type": "total_value",
+                            "timeframe":   tf,
+                            "breakdown":   breakdown,
+                        })
+                        parsed = {}
+                        for m in resp.get("data", []):
+                            tv = m.get("total_value", {})
+                            for bd in tv.get("breakdowns", []):
+                                for res in bd.get("results", []):
+                                    dv = (res.get("dimension_values") or [""])[0]
+                                    if dv == "":
+                                        continue
+                                    parsed[str(dv)] = int(res.get("value", 0) or 0)
+                        if parsed:
+                            dims = parsed
+                            print(f"[IG] ✓ {metric}/{breakdown} ({tf}): {len(parsed)} valores")
+                            break
+                    except Exception as e:
+                        print(f"[IG] ✗ {metric}/{breakdown}/{tf}: {e}")
+                if dims:
+                    out[audience_type][breakdown] = dims
+        return out
+
     def _get_media_metric(self, post_id, media_type, product_type=""):
         """
         Intenta obtener métricas de un post individual.

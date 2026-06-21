@@ -32,6 +32,16 @@ def ingest_instagram(portal):
     except Exception as e:
         print(f"[IG/{nombre}] posts error: {e}")
 
+    try:
+        _ingest_reach_by_follow_type(con, ig, pid, ig_id)
+    except Exception as e:
+        print(f"[IG/{nombre}] reach_by_follow_type error: {e}")
+
+    try:
+        _ingest_demographics(con, ig, pid, ig_id)
+    except Exception as e:
+        print(f"[IG/{nombre}] demographics error: {e}")
+
     con.commit()
     con.close()
 
@@ -90,6 +100,40 @@ def _ingest_account_info(con, ig, portal_id, ig_id):
         ]
     )
     print(f"[IG/{portal_id}] account_info: followers={info.get('followers_count')}")
+
+
+def _ingest_reach_by_follow_type(con, ig, portal_id, ig_id):
+    data = ig.get_reach_by_follow_type(days=3)
+    inserted = 0
+    for date_str, splits in data.items():
+        for follow_type, value in splits.items():
+            con.execute(
+                """INSERT INTO raw_ig_reach_by_follow_type
+                   (portal_id, ig_id, metric_date, follow_type, reach_value, ingested_at)
+                   VALUES (?, ?, ?, ?, ?, now())""",
+                [portal_id, ig_id, date_str, follow_type, int(value or 0)]
+            )
+            inserted += 1
+    print(f"[IG/{portal_id}] reach_by_follow_type: {inserted} filas")
+
+
+def _ingest_demographics(con, ig, portal_id, ig_id):
+    demo = ig.get_demographics()
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    inserted = 0
+    for audience_type, breakdowns in demo.items():
+        for breakdown, dims in breakdowns.items():
+            for dimension, value in dims.items():
+                con.execute(
+                    """INSERT INTO raw_ig_demographics
+                       (portal_id, ig_id, audience_type, breakdown, dimension,
+                        value, snapshot_date, ingested_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, now())""",
+                    [portal_id, ig_id, audience_type, breakdown,
+                     str(dimension)[:120], int(value or 0), today_str]
+                )
+                inserted += 1
+    print(f"[IG/{portal_id}] demographics: {inserted} filas")
 
 
 def _ingest_posts(con, ig, portal_id):
