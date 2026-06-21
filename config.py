@@ -39,6 +39,18 @@ section[data-testid="stSidebar"] ul {
         padding-top: 1rem !important;
     }
 }
+
+/* Títulos más compactos en móvil para que no ocupen toda la pantalla */
+@media (max-width: 768px) {
+    h1, [data-testid="stHeading"] h1 { font-size: 1.45rem !important; line-height: 1.2 !important; }
+    h2 { font-size: 1.2rem !important; }
+    h3 { font-size: 1.05rem !important; }
+    [data-testid="stMetricValue"] { font-size: 1.35rem !important; }
+}
+
+/* Un poco de aire entre secciones (evita que quede todo pegado) */
+[data-testid="stHeading"] { margin-top: 0.5rem; }
+hr { margin: 0.7rem 0 !important; }
 </style>
 """
 
