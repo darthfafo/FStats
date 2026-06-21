@@ -6,10 +6,18 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class InstagramCollector:
-    def __init__(self, ig_id=None, access_token=None):
+    def __init__(self, ig_id=None, access_token=None, resolve_username=True):
         self.ig_id        = ig_id        or os.getenv("META_INSTAGRAM_ID")
         self.access_token = access_token or os.getenv("META_PAGE_ACCESS_TOKEN")
         self.base_url     = "https://graph.facebook.com/v25.0"
+        # Si el id viene como @usuario (no numérico), lo resolvemos al ID real
+        # usando las cuentas que administra el token. Permite conectar un portal
+        # con solo el username (ver config / VISTE ESTO?).
+        if (resolve_username and self.ig_id and self.access_token
+                and not str(self.ig_id).isdigit()):
+            resolved = self.find_owned_ig_id_by_username(self.ig_id)
+            if resolved:
+                self.ig_id = resolved
 
     def _get(self, endpoint, params=None):
         if params is None:
@@ -31,6 +39,43 @@ class InstagramCollector:
         return self._get(self.ig_id, {
             "fields": "id,name,username,biography,followers_count,follows_count,media_count"
         })
+
+    def find_owned_ig_id_by_username(self, username):
+        """
+        Resuelve el ID numérico de una cuenta de Instagram a partir de su @usuario,
+        buscando entre las páginas de Facebook que administra el token actual la
+        cuenta de IG cuyo username coincide.
+
+        Sirve para conectar un portal sin tener a mano el ID numérico, siempre que
+        el token tenga permiso sobre esa cuenta (mismo administrador). Que aparezca
+        acá implica además que el token PUEDE leer sus insights. Devuelve el ID
+        (str) o None si no la encuentra.
+        """
+        objetivo = str(username).lstrip("@").strip().lower()
+        if not objetivo:
+            return None
+        try:
+            data = self._get("me/accounts", {
+                "fields": "instagram_business_account{id,username}",
+                "limit":  100,
+            })
+            while True:
+                for pg in data.get("data", []):
+                    iba = pg.get("instagram_business_account") or {}
+                    if str(iba.get("username", "")).strip().lower() == objetivo:
+                        print(f"[IG] ✓ @{objetivo} resuelto a id {iba.get('id')}")
+                        return iba.get("id")
+                next_url = data.get("paging", {}).get("next")
+                if not next_url:
+                    break
+                r = requests.get(next_url)
+                if not r.ok:
+                    break
+                data = r.json()
+            print(f"[IG] ✗ no encontré @{objetivo} entre las cuentas del token")
+        except Exception as e:
+            print(f"[IG] ✗ error resolviendo @{objetivo}: {e}")
+        return None
 
     def get_recent_media(self, limit=30):
         # El campo correcto es media_product_type = "REELS" para Reels (media_type

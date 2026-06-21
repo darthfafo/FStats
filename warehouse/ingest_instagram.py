@@ -14,7 +14,14 @@ def ingest_instagram(portal):
         print(f"[IG/{nombre}] Skipped — missing ig_id or token")
         return
 
+    # El colector resuelve solo el @usuario a ID numérico (ver InstagramCollector).
     ig = InstagramCollector(ig_id=ig_id, access_token=token)
+    if not str(ig.ig_id).isdigit():
+        print(f"[IG/{nombre}] Skipped — no pude resolver el id de '{ig_id}' "
+              f"(¿el token administra esa cuenta?)")
+        return
+    ig_id = ig.ig_id
+
     con = get_connection()
 
     try:
