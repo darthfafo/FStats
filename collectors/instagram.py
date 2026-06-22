@@ -67,9 +67,10 @@ class InstagramCollector:
         objetivo = str(self.ig_id).lstrip("@").strip().lower()
         if not objetivo:
             return False
+        administradas = []   # diagnóstico: qué cuentas IG administra este token
         try:
             data = self._get("me/accounts", {
-                "fields": "access_token,instagram_business_account{id,username}",
+                "fields": "name,access_token,instagram_business_account{id,username}",
                 "limit":  100,
             })
             while True:
@@ -77,6 +78,8 @@ class InstagramCollector:
                     iba   = pg.get("instagram_business_account") or {}
                     iid   = str(iba.get("id", "") or "")
                     uname = str(iba.get("username", "") or "").strip().lower()
+                    etiqueta = (f"@{uname}" if uname else (iid or pg.get("name", "?")))
+                    administradas.append(etiqueta)
                     if (iid and iid == objetivo) or (uname and uname == objetivo):
                         if iid:
                             self.ig_id = iid
@@ -93,7 +96,10 @@ class InstagramCollector:
                 if not r.ok:
                     break
                 data = r.json()
-            print(f"[IG] no encontré la página de '{objetivo}' en me/accounts; uso el token tal cual")
+            cuentas = ", ".join(administradas) if administradas else "(ninguna con IG vinculado)"
+            print(f"[IG] '{objetivo}' NO está entre las cuentas de este token. "
+                  f"El token administra: {cuentas}. "
+                  f"Revisá que el token y META_INSTAGRAM_ID_*/META_PAGE_ID_* sean de la MISMA cuenta.")
         except Exception as e:
             print(f"[IG] me/accounts no disponible ({e}); uso el token tal cual")
         return False
