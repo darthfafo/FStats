@@ -160,53 +160,66 @@ class FacebookCollector:
 
     def get_page_insights(self):
         """
-        Métricas de página disponibles en API v25.0.
-        Nota: page_impressions fue deprecada; usamos page_impressions_unique (alcance único).
+        Métricas de página (API v25.0). Meta está deprecando varias métricas de
+        página (page_impressions_unique entre ellas, jun 2026). Para el ALCANCE
+        probamos una lista de candidatos y usamos el primero que devuelva datos;
+        si ninguno responde, caemos a page_views_total como proxy de actividad
+        para no mostrar 0.
         """
         since = int((datetime.now() - timedelta(days=30)).timestamp())
         until = int(datetime.now().timestamp())
 
         result = {
-            "alcance":          0,   # page_impressions_unique
+            "alcance":          0,   # personas únicas alcanzadas (reach)
             "engagement":       0,   # page_post_engagements
             "vistas":           0,   # page_views_total
             "daily_alcance":    {},
             "daily_engagement": {},
+            "daily_vistas":     {},
         }
 
-        metricas = [
-            "page_impressions_unique",
-            "page_post_engagements",
-            "page_views_total",
-        ]
+        def _serie(metric):
+            """Devuelve (total, {fecha: valor}) o (None, {}) si la métrica falla."""
+            resp  = self._get(f"{self.page_id}/insights", {
+                "metric": metric, "period": "day", "since": since, "until": until})
+            datos = resp.get("data", [])
+            vals  = datos[0].get("values", []) if datos else []
+            total = sum(v.get("value", 0) for v in vals)
+            daily = {v["end_time"][:10]: v.get("value", 0)
+                     for v in vals if v.get("value", 0) > 0}
+            return total, daily
 
-        for metric in metricas:
+        # ── Alcance: probamos candidatos hasta dar con uno válido ──────
+        for metric in ("page_impressions_unique",
+                       "page_impressions_organic_unique",
+                       "page_impressions_viral_unique"):
             try:
-                resp = self._get(f"{self.page_id}/insights", {
-                    "metric": metric,
-                    "period": "day",
-                    "since":  since,
-                    "until":  until,
-                })
-                for m in resp.get("data", []):
-                    vals  = m.get("values", [])
-                    total = sum(v.get("value", 0) for v in vals)
-                    daily = {
-                        v["end_time"][:10]: v.get("value", 0)
-                        for v in vals if v.get("value", 0) > 0
-                    }
-                    name = m["name"]
-                    if name == "page_impressions_unique":
-                        result["alcance"]       = total
-                        result["daily_alcance"] = daily
-                    elif name == "page_post_engagements":
-                        result["engagement"]       = total
-                        result["daily_engagement"] = daily
-                    elif name == "page_views_total":
-                        result["vistas"] = total
+                total, daily = _serie(metric)
+                if daily:
+                    result["alcance"], result["daily_alcance"] = total, daily
+                    print(f"[FB] ✓ alcance vía {metric}")
+                    break
+            except Exception as e:
+                print(f"[FB] ✗ alcance {metric}: {e}")
+
+        # ── Engagement y vistas (siguen vigentes) ──────────────────────
+        for metric, total_key, daily_key in (
+                ("page_post_engagements", "engagement", "daily_engagement"),
+                ("page_views_total",      "vistas",     "daily_vistas")):
+            try:
+                total, daily = _serie(metric)
+                result[total_key] = total
+                result[daily_key] = daily
                 print(f"[FB] ✓ page insights: {metric} OK")
             except Exception as e:
                 print(f"[FB] ✗ page insights {metric}: {e}")
+
+        # ── Fallback: si el alcance quedó en 0 (métrica deprecada) pero hay
+        # vistas, las usamos como proxy para que el panel no muestre 0. ──
+        if not result["alcance"] and result["vistas"]:
+            result["alcance"]       = result["vistas"]
+            result["daily_alcance"] = result["daily_vistas"]
+            print("[FB] alcance no disponible; uso page_views_total como proxy.")
 
         return result
 
