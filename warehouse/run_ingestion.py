@@ -33,6 +33,10 @@ def run():
 
     for portal in PORTALES:
         nombre = portal["nombre"]
+        if portal.get("oculto"):
+            print(f"\n[{nombre}] -- Skipped (oculto: acceso sin configurar)")
+            results["skipped"] += 1
+            continue
         if not _is_active(portal):
             print(f"\n[{nombre}] -- Skipped (PENDIENTE credentials)")
             results["skipped"] += 1

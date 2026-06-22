@@ -189,7 +189,7 @@ def portal_activo(p):
     return (p.get("access_token") not in pendientes and
             p.get("facebook_page_id") not in pendientes)
 
-PORTALES_ACTIVOS = [p for p in PORTALES if portal_activo(p)]
+PORTALES_ACTIVOS = [p for p in PORTALES if portal_activo(p) and not p.get("oculto")]
 
 # ── Sidebar (navegación unificada con el resto del panel) ──────────
 sidebar_nav(current="")
@@ -277,13 +277,7 @@ gran_total_ig  = sum(r["ig_imp"]      for r in resumenes)
 tasa_eng       = (gran_total_eng / gran_total_seg * 100) if gran_total_seg > 0 else 0
 
 # ── Encabezado del panel ───────────────────────────────────────────
-# Título y bajada con componentes nativos (se adaptan al tema claro/oscuro).
 st.title("🚀 Performance de la Red")
-st.caption(
-    "El pulso de tu audiencia, consolidado: qué contenido convierte, qué red "
-    "crece y dónde está tu mayor oportunidad de alcance — todo en un tablero "
-    "para decidir con datos, no con corazonadas."
-)
 
 # ── HERO — Total de visualizaciones ────────────────────────────────
 st.markdown(f"""
@@ -310,21 +304,21 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-with st.expander("📖 Qué significa cada dato"):
-    st.markdown(
-        "- **🎯 Total visualizaciones:** la suma de todo lo que se *vio* en la red en "
-        "30 días — alcance único de Facebook + visualizaciones de Instagram. Es el "
-        "termómetro de difusión general.\n"
-        "- **📘 Facebook:** personas **únicas** alcanzadas en Facebook en el mes.\n"
-        "- **📸 Instagram:** **visualizaciones** totales en Instagram (reproducciones de "
-        "Reels, videos y fotos) del mes.\n"
-        "- **💬 Engagement (30d):** interacciones con el contenido — reacciones, "
-        "comentarios y compartidos. Mide qué tan involucrada está la audiencia.\n"
-        "- **👥 Seguidores totales:** el tamaño de tu audiencia propia (FB + IG), foto "
-        "de hoy.\n"
-        "- **📊 Tasa de engagement:** engagement ÷ seguidores. Pone el engagement en "
-        "contexto del tamaño de la audiencia."
-    )
+st.markdown("##### 📖 Qué significa cada dato")
+st.markdown(
+    "- **🎯 Total visualizaciones:** la suma de todo lo que se *vio* en la red en "
+    "30 días — alcance único de Facebook + visualizaciones de Instagram. Es el "
+    "termómetro de difusión general.\n"
+    "- **📘 Facebook:** personas **únicas** alcanzadas en Facebook en el mes.\n"
+    "- **📸 Instagram:** **visualizaciones** totales en Instagram (reproducciones de "
+    "Reels, videos y fotos) del mes.\n"
+    "- **💬 Engagement (30d):** interacciones con el contenido — reacciones, "
+    "comentarios y compartidos. Mide qué tan involucrada está la audiencia.\n"
+    "- **👥 Seguidores totales:** el tamaño de tu audiencia propia (FB + IG), foto "
+    "de hoy.\n"
+    "- **📊 Tasa de engagement:** engagement ÷ seguidores. Pone el engagement en "
+    "contexto del tamaño de la audiencia."
+)
 
 st.markdown("---")
 st.subheader("🗂️ Detalle por portal")
