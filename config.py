@@ -217,9 +217,6 @@ PORTALES = [
         "color_fb":         "#1877F2",
         "color_ig":         "#E1306C",
         "pagina":           "pages/5_Viste_Esto.py",
-        # Oculto del panel y la ingesta hasta que su acceso (token con la página
-        # asignada) esté funcionando. Quitar este flag para reactivarlo.
-        "oculto":           True,
     },
     {
         "nombre":           "Boca en Linea",
