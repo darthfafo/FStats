@@ -73,7 +73,7 @@ st.markdown(f"""
         <div style="color:white;font-size:clamp(26px,7vw,60px);font-weight:900;line-height:1;margin:8px 0 4px">
             {gran_total:,}
         </div>
-        <div style="color:#64748b;font-size:13px">Facebook + Instagram</div>
+        <div style="color:#94a3b8;font-size:13px">Facebook + Instagram</div>
     </div>
     <div style="display:flex;gap:32px;flex-wrap:wrap;">
         <div style="text-align:center">

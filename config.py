@@ -51,6 +51,13 @@ section[data-testid="stSidebar"] ul {
 /* Un poco de aire entre secciones (evita que quede todo pegado) */
 [data-testid="stHeading"] { margin-top: 0.5rem; }
 hr { margin: 0.7rem 0 !important; }
+
+/* Contenedores con borde con look de tarjeta, consistente en toda la app */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    border-radius: 14px !important;
+    border-color: rgba(148,163,184,0.18) !important;
+    background: rgba(148,163,184,0.04);
+}
 </style>
 """
 

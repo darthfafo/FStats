@@ -31,7 +31,7 @@ if portal is None or not credenciales_ok(portal):
         <div style="font-size:64px;margin-bottom:16px">⏳</div>
         <div style="color:#94a3b8;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase">Esperando credenciales</div>
         <div style="color:white;font-size:clamp(18px,4vw,28px);font-weight:800;margin:12px 0">VISTE ESTO? — Pendiente de configuración</div>
-        <div style="color:#64748b;font-size:15px">Una vez que el administrador envíe el token de acceso,<br>
+        <div style="color:#94a3b8;font-size:15px">Una vez que el administrador envíe el token de acceso,<br>
         completá los datos en el archivo <code>.env</code> y el panel se activa automáticamente.</div>
     </div>""", unsafe_allow_html=True)
     st.markdown("### 📋 Qué completar en `.env`")
@@ -69,7 +69,7 @@ st.markdown(f"""
   <div>
     <div style="color:#94a3b8;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase">📸 Total visualizaciones Instagram — último mes</div>
     <div style="color:white;font-size:clamp(26px,7vw,60px);font-weight:900;line-height:1;margin:8px 0 4px">{imp_ig['total_imp']:,}</div>
-    <div style="color:#64748b;font-size:13px">Plays de Reels + reproducciones + vistas</div>
+    <div style="color:#94a3b8;font-size:13px">Plays de Reels + reproducciones + vistas</div>
   </div>
   <div style="display:flex;gap:32px;flex-wrap:wrap;">
     <div style="text-align:center">
