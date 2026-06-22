@@ -118,6 +118,35 @@ section[data-testid="stSidebar"] ul { display: none !important; }
     font-size: clamp(12px, 2vw, 15px);
 }
 
+/* Encabezado del panel */
+.panel-head { margin: 4px 0 14px 0; }
+.panel-head .h-title {
+    color: #f8fafc; font-size: clamp(20px, 4vw, 30px); font-weight: 800;
+    line-height: 1.15; margin: 0;
+}
+.panel-head .h-sub {
+    color: #94a3b8; font-size: clamp(12px, 2vw, 14.5px); margin-top: 4px;
+}
+
+/* Tarjetas KPI azules (mismo estilo que el hero, en chico) */
+.kpi-grid { display: flex; gap: 14px; flex-wrap: wrap; margin: 4px 0 6px 0; }
+.kpi-card {
+    flex: 1 1 165px;
+    background: linear-gradient(135deg, #0f172a, #1e3a5f);
+    border: 1px solid rgba(148,163,184,0.12);
+    border-radius: 14px;
+    padding: 16px 18px;
+}
+.kpi-card .k-label {
+    color: #94a3b8; font-size: 11.5px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase;
+}
+.kpi-card .k-value {
+    color: #fff; font-size: clamp(22px, 4vw, 30px); font-weight: 800;
+    line-height: 1.1; margin-top: 6px;
+}
+.kpi-card .k-sub { color: #64748b; font-size: 11.5px; margin-top: 4px; }
+
 /* Responsive: hero inline divs en portales */
 @media (max-width: 768px) {
     div[style*="font-size:60px"], div[style*="font-size: 60px"] {
@@ -239,7 +268,16 @@ gran_total_fb  = sum(r["fb_imp"]      for r in resumenes)
 gran_total_ig  = sum(r["ig_imp"]      for r in resumenes)
 tasa_eng       = (gran_total_eng / gran_total_seg * 100) if gran_total_seg > 0 else 0
 
-# ── HERO — Alcance total ───────────────────────────────────────────
+# ── Encabezado del panel ───────────────────────────────────────────
+st.markdown(f"""
+<div class="panel-head">
+    <div class="h-title">📊 Panel general</div>
+    <div class="h-sub">Resumen en vivo de toda la red — los números clave de los últimos 30 días,
+    sumando {len(PORTALES_ACTIVOS)} portal(es) de Facebook e Instagram.</div>
+</div>
+""", unsafe_allow_html=True)
+
+# ── HERO — Total de visualizaciones ────────────────────────────────
 st.markdown(f"""
 <div class="hero">
     <div class="label">🎯 Total visualizaciones — Últimos 30 días — Todas las fuentes</div>
@@ -248,12 +286,37 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-c1, c2, c3, c4, c5 = st.columns(5)
-c1.metric("📘 Facebook",              f"{gran_total_fb:,}",  help="Alcance único 30d")
-c2.metric("📸 Instagram",             f"{gran_total_ig:,}",  help="Visualizaciones 30d")
-c3.metric("💬 Engagement (30d)",      f"{gran_total_eng:,}", help="Likes + comentarios + compartidos en Facebook")
-c4.metric("👥 Seguidores totales",    f"{gran_total_seg:,}")
-c5.metric("📊 Tasa de engagement",    f"{tasa_eng:.2f}%",    help="Engagement FB / seguidores totales")
+# ── KPIs en tarjetas azules (estilo dashboard) ─────────────────────
+st.markdown(f"""
+<div class="kpi-grid">
+  <div class="kpi-card"><div class="k-label">📘 Facebook</div>
+    <div class="k-value">{gran_total_fb:,}</div><div class="k-sub">Alcance único · 30d</div></div>
+  <div class="kpi-card"><div class="k-label">📸 Instagram</div>
+    <div class="k-value">{gran_total_ig:,}</div><div class="k-sub">Visualizaciones · 30d</div></div>
+  <div class="kpi-card"><div class="k-label">💬 Engagement</div>
+    <div class="k-value">{gran_total_eng:,}</div><div class="k-sub">Interacciones · 30d</div></div>
+  <div class="kpi-card"><div class="k-label">👥 Seguidores</div>
+    <div class="k-value">{gran_total_seg:,}</div><div class="k-sub">Audiencia propia (hoy)</div></div>
+  <div class="kpi-card"><div class="k-label">📊 Tasa engagement</div>
+    <div class="k-value">{tasa_eng:.1f}%</div><div class="k-sub">Engagement ÷ seguidores</div></div>
+</div>
+""", unsafe_allow_html=True)
+
+with st.expander("📖 Qué significa cada dato"):
+    st.markdown(
+        "- **🎯 Total visualizaciones:** la suma de todo lo que se *vio* en la red en "
+        "30 días — alcance único de Facebook + visualizaciones de Instagram. Es el "
+        "termómetro de difusión general.\n"
+        "- **📘 Facebook:** personas **únicas** alcanzadas en Facebook en el mes.\n"
+        "- **📸 Instagram:** **visualizaciones** totales en Instagram (reproducciones de "
+        "Reels, videos y fotos) del mes.\n"
+        "- **💬 Engagement (30d):** interacciones con el contenido — reacciones, "
+        "comentarios y compartidos. Mide qué tan involucrada está la audiencia.\n"
+        "- **👥 Seguidores totales:** el tamaño de tu audiencia propia (FB + IG), foto "
+        "de hoy.\n"
+        "- **📊 Tasa de engagement:** engagement ÷ seguidores. Pone el engagement en "
+        "contexto del tamaño de la audiencia."
+    )
 
 st.markdown("---")
 st.subheader("📊 Detalle por portal")
