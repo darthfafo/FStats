@@ -5,10 +5,18 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.8.0"
+APP_VERSION = "1.8.1"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.8.1",
+        "fecha":   "2026-06-22",
+        "titulo":  "Atento y Viste reconectados",
+        "cambios": [
+            "Viste Esto vuelve al panel y a la ingesta (token de usuario del admin de Atento, con ambas páginas).",
+        ],
+    },
     {
         "version": "1.8.0",
         "fecha":   "2026-06-22",
