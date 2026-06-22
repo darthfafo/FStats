@@ -203,6 +203,9 @@ class InstagramCollector:
                 print(f"[IG] ✓ account insights (time_series): {metric} = {total:,}")
             except Exception as e:
                 print(f"[IG] ✗ account insights {metric}: {e}")
+                if _es_error_permiso(e):
+                    print("[IG] token inválido/expirado: omito el resto de account insights.")
+                    return result
 
         # ── 2. Métricas total_value (metric_type=total_value) ───────
         # views = "Visualizaciones" del panel profesional IG (plays de Reels + videos + fotos)
@@ -240,6 +243,9 @@ class InstagramCollector:
                 print(f"[IG] ✓ account insights (total_value): {metric} = {total:,}")
             except Exception as e:
                 print(f"[IG] ✗ account insights {metric}: {e}")
+                if _es_error_permiso(e):
+                    print("[IG] token inválido/expirado: corto account insights.")
+                    return result
 
         return result
 
