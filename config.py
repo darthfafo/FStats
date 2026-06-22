@@ -166,8 +166,8 @@ PORTALES = [
         "facebook_page_id": None,
         # Aceptamos el @usuario como valor por defecto: la ingesta resuelve el
         # ID numérico real consultando las cuentas que administra el token (ver
-        # InstagramCollector.find_owned_ig_id_by_username). Si preferís fijar el
-        # ID numérico, cargá META_INSTAGRAM_ID_VISTE en los secrets.
+        # InstagramCollector._adopt_page_token). Si preferís fijar el ID numérico,
+        # cargá META_INSTAGRAM_ID_VISTE en los secrets.
         "instagram_id":     _secret("META_INSTAGRAM_ID_VISTE",     "visteestook"),
         # Mismo administrador que Atento Chubut: si no hay un token propio de
         # Viste, reutilizamos el de Atento (que tiene permiso sobre esta cuenta).

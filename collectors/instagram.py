@@ -20,14 +20,14 @@ class InstagramCollector:
         self.ig_id        = ig_id        or os.getenv("META_INSTAGRAM_ID")
         self.access_token = access_token or os.getenv("META_PAGE_ACCESS_TOKEN")
         self.base_url     = "https://graph.facebook.com/v25.0"
-        # Si el id viene como @usuario (no numérico), lo resolvemos al ID real
-        # usando las cuentas que administra el token. Permite conectar un portal
-        # con solo el username (ver config / VISTE ESTO?).
-        if (resolve_username and self.ig_id and self.access_token
-                and not str(self.ig_id).isdigit()):
-            resolved = self.find_owned_ig_id_by_username(self.ig_id)
-            if resolved:
-                self.ig_id = resolved
+        # Las métricas de IG requieren el PAGE token de la página vinculada. Si el
+        # token es de usuario/system user (para acceder a varias páginas), las
+        # llamadas de insights fallan con code 100. Acá buscamos la página de esta
+        # cuenta de IG en me/accounts y adoptamos su page token; de paso resolvemos
+        # el @usuario a id numérico. Si el token ya es de página (o no se encuentra
+        # la cuenta), se deja el token tal cual.
+        if resolve_username and self.ig_id and self.access_token:
+            self._adopt_page_token()
 
     def _get(self, endpoint, params=None):
         if params is None:
@@ -50,31 +50,42 @@ class InstagramCollector:
             "fields": "id,name,username,biography,followers_count,follows_count,media_count"
         })
 
-    def find_owned_ig_id_by_username(self, username):
+    def _adopt_page_token(self):
         """
-        Resuelve el ID numérico de una cuenta de Instagram a partir de su @usuario,
-        buscando entre las páginas de Facebook que administra el token actual la
-        cuenta de IG cuyo username coincide.
+        Adopta el PAGE access token de la página vinculada a esta cuenta de IG y
+        resuelve el @usuario a id numérico.
 
-        Sirve para conectar un portal sin tener a mano el ID numérico, siempre que
-        el token tenga permiso sobre esa cuenta (mismo administrador). Que aparezca
-        acá implica además que el token PUEDE leer sus insights. Devuelve el ID
-        (str) o None si no la encuentra.
+        Las métricas de Instagram requieren el token de la PÁGINA de Facebook a la
+        que está conectada la cuenta: con un token de usuario/system user (que da
+        acceso a varias páginas) fallan con code 100. Buscamos en me/accounts la
+        página cuyo instagram_business_account coincide (por id o @usuario), y
+        tomamos su access_token + su id numérico.
+
+        Devuelve True si la encontró. Si no (p.ej. el token ya es de página, o la
+        cuenta no aparece), deja el token y el id tal como estaban.
         """
-        objetivo = str(username).lstrip("@").strip().lower()
+        objetivo = str(self.ig_id).lstrip("@").strip().lower()
         if not objetivo:
-            return None
+            return False
         try:
             data = self._get("me/accounts", {
-                "fields": "instagram_business_account{id,username}",
+                "fields": "access_token,instagram_business_account{id,username}",
                 "limit":  100,
             })
             while True:
                 for pg in data.get("data", []):
-                    iba = pg.get("instagram_business_account") or {}
-                    if str(iba.get("username", "")).strip().lower() == objetivo:
-                        print(f"[IG] ✓ @{objetivo} resuelto a id {iba.get('id')}")
-                        return iba.get("id")
+                    iba   = pg.get("instagram_business_account") or {}
+                    iid   = str(iba.get("id", "") or "")
+                    uname = str(iba.get("username", "") or "").strip().lower()
+                    if (iid and iid == objetivo) or (uname and uname == objetivo):
+                        if iid:
+                            self.ig_id = iid
+                        if pg.get("access_token"):
+                            self.access_token = pg["access_token"]
+                            print(f"[IG] ✓ page token adoptado para IG {iid or objetivo}")
+                        else:
+                            print(f"[IG] ✓ IG {iid or objetivo} encontrada (sin page token en la respuesta)")
+                        return True
                 next_url = data.get("paging", {}).get("next")
                 if not next_url:
                     break
@@ -82,10 +93,10 @@ class InstagramCollector:
                 if not r.ok:
                     break
                 data = r.json()
-            print(f"[IG] ✗ no encontré @{objetivo} entre las cuentas del token")
+            print(f"[IG] no encontré la página de '{objetivo}' en me/accounts; uso el token tal cual")
         except Exception as e:
-            print(f"[IG] ✗ error resolviendo @{objetivo}: {e}")
-        return None
+            print(f"[IG] me/accounts no disponible ({e}); uso el token tal cual")
+        return False
 
     def get_recent_media(self, limit=30):
         # El campo correcto es media_product_type = "REELS" para Reels (media_type
