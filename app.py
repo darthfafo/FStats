@@ -287,9 +287,6 @@ gran_total_fb  = sum(r["fb_imp"]      for r in resumenes)
 gran_total_ig  = sum(r["ig_imp"]      for r in resumenes)
 tasa_eng       = (gran_total_eng / gran_total_seg * 100) if gran_total_seg > 0 else 0
 
-# ── Encabezado del panel ───────────────────────────────────────────
-st.title("🚀 Performance de la Red")
-
 # ── HERO — Total de visualizaciones ────────────────────────────────
 st.markdown(f"""
 <div class="hero">
@@ -315,21 +312,21 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-st.markdown("##### 📖 Qué significa cada dato")
-st.markdown(
-    "- **🎯 Total visualizaciones:** la suma de todo lo que se *vio* en la red en "
-    "30 días — alcance único de Facebook + visualizaciones de Instagram. Es el "
-    "termómetro de difusión general.\n"
-    "- **📘 Facebook:** personas **únicas** alcanzadas en Facebook en el mes.\n"
-    "- **📸 Instagram:** **visualizaciones** totales en Instagram (reproducciones de "
-    "Reels, videos y fotos) del mes.\n"
-    "- **💬 Engagement (30d):** interacciones con el contenido — reacciones, "
-    "comentarios y compartidos. Mide qué tan involucrada está la audiencia.\n"
-    "- **👥 Seguidores totales:** el tamaño de tu audiencia propia (FB + IG), foto "
-    "de hoy.\n"
-    "- **📊 Tasa de engagement:** engagement ÷ seguidores. Pone el engagement en "
-    "contexto del tamaño de la audiencia."
-)
+with st.expander("📖 Qué significa cada dato"):
+    st.markdown(
+        "- **🎯 Total visualizaciones:** la suma de todo lo que se *vio* en la red en "
+        "30 días — alcance único de Facebook + visualizaciones de Instagram. Es el "
+        "termómetro de difusión general.\n"
+        "- **📘 Facebook:** personas **únicas** alcanzadas en Facebook en el mes.\n"
+        "- **📸 Instagram:** **visualizaciones** totales en Instagram (reproducciones de "
+        "Reels, videos y fotos) del mes.\n"
+        "- **💬 Engagement (30d):** interacciones con el contenido — reacciones, "
+        "comentarios y compartidos. Mide qué tan involucrada está la audiencia.\n"
+        "- **👥 Seguidores totales:** el tamaño de tu audiencia propia (FB + IG), foto "
+        "de hoy.\n"
+        "- **📊 Tasa de engagement:** engagement ÷ seguidores. Pone el engagement en "
+        "contexto del tamaño de la audiencia."
+    )
 
 st.markdown("---")
 st.subheader("🔍 Cada portal bajo la lupa")
