@@ -1,16 +1,16 @@
 """
 Versión de la aplicación y bitácora de cambios (changelog).
 
-Para registrar una nueva versión: agregá un dict al principio de CHANGELOG y
-actualizá APP_VERSION. Cada entrada documenta las mejoras de esa sub-versión.
+Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
+nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.6.0"
+APP_VERSION = "1.7.0"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
     {
-        "version": "1.6.0",
+        "version": "1.7.0",
         "fecha":   "2026-06-22",
         "titulo":  "Inicio tipo dashboard",
         "cambios": [
@@ -23,59 +23,75 @@ CHANGELOG = [
         ],
     },
     {
-        "version": "1.5.0",
+        "version": "1.6.0",
         "fecha":   "2026-06-21",
         "titulo":  "Estadísticas Globales profesional",
         "cambios": [
             "KPIs con variación de período (últimos 30 días vs los 30 anteriores) y explicaciones.",
-            "El gráfico de alcance en escala logarítmica se mueve arriba, debajo de los KPIs.",
-            "Tendencia 'En vivo' limitada a 30 días; selector en vivo / histórico unificado.",
-            "Generador de informe PDF al final de la sección.",
+            "El gráfico de alcance en escala logarítmica se mueve arriba; tendencia 'En vivo' a 30 días.",
+            "Selector en vivo / histórico unificado y generador de informe PDF al final de la sección.",
+            "Rendimiento de reels por portal y Top 10 ordenado por difusión real.",
+            "Alcance de Facebook resiliente ante la deprecación de métricas de Meta.",
             "Barra lateral consistente en todas las páginas.",
         ],
     },
     {
-        "version": "1.4.0",
+        "version": "1.5.0",
         "fecha":   "2026-06-21",
-        "titulo":  "Conexiones e ingesta más robustas",
+        "titulo":  "Audiencia, demografía y conexiones",
         "cambios": [
-            "Instagram adopta el page token de la página vinculada (arregla métricas con user token).",
-            "Alcance de Facebook resiliente ante la deprecación de métricas de Meta.",
-            "La ingesta corta temprano y avisa cuando a un token le faltan permisos o páginas.",
+            "Contribución de seguidores: cobertura y alcance a no-seguidores (desglose por tipo de seguidor).",
+            "Demografía de la audiencia (edad, género, geografía) y evolución del crecimiento de seguidores.",
+            "Conexión de Viste Esto y El Americano reutilizando el token de su administrador.",
+            "Instagram adopta el page token de la página vinculada; la ingesta avisa si a un token le faltan permisos.",
+        ],
+    },
+    {
+        "version": "1.4.0",
+        "fecha":   "2026-06-15",
+        "titulo":  "Analizador de viralidad",
+        "cambios": [
+            "Análisis del potencial de viralidad de un reel, con puntaje explicado.",
+            "Generador de copy y de títulos; modelo entrenado respaldado en la base de datos.",
+            "Arreglos en la detección de reels y en las métricas de Instagram.",
         ],
     },
     {
         "version": "1.3.0",
-        "fecha":   "2026-06-21",
-        "titulo":  "Audiencia y demografía",
+        "fecha":   "2026-06-14",
+        "titulo":  "Base de datos histórica",
         "cambios": [
-            "Cobertura de seguidores y alcance a no-seguidores (desglose por tipo de seguidor).",
-            "Evolución del crecimiento de seguidores y demografía (edad, género, geografía).",
-            "Todo el histórico se acumula en la base de datos día a día.",
+            "Warehouse en MotherDuck con ingesta diaria automática (GitHub Actions).",
+            "El panel se sirve desde la base de datos (instantáneo), con respaldo a la API en vivo.",
+            "Gráfico de alcance histórico acumulado que crece día a día.",
         ],
     },
     {
         "version": "1.2.0",
-        "fecha":   "2026-06-21",
-        "titulo":  "Contribución de seguidores",
+        "fecha":   "2026-05-31",
+        "titulo":  "Navegación y tendencias",
         "cambios": [
-            "Sección de aporte de cada portal a la base de seguidores y a la audiencia total.",
+            "Barra lateral unificada en todas las páginas.",
+            "Gráfico de tendencia de alcance en escala logarítmica, con colores por portal y manejo de brechas.",
+            "Refinamiento del informe PDF (engagement FB+IG, explicaciones, gráficos por portal).",
         ],
     },
     {
         "version": "1.1.0",
-        "fecha":   "2026-06-21",
-        "titulo":  "Más portales conectados",
+        "fecha":   "2026-05-30",
+        "titulo":  "Informe PDF",
         "cambios": [
-            "Atento, La Calle Online y El Americano conectados; tokens compartidos por administrador.",
+            "Generador de brief PDF profesional (fpdf2) con KPIs, participación y Top 10 de Instagram y Facebook.",
+            "Paginación de Instagram hasta 500 publicaciones para el histórico.",
         ],
     },
     {
         "version": "1.0.0",
-        "fecha":   "2026-06-15",
-        "titulo":  "Versión base",
+        "fecha":   "2026-05-30",
+        "titulo":  "Lanzamiento",
         "cambios": [
-            "Panel multi-portal (Facebook + Instagram), analizador de viralidad y warehouse histórico.",
+            "Panel de estadísticas multi-portal (Facebook + Instagram).",
+            "Diseño responsive para móvil.",
         ],
     },
 ]
