@@ -190,6 +190,7 @@ class FacebookCollector:
             return total, daily
 
         # ── Alcance: probamos candidatos hasta dar con uno válido ──────
+        token_muerto = False
         for metric in ("page_impressions_unique",
                        "page_impressions_organic_unique",
                        "page_impressions_viral_unique"):
@@ -201,11 +202,17 @@ class FacebookCollector:
                     break
             except Exception as e:
                 print(f"[FB] ✗ alcance {metric}: {e}")
+                if _es_error_permiso(e):
+                    print("[FB] token inválido/expirado: corto page insights.")
+                    token_muerto = True
+                    break
 
         # ── Engagement y vistas (siguen vigentes) ──────────────────────
         for metric, total_key, daily_key in (
                 ("page_post_engagements", "engagement", "daily_engagement"),
                 ("page_views_total",      "vistas",     "daily_vistas")):
+            if token_muerto:
+                break
             try:
                 total, daily = _serie(metric)
                 result[total_key] = total
@@ -213,6 +220,9 @@ class FacebookCollector:
                 print(f"[FB] ✓ page insights: {metric} OK")
             except Exception as e:
                 print(f"[FB] ✗ page insights {metric}: {e}")
+                if _es_error_permiso(e):
+                    print("[FB] token inválido/expirado: corto page insights.")
+                    break
 
         # ── Fallback: si el alcance quedó en 0 (métrica deprecada) pero hay
         # vistas, las usamos como proxy para que el panel no muestre 0. ──
