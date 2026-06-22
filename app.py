@@ -328,40 +328,39 @@ st.caption(
     "ver sus estadísticas completas."
 )
 
-# ── Tarjetas por portal ────────────────────────────────────────────
-cols_portales = st.columns(max(len(resumenes), 1))
+# ── Tarjetas por portal (grilla responsive: filas de 2-3 según cantidad) ─
+n_portales = len(resumenes)
+por_fila = 2 if n_portales <= 4 else 3
 
-for i, resumen in enumerate(resumenes):
-    with cols_portales[i]:
-        with st.container(border=True):
-            st.markdown(f"### {resumen['icono']} {resumen['nombre']}")
+for fila_ini in range(0, n_portales, por_fila):
+    fila = resumenes[fila_ini:fila_ini + por_fila]
+    cols = st.columns(por_fila)
+    for j, resumen in enumerate(fila):
+        i = fila_ini + j
+        with cols[j]:
+            with st.container(border=True):
+                st.markdown(f"#### {resumen['icono']} {resumen['nombre']}")
+                pct = (resumen["total_imp"] / gran_total_imp * 100) if gran_total_imp else 0
+                st.metric("Alcance total · 30 días", f"{resumen['total_imp']:,}",
+                          help="Facebook alcance único + Instagram visualizaciones del mes")
+                st.progress(min(pct / 100, 1.0), text=f"{pct:.1f}% del alcance de la red")
 
-            st.metric("🎯 Personas alcanzadas",
-                      f"{resumen['total_imp']:,}",
-                      help="Facebook alcance único + Instagram visualizaciones — último mes")
-
-            if gran_total_imp > 0:
-                prop = resumen["total_imp"] / gran_total_imp
-                st.progress(prop, text=f"{prop*100:.1f}% del total general")
-
-            st.markdown("---")
-
-            col_fb, col_ig = st.columns(2)
-            with col_fb:
-                st.markdown("**📘 Facebook**")
-                st.markdown(f"Alcance único: **{resumen['fb_imp']:,}**")
-                st.markdown(f"Engagement: **{resumen['fb_eng']:,}**")
-                st.markdown(f"Seguidores: **{resumen['fb_seg']:,}**")
-            with col_ig:
-                st.markdown("**📸 Instagram**")
-                st.markdown(f"Visualizaciones: **{resumen['ig_imp']:,}**")
-                st.markdown(f"Alcance: **{resumen['ig_reach']:,}**")
-                st.markdown(f"Seguidores: **{resumen['ig_seg']:,}**")
-
-            st.markdown("")
-            if st.button("Ver estadísticas completas →",
-                         key=f"btn_{i}", use_container_width=True, type="primary"):
-                st.switch_page(resumen["pagina"])
+                es_ig_only = resumen.get("ig_only", False) or (
+                    resumen["fb_imp"] == 0 and resumen["fb_seg"] == 0)
+                if not es_ig_only:
+                    st.markdown(
+                        f"**📘 Facebook**  \n"
+                        f"Alcance **{resumen['fb_imp']:,}** · Eng. **{resumen['fb_eng']:,}** "
+                        f"· 👥 **{resumen['fb_seg']:,}**"
+                    )
+                st.markdown(
+                    f"**📸 Instagram**  \n"
+                    f"Visualiz. **{resumen['ig_imp']:,}** · Alcance **{resumen['ig_reach']:,}** "
+                    f"· 👥 **{resumen['ig_seg']:,}**"
+                )
+                if st.button("Ver estadísticas completas →", key=f"btn_{i}",
+                             use_container_width=True, type="primary"):
+                    st.switch_page(resumen["pagina"])
 
 # ── Participación de cada portal (treemap: aprovecha mejor el espacio) ─
 if len(resumenes) > 1:

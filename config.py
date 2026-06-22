@@ -84,6 +84,7 @@ def sidebar_nav(current="", show_update=True, extra_widgets=None):
         st.page_link("pages/0_Estadisticas_Globales.py", label="📊 Estadísticas Globales")
         st.page_link("pages/7_Analizador.py", label="🚀 Analizador")
         st.page_link("pages/8_Realimentacion.py", label="🔁 Realimentación")
+        st.page_link("pages/9_Bitacora.py", label="📓 Bitácora")
         st.markdown("---")
         st.caption("PORTALES")
         for icono, nombre, pagina in _NAV_PORTALES:
@@ -106,7 +107,11 @@ def sidebar_nav(current="", show_update=True, extra_widgets=None):
                     st.session_state["fstats_live"] = True
                     st.cache_data.clear()
                     st.rerun()
-        st.caption(_dt.now().strftime("%d/%m/%Y %H:%M"))
+        try:
+            from version import APP_VERSION
+            st.caption(f"FStats v{APP_VERSION} · {_dt.now().strftime('%d/%m/%Y %H:%M')}")
+        except Exception:
+            st.caption(_dt.now().strftime("%d/%m/%Y %H:%M"))
 
 
 def _secret(key, default="PENDIENTE"):
