@@ -90,47 +90,6 @@ with st.spinner("Cargando datos de todos los portales..."):
 
 activos = [d for d in datos_portales if not d.get("pendiente") and d["total_imp"] > 0]
 
-# ── KPIs globales ───────────────────────────────────────────────────
-total_viz   = sum(d["total_imp"] for d in datos_portales)
-total_seg   = sum(d["total_seg"] for d in datos_portales)
-total_eng   = sum(d["fb_eng"]    for d in datos_portales)
-total_reach = sum(d["ig_reach"]  for d in datos_portales)
-tasa_global = round(total_eng / total_seg * 100, 2) if total_seg else 0
-portales_activos = len(activos)
-
-c1,c2,c3,c4,c5 = st.columns(5)
-c1.metric("🎯 Visualizaciones totales", f"{total_viz:,}")
-c2.metric("👥 Seguidores totales",      f"{total_seg:,}")
-c3.metric("💬 Engagement FB total",     f"{total_eng:,}")
-c4.metric("🎯 Alcance único IG total",  f"{total_reach:,}")
-c5.metric("📊 Tasa eng. global",        f"{tasa_global:.2f}%",
-          help="Engagement FB / seguidores totales")
-
-st.markdown("---")
-
-# ── Tabla comparativa ────────────────────────────────────────────────
-st.subheader("📋 Tabla comparativa de portales")
-
-filas = []
-for d in datos_portales:
-    filas.append({
-        "Portal":             d["nombre"],
-        "Estado":             "✅ Activo" if not d.get("pendiente") and d["total_imp"]>0 else "⏳ Pendiente",
-        "📘 FB Alcance":      d["fb_imp"],
-        "📸 IG Visualiz.":    d["ig_imp"],
-        "🎯 Total":           d["total_imp"],
-        "👥 Seguidores":      d["total_seg"],
-        "💬 Engagement FB":   d["fb_eng"],
-        "📊 Tasa eng.":       f"{d['tasa_eng']:.2f}%",
-        "🎯 Alcance único IG":d["ig_reach"],
-        "💬 Interacc. IG":    d["ig_engaged"],
-    })
-
-df_tabla = pd.DataFrame(filas)
-st.dataframe(df_tabla, width='stretch', hide_index=True)
-
-st.markdown("---")
-
 # ── Helpers de warehouse y colores (usados en varias secciones) ──────
 import warehouse.reader as _wr
 
@@ -169,6 +128,230 @@ def _alcance_por_tipo(portales):
         out[d["nombre"]] = {"follower": float(fr), "non_follower": float(nf)}
     return out
 
+def _delta_diaria(plataforma, metric_name):
+    """Variación del último día con dato vs el anterior, sumando todos los
+    portales activos. None si no hay al menos dos días en la base."""
+    serie = {}
+    for d in activos:
+        df = _df_seguro(_wr.daily_metric, d["nombre"], plataforma, metric_name)
+        for _, row in df.iterrows():
+            k = str(row["metric_date"])
+            serie[k] = serie.get(k, 0) + int(row["metric_value"] or 0)
+    if len(serie) < 2:
+        return None
+    f = sorted(serie)
+    return serie[f[-1]] - serie[f[-2]]
+
+def _delta_seguidores():
+    """Altas netas de seguidores (FB+IG) del último día con dato vs el anterior."""
+    serie = {}
+    for d in activos:
+        for plat in ("fb", "ig"):
+            h = _df_seguro(_wr.followers_history, d["nombre"], plat)
+            for _, row in h.iterrows():
+                k = str(row["snapshot_date"])
+                serie[k] = serie.get(k, 0) + int(row["followers_count"] or 0)
+    if len(serie) < 2:
+        return None
+    f = sorted(serie)
+    return serie[f[-1]] - serie[f[-2]]
+
+
+# ── KPIs globales ───────────────────────────────────────────────────
+total_viz   = sum(d["total_imp"] for d in datos_portales)
+total_seg   = sum(d["total_seg"] for d in datos_portales)
+total_eng   = sum(d["fb_eng"]    for d in datos_portales)
+total_reach = sum(d["ig_reach"]  for d in datos_portales)
+tasa_global = round(total_eng / total_seg * 100, 2) if total_seg else 0
+portales_activos = len(activos)
+
+# Variación día a día (verde/roja). None = sin dato diario suficiente → sin flecha.
+d_viz = _delta_diaria("ig", "views")
+d_seg = _delta_seguidores()
+d_eng = _delta_diaria("fb", "page_post_engagements")
+d_rch = _delta_diaria("ig", "reach")
+
+c1, c2, c3, c4, c5 = st.columns(5)
+c1.metric("🎯 Visualizaciones totales", f"{total_viz:,}", delta=d_viz,
+          help="Reproducciones de Instagram (Reels + videos + fotos) más el alcance "
+               "de Facebook, acumulado del último mes. La flecha es la variación "
+               "respecto al día anterior.")
+c2.metric("👥 Seguidores totales", f"{total_seg:,}", delta=d_seg,
+          help="Seguidores de Facebook + Instagram sumados. La flecha son las altas "
+               "netas del último día.")
+c3.metric("💬 Engagement FB total", f"{total_eng:,}", delta=d_eng,
+          help="Interacciones con las publicaciones de Facebook (reacciones, "
+               "comentarios y compartidos) del último mes. La flecha es la variación "
+               "respecto al día anterior.")
+c4.metric("🎯 Alcance único IG total", f"{total_reach:,}", delta=d_rch,
+          help="Personas únicas alcanzadas en Instagram (suma del alcance diario del "
+               "mes). La flecha es la variación del alcance diario.")
+c5.metric("📊 Tasa eng. global", f"{tasa_global:.2f}%",
+          help="Engagement de Facebook ÷ seguidores totales: qué tan activa es la "
+               "audiencia respecto a su tamaño.")
+
+st.caption(
+    "Las **flechas verdes/rojas** muestran la variación respecto al día anterior "
+    "(donde la base ya tiene dato diario). Pasá el cursor por el ⓘ de cada métrica "
+    "para ver qué mide."
+)
+
+st.markdown("---")
+
+# ── Tendencia de alcance diario — selector en vivo / histórico ─────
+# Es el gráfico que mejor refleja la actividad, por eso va arriba de todo.
+# Misma métrica sobre los mismos ejes (escala log); un selector elige la fuente:
+# API en vivo (máx 30 días) o base de datos histórica (crece sola).
+st.subheader("📈 Tendencia de alcance diario — todos los portales")
+
+if activos:
+    PORTAL_COLOR = {
+        "Chubut Noticias": "#E2E8F0",  # blanco/gris claro (tema oscuro)
+        "Atento Chubut":   "#0EA5E9",  # celeste
+        "La Calle Online": "#EA580C",  # naranja
+        "El Americano":    "#22C55E",  # verde
+    }
+    FALLBACK = ["#a855f7", "#fbbf24", "#14b8a6"]
+    # Color estable por portal: el mismo en ambas fuentes.
+    _colores_trend, _fi = {}, 0
+    for d in activos:
+        c = PORTAL_COLOR.get(d["nombre"])
+        if not c:
+            c = FALLBACK[_fi % len(FALLBACK)]
+            _fi += 1
+        _colores_trend[d["nombre"]] = c
+
+    _MODO_VIVO = "🟢 En vivo (últimos 30 días)"
+    _MODO_HIST = "🗄️ Histórico acumulado (base de datos)"
+    modo_trend = st.radio(
+        "Fuente de datos", [_MODO_VIVO, _MODO_HIST],
+        horizontal=True, key="trend_src",
+        help="Misma métrica y mismos ejes. En vivo: API de Meta, máximo 30 días. "
+             "Histórico: base de datos, se acumula indefinidamente día a día.")
+
+    fig_trend = go.Figure()
+    hay_datos = False
+    nota_extra = []
+
+    if modo_trend == _MODO_VIVO:
+        from datetime import datetime as _dt, timedelta as _td
+        fecha_inicio_global = (_dt.now() - _td(days=29)).strftime("%Y-%m-%d")
+        notas_inicio = []
+        for d in activos:
+            color = _colores_trend[d["nombre"]]
+            # IG = línea continua
+            if d["ig_daily"]:
+                items_ig = sorted(d["ig_daily"].items())
+                fechas_ig = [k for k, v in items_ig]
+                vals_ig   = [v for k, v in items_ig]
+                nombre_ig = d["nombre"] + " (IG)"
+                if fechas_ig and fechas_ig[0] > fecha_inicio_global:
+                    nombre_ig += f" · desde {fechas_ig[0][8:10]}/{fechas_ig[0][5:7]}"
+                    notas_inicio.append(f"**{d['nombre']} IG**: datos desde {fechas_ig[0][8:10]}/{fechas_ig[0][5:7]}")
+                fig_trend.add_trace(go.Scatter(
+                    x=fechas_ig, y=vals_ig, mode="lines+markers", name=nombre_ig,
+                    connectgaps=False, line=dict(color=color, width=2),
+                    marker=dict(size=4, color=color, opacity=0.7), opacity=0.95))
+                hay_datos = True
+            # FB = línea punteada
+            if d["fb_daily"]:
+                items_fb = sorted(d["fb_daily"].items())
+                fechas_fb = [k for k, v in items_fb]
+                vals_fb   = [v for k, v in items_fb]
+                nombre_fb = d["nombre"] + " (FB)"
+                if fechas_fb and fechas_fb[0] > fecha_inicio_global:
+                    nombre_fb += f" · desde {fechas_fb[0][8:10]}/{fechas_fb[0][5:7]}"
+                    notas_inicio.append(f"**{d['nombre']} FB**: datos desde {fechas_fb[0][8:10]}/{fechas_fb[0][5:7]}")
+                fig_trend.add_trace(go.Scatter(
+                    x=fechas_fb, y=vals_fb, mode="lines+markers", name=nombre_fb,
+                    connectgaps=False, line=dict(color=color, width=1.5, dash="dot"),
+                    marker=dict(size=3, color=color, opacity=0.5), opacity=0.7))
+                hay_datos = True
+        if any(len(d.get("ig_daily", {})) < 25 for d in activos if d.get("ig_daily")):
+            nota_extra.append("Los puntos (•) marcan días con dato; una brecha indica día sin datos.")
+        if notas_inicio:
+            nota_extra.append("⚠️ Inicio tardío: " + " | ".join(notas_inicio) +
+                              " — Meta solo provee histórico desde la conexión al panel.")
+        nota_extra.append("ℹ️ Los datos del día actual pueden tardar horas en estar disponibles.")
+    else:
+        try:
+            import warehouse.reader as wreader
+            for d in activos:
+                color = _colores_trend[d["nombre"]]
+                df_ig = wreader.daily_metric(d["nombre"], "ig", "reach")
+                if not df_ig.empty:
+                    hay_datos = True
+                    fig_trend.add_trace(go.Scatter(
+                        x=df_ig["metric_date"], y=df_ig["metric_value"],
+                        mode="lines+markers", name=d["nombre"] + " (IG)",
+                        connectgaps=False, line=dict(color=color, width=2),
+                        marker=dict(size=4, color=color, opacity=0.7)))
+                df_fb = wreader.daily_metric(d["nombre"], "fb", "page_impressions_unique")
+                if not df_fb.empty:
+                    hay_datos = True
+                    fig_trend.add_trace(go.Scatter(
+                        x=df_fb["metric_date"], y=df_fb["metric_value"],
+                        mode="lines+markers", name=d["nombre"] + " (FB)",
+                        connectgaps=False, line=dict(color=color, width=1.5, dash="dot"),
+                        marker=dict(size=3, color=color, opacity=0.5)))
+            nota_extra.append(
+                "🗄️ Se nutre de la base de datos histórica: se actualiza cada día y "
+                "**sigue creciendo indefinidamente**, a diferencia del modo en vivo (máx 30 días).")
+        except Exception:
+            st.info(
+                "📦 La base de datos histórica todavía no está conectada. Agregá "
+                "`MOTHERDUCK_TOKEN` en los *secrets* de Streamlit (Settings → Secrets) "
+                "para ver el histórico acumulado que se va guardando cada día.")
+            hay_datos = None  # aviso ya mostrado
+
+    if hay_datos:
+        fig_trend.update_layout(
+            showlegend=True,
+            legend=dict(orientation="h", yanchor="top", y=-0.12, xanchor="left",
+                        x=0, font=dict(size=10.5), bgcolor="rgba(0,0,0,0)", title=None),
+            margin=dict(l=0, r=0, t=10, b=130),
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            xaxis=dict(gridcolor="rgba(255,255,255,0.08)", showgrid=True),
+            yaxis=dict(type="log", title="Alcance (escala log.)",
+                       gridcolor="rgba(255,255,255,0.08)", tickformat=".2s"),
+            hovermode="x unified")
+        st.plotly_chart(fig_trend, width='stretch')
+        partes = [
+            "📐 **Escala logarítmica**: cada división = 10× el valor anterior, "
+            "permite comparar portales con audiencias muy distintas.",
+            "**Línea continua** = Instagram · **Punteada** = Facebook (alcance único).",
+        ]
+        partes.extend(nota_extra)
+        st.caption("  \n".join(partes))
+    elif hay_datos is False:
+        st.info("No hay datos de alcance para mostrar en esta fuente todavía.")
+else:
+    st.info("Todavía no hay portales activos con datos de alcance para graficar.")
+
+st.markdown("---")
+
+# ── Tabla comparativa ────────────────────────────────────────────────
+st.subheader("📋 Tabla comparativa de portales")
+
+filas = []
+for d in datos_portales:
+    filas.append({
+        "Portal":             d["nombre"],
+        "Estado":             "✅ Activo" if not d.get("pendiente") and d["total_imp"]>0 else "⏳ Pendiente",
+        "📘 FB Alcance":      d["fb_imp"],
+        "📸 IG Visualiz.":    d["ig_imp"],
+        "🎯 Total":           d["total_imp"],
+        "👥 Seguidores":      d["total_seg"],
+        "💬 Engagement FB":   d["fb_eng"],
+        "📊 Tasa eng.":       f"{d['tasa_eng']:.2f}%",
+        "🎯 Alcance único IG":d["ig_reach"],
+        "💬 Interacc. IG":    d["ig_engaged"],
+    })
+
+df_tabla = pd.DataFrame(filas)
+st.dataframe(df_tabla, width='stretch', hide_index=True)
+
+st.markdown("---")
 
 # ── Seguidores y su aporte a la audiencia ────────────────────────────
 st.subheader("👥 Seguidores y su aporte a la audiencia")
@@ -477,133 +660,6 @@ if activos:
 
     st.markdown("---")
 
-    # ── Tendencia de alcance diario — selector en vivo / histórico ─────
-    # Misma métrica sobre los mismos ejes (escala log). Un selector elige la
-    # fuente: API en vivo (máx 30 días) o base de datos histórica (crece sola).
-    st.subheader("📈 Tendencia de alcance diario — todos los portales")
-
-    PORTAL_COLOR = {
-        "Chubut Noticias": "#E2E8F0",  # blanco/gris claro (tema oscuro)
-        "Atento Chubut":   "#0EA5E9",  # celeste
-        "La Calle Online": "#EA580C",  # naranja
-        "El Americano":    "#22C55E",  # verde
-    }
-    FALLBACK = ["#a855f7", "#fbbf24", "#14b8a6"]
-    # Color estable por portal: el mismo en ambas fuentes.
-    _colores_trend, _fi = {}, 0
-    for d in activos:
-        c = PORTAL_COLOR.get(d["nombre"])
-        if not c:
-            c = FALLBACK[_fi % len(FALLBACK)]
-            _fi += 1
-        _colores_trend[d["nombre"]] = c
-
-    _MODO_VIVO = "🟢 En vivo (últimos 30 días)"
-    _MODO_HIST = "🗄️ Histórico acumulado (base de datos)"
-    modo_trend = st.radio(
-        "Fuente de datos", [_MODO_VIVO, _MODO_HIST],
-        horizontal=True, key="trend_src",
-        help="Misma métrica y mismos ejes. En vivo: API de Meta, máximo 30 días. "
-             "Histórico: base de datos, se acumula indefinidamente día a día.")
-
-    fig_trend = go.Figure()
-    hay_datos = False
-    nota_extra = []
-
-    if modo_trend == _MODO_VIVO:
-        from datetime import datetime as _dt, timedelta as _td
-        fecha_inicio_global = (_dt.now() - _td(days=29)).strftime("%Y-%m-%d")
-        notas_inicio = []
-        for d in activos:
-            color = _colores_trend[d["nombre"]]
-            # IG = línea continua
-            if d["ig_daily"]:
-                items_ig = sorted(d["ig_daily"].items())
-                fechas_ig = [k for k, v in items_ig]
-                vals_ig   = [v for k, v in items_ig]
-                nombre_ig = d["nombre"] + " (IG)"
-                if fechas_ig and fechas_ig[0] > fecha_inicio_global:
-                    nombre_ig += f" · desde {fechas_ig[0][8:10]}/{fechas_ig[0][5:7]}"
-                    notas_inicio.append(f"**{d['nombre']} IG**: datos desde {fechas_ig[0][8:10]}/{fechas_ig[0][5:7]}")
-                fig_trend.add_trace(go.Scatter(
-                    x=fechas_ig, y=vals_ig, mode="lines+markers", name=nombre_ig,
-                    connectgaps=False, line=dict(color=color, width=2),
-                    marker=dict(size=4, color=color, opacity=0.7), opacity=0.95))
-                hay_datos = True
-            # FB = línea punteada
-            if d["fb_daily"]:
-                items_fb = sorted(d["fb_daily"].items())
-                fechas_fb = [k for k, v in items_fb]
-                vals_fb   = [v for k, v in items_fb]
-                nombre_fb = d["nombre"] + " (FB)"
-                if fechas_fb and fechas_fb[0] > fecha_inicio_global:
-                    nombre_fb += f" · desde {fechas_fb[0][8:10]}/{fechas_fb[0][5:7]}"
-                    notas_inicio.append(f"**{d['nombre']} FB**: datos desde {fechas_fb[0][8:10]}/{fechas_fb[0][5:7]}")
-                fig_trend.add_trace(go.Scatter(
-                    x=fechas_fb, y=vals_fb, mode="lines+markers", name=nombre_fb,
-                    connectgaps=False, line=dict(color=color, width=1.5, dash="dot"),
-                    marker=dict(size=3, color=color, opacity=0.5), opacity=0.7))
-                hay_datos = True
-        if any(len(d.get("ig_daily", {})) < 25 for d in activos if d.get("ig_daily")):
-            nota_extra.append("Los puntos (•) marcan días con dato; una brecha indica día sin datos.")
-        if notas_inicio:
-            nota_extra.append("⚠️ Inicio tardío: " + " | ".join(notas_inicio) +
-                              " — Meta solo provee histórico desde la conexión al panel.")
-        nota_extra.append("ℹ️ Los datos del día actual pueden tardar horas en estar disponibles.")
-    else:
-        try:
-            import warehouse.reader as wreader
-            for d in activos:
-                color = _colores_trend[d["nombre"]]
-                df_ig = wreader.daily_metric(d["nombre"], "ig", "reach")
-                if not df_ig.empty:
-                    hay_datos = True
-                    fig_trend.add_trace(go.Scatter(
-                        x=df_ig["metric_date"], y=df_ig["metric_value"],
-                        mode="lines+markers", name=d["nombre"] + " (IG)",
-                        connectgaps=False, line=dict(color=color, width=2),
-                        marker=dict(size=4, color=color, opacity=0.7)))
-                df_fb = wreader.daily_metric(d["nombre"], "fb", "page_impressions_unique")
-                if not df_fb.empty:
-                    hay_datos = True
-                    fig_trend.add_trace(go.Scatter(
-                        x=df_fb["metric_date"], y=df_fb["metric_value"],
-                        mode="lines+markers", name=d["nombre"] + " (FB)",
-                        connectgaps=False, line=dict(color=color, width=1.5, dash="dot"),
-                        marker=dict(size=3, color=color, opacity=0.5)))
-            nota_extra.append(
-                "🗄️ Se nutre de la base de datos histórica: se actualiza cada día y "
-                "**sigue creciendo indefinidamente**, a diferencia del modo en vivo (máx 30 días).")
-        except Exception:
-            st.info(
-                "📦 La base de datos histórica todavía no está conectada. Agregá "
-                "`MOTHERDUCK_TOKEN` en los *secrets* de Streamlit (Settings → Secrets) "
-                "para ver el histórico acumulado que se va guardando cada día.")
-            hay_datos = None  # aviso ya mostrado
-
-    if hay_datos:
-        fig_trend.update_layout(
-            showlegend=True,
-            legend=dict(orientation="h", yanchor="top", y=-0.12, xanchor="left",
-                        x=0, font=dict(size=10.5), bgcolor="rgba(0,0,0,0)", title=None),
-            margin=dict(l=0, r=0, t=10, b=130),
-            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-            xaxis=dict(gridcolor="rgba(255,255,255,0.08)", showgrid=True),
-            yaxis=dict(type="log", title="Alcance (escala log.)",
-                       gridcolor="rgba(255,255,255,0.08)", tickformat=".2s"),
-            hovermode="x unified")
-        st.plotly_chart(fig_trend, width='stretch')
-        partes = [
-            "📐 **Escala logarítmica**: cada división = 10× el valor anterior, "
-            "permite comparar portales con audiencias muy distintas.",
-            "**Línea continua** = Instagram · **Punteada** = Facebook (alcance único).",
-        ]
-        partes.extend(nota_extra)
-        st.caption("  \n".join(partes))
-    elif hay_datos is False:
-        st.info("No hay datos de alcance para mostrar en esta fuente todavía.")
-
-    st.markdown("---")
 
     # ── Rendimiento de reels por portal ──────────────────────────────
     st.subheader("🎬 Rendimiento de reels por portal")
