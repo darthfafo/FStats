@@ -95,6 +95,7 @@ _NAV_PORTALES = [
     ("📡", "Atento Chubut",    "pages/2_Atento_Chubut.py"),
     ("🗞️", "La Calle Online", "pages/3_La_Calle_Online.py"),
     ("🌎", "El Americano",     "pages/4_El_Americano.py"),
+    ("👁️", "VISTE ESTO?",     "pages/5_Viste_Esto.py"),
 ]
 
 def sidebar_nav(current="", show_update=True, extra_widgets=None):
