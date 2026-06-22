@@ -11,7 +11,7 @@ st.set_page_config(page_title="Estadísticas Globales", page_icon="📊", layout
 st.markdown(RESPONSIVE_CSS, unsafe_allow_html=True)
 sidebar_nav(current="")
 
-st.title("📊 Estadísticas Globales — Todos los portales")
+st.markdown("## 📊 Estadísticas Globales")
 st.markdown(
     "**Vista ejecutiva de toda la red en un solo lugar.** Reúne el desempeño de "
     "todos los portales para **compararlos entre sí**, **seguir su evolución** y "
@@ -190,23 +190,28 @@ d_seg = _delta_periodo_seguidores()
 d_eng = _delta_periodo("fb", "page_post_engagements")
 d_rch = _delta_periodo("ig", "reach")
 
-c1, c2, c3, c4, c5 = st.columns(5)
-c1.metric("🎯 Visualizaciones (mes)", f"{total_viz:,}",
-          help="Reproducciones de Instagram (Reels + videos + fotos) más el alcance "
-               "de Facebook, ACUMULADO de los últimos 30 días en toda la red.")
-c2.metric("👥 Seguidores totales", f"{total_seg:,}", delta=d_seg,
-          help="Seguidores de Facebook + Instagram sumados (foto de hoy). La flecha "
-               "es el crecimiento neto de los últimos 30 días.")
-c3.metric("💬 Engagement FB (mes)", f"{total_eng:,}", delta=d_eng,
-          help="Interacciones con las publicaciones de Facebook (reacciones, "
-               "comentarios y compartidos) del último mes. La flecha compara estos "
-               "30 días con los 30 anteriores.")
-c4.metric("🎯 Alcance IG (mes)", f"{total_reach:,}", delta=d_rch,
-          help="Personas alcanzadas en Instagram durante el mes. La flecha compara "
-               "el alcance de estos 30 días con el de los 30 anteriores.")
-c5.metric("📊 Tasa de engagement", f"{tasa_global:.2f}%",
-          help="Engagement de Facebook ÷ seguidores totales: qué tan activa es la "
-               "audiencia respecto a su tamaño. Cuanto más alta, mejor.")
+def _kpi_delta(d, fallback=""):
+    """Línea inferior de la tarjeta: delta de período (verde/rojo) o un subtítulo."""
+    if d is None:
+        return f'<div class="k-sub">{fallback}</div>' if fallback else ""
+    cls = "up" if d >= 0 else "down"
+    fl  = "▲" if d >= 0 else "▼"
+    return f'<div class="k-delta {cls}">{fl} {d:+,} · 30d</div>'
+
+st.markdown(f"""
+<div class="kpi-grid">
+  <div class="kpi-card"><div class="k-label">🎯 Visualizaciones</div>
+    <div class="k-value">{total_viz:,}</div><div class="k-sub">Acumulado · 30 días</div></div>
+  <div class="kpi-card"><div class="k-label">👥 Seguidores</div>
+    <div class="k-value">{total_seg:,}</div>{_kpi_delta(d_seg, "Audiencia propia (hoy)")}</div>
+  <div class="kpi-card"><div class="k-label">💬 Engagement FB</div>
+    <div class="k-value">{total_eng:,}</div>{_kpi_delta(d_eng, "Interacciones · 30d")}</div>
+  <div class="kpi-card"><div class="k-label">🎯 Alcance IG</div>
+    <div class="k-value">{total_reach:,}</div>{_kpi_delta(d_rch, "Personas únicas · 30d")}</div>
+  <div class="kpi-card"><div class="k-label">📊 Tasa engagement</div>
+    <div class="k-value">{tasa_global:.1f}%</div><div class="k-sub">Engagement ÷ seguidores</div></div>
+</div>
+""", unsafe_allow_html=True)
 
 st.caption(
     "Los números grandes son el **acumulado del último mes** (en seguidores, la foto "
@@ -237,6 +242,7 @@ st.markdown("---")
 # Es el gráfico que mejor refleja la actividad, por eso va arriba de todo.
 # Misma métrica sobre los mismos ejes (escala log); un selector elige la fuente:
 # API en vivo (máx 30 días) o base de datos histórica (crece sola).
+st.markdown('<div class="grupo-titulo">📡 Alcance de la red</div>', unsafe_allow_html=True)
 st.subheader("📈 Tendencia de alcance diario — todos los portales")
 
 if activos:
@@ -314,11 +320,14 @@ if activos:
     else:
         try:
             import warehouse.reader as wreader
+            sin_hist = []   # portales activos sin ninguna serie histórica en la base
             for d in activos:
                 color = _colores_trend[d["nombre"]]
+                con_traza = False
                 df_ig = wreader.daily_metric(d["nombre"], "ig", "reach")
                 if not df_ig.empty:
                     hay_datos = True
+                    con_traza = True
                     fig_trend.add_trace(go.Scatter(
                         x=df_ig["metric_date"], y=df_ig["metric_value"],
                         mode="lines+markers", name=d["nombre"] + " (IG)",
@@ -327,14 +336,22 @@ if activos:
                 df_fb = wreader.daily_metric(d["nombre"], "fb", "page_impressions_unique")
                 if not df_fb.empty:
                     hay_datos = True
+                    con_traza = True
                     fig_trend.add_trace(go.Scatter(
                         x=df_fb["metric_date"], y=df_fb["metric_value"],
                         mode="lines+markers", name=d["nombre"] + " (FB)",
                         connectgaps=False, line=dict(color=color, width=1.5, dash="dot"),
                         marker=dict(size=3, color=color, opacity=0.5)))
+                if not con_traza:
+                    sin_hist.append(d["nombre"])
             nota_extra.append(
                 "🗄️ Se nutre de la base de datos histórica: se actualiza cada día y "
                 "**sigue creciendo indefinidamente**, a diferencia del modo en vivo (máx 30 días).")
+            if sin_hist:
+                nota_extra.append(
+                    "⚠️ Sin alcance histórico en la base todavía: **" + ", ".join(sin_hist) +
+                    "** — van a aparecer cuando su ingesta cargue alcance diario (revisá que "
+                    "su token esté ingestando bien).")
         except Exception:
             st.info(
                 "📦 La base de datos histórica todavía no está conectada. Agregá "
@@ -392,6 +409,7 @@ st.dataframe(df_tabla, width='stretch', hide_index=True)
 st.markdown("---")
 
 # ── Seguidores y su aporte a la audiencia ────────────────────────────
+st.markdown('<div class="grupo-titulo">👥 Audiencia</div>', unsafe_allow_html=True)
 st.subheader("👥 Seguidores y su aporte a la audiencia")
 st.caption(
     "Cuánto pesa cada portal en la base total de seguidores y, cuando hay datos "
@@ -676,6 +694,7 @@ else:
 st.markdown("---")
 
 # ── Ranking por visualizaciones ─────────────────────────────────────
+st.markdown('<div class="grupo-titulo">🎬 Contenido y posicionamiento</div>', unsafe_allow_html=True)
 st.subheader("🏆 Ranking de portales por visualizaciones totales")
 
 if activos:

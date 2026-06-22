@@ -58,6 +58,35 @@ hr { margin: 0.7rem 0 !important; }
     border-color: rgba(148,163,184,0.18) !important;
     background: rgba(148,163,184,0.04);
 }
+
+/* Tarjetas KPI azules (mismo estilo del inicio) reutilizables en las páginas */
+.kpi-grid { display: flex; gap: 14px; flex-wrap: wrap; margin: 4px 0 14px 0; }
+.kpi-card {
+    flex: 1 1 165px;
+    background: linear-gradient(135deg, #0f172a, #1e3a5f);
+    border: 1px solid rgba(148,163,184,0.12);
+    border-radius: 14px;
+    padding: 16px 18px;
+}
+.kpi-card .k-label {
+    color: #e2e8f0; font-size: 11.5px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase;
+}
+.kpi-card .k-value {
+    color: #fff; font-size: clamp(20px, 3.5vw, 28px); font-weight: 800;
+    line-height: 1.1; margin-top: 6px;
+}
+.kpi-card .k-sub   { color: #cbd5e1; font-size: 11.5px; margin-top: 4px; }
+.kpi-card .k-delta { font-size: 12.5px; font-weight: 700; margin-top: 6px; }
+.kpi-card .k-delta.up   { color: #22c55e; }
+.kpi-card .k-delta.down { color: #f87171; }
+
+/* Encabezado de grupo temático (separa secciones por tema) */
+.grupo-titulo {
+    font-size: clamp(15px, 2.4vw, 19px); font-weight: 800; color: #38bdf8;
+    letter-spacing: 0.5px; margin: 2px 0 2px; text-transform: uppercase;
+}
+.grupo-sub { color: #94a3b8; font-size: 12.5px; margin: 0 0 4px; }
 </style>
 """
 
