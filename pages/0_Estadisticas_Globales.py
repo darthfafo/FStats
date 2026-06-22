@@ -12,7 +12,12 @@ st.markdown(RESPONSIVE_CSS, unsafe_allow_html=True)
 sidebar_nav(current="")
 
 st.title("📊 Estadísticas Globales — Todos los portales")
-st.markdown("Análisis comparativo · último mes")
+st.markdown(
+    "**Vista ejecutiva de toda la red en un solo lugar.** Reúne el desempeño de "
+    "todos los portales para **compararlos entre sí**, **seguir su evolución** y "
+    "**detectar a tiempo** qué crece y qué cae. Los indicadores de abajo resumen el "
+    "último mes de toda la red; más abajo se abren por portal, audiencia y contenido."
+)
 st.markdown("---")
 
 # ── Carga de datos ──────────────────────────────────────────────────
@@ -129,32 +134,35 @@ def _alcance_por_tipo(portales):
     return out
 
 def _delta_diaria(plataforma, metric_name):
-    """Variación del último día con dato vs el anterior, sumando todos los
-    portales activos. None si no hay al menos dos días en la base."""
-    serie = {}
+    """Variación del último día con dato vs el anterior, calculada POR PORTAL y
+    sumada. Hacerlo por portal evita falsos saltos gigantes cuando a un portal le
+    falta el dato de un día (si se sumara global, ese hueco se vería como una caída
+    enorme). None si ningún portal tiene al menos dos días."""
+    total, hubo = 0, False
     for d in activos:
         df = _df_seguro(_wr.daily_metric, d["nombre"], plataforma, metric_name)
-        for _, row in df.iterrows():
-            k = str(row["metric_date"])
-            serie[k] = serie.get(k, 0) + int(row["metric_value"] or 0)
-    if len(serie) < 2:
-        return None
-    f = sorted(serie)
-    return serie[f[-1]] - serie[f[-2]]
+        if df.empty:
+            continue
+        s = df.dropna(subset=["metric_value"]).sort_values("metric_date")
+        if len(s) >= 2:
+            total += int(s["metric_value"].iloc[-1]) - int(s["metric_value"].iloc[-2])
+            hubo = True
+    return total if hubo else None
 
 def _delta_seguidores():
-    """Altas netas de seguidores (FB+IG) del último día con dato vs el anterior."""
-    serie = {}
+    """Altas netas de seguidores del último día, sumando la variación POR PORTAL
+    (FB + IG). Por portal evita falsos saltos por días faltantes."""
+    total, hubo = 0, False
     for d in activos:
         for plat in ("fb", "ig"):
             h = _df_seguro(_wr.followers_history, d["nombre"], plat)
-            for _, row in h.iterrows():
-                k = str(row["snapshot_date"])
-                serie[k] = serie.get(k, 0) + int(row["followers_count"] or 0)
-    if len(serie) < 2:
-        return None
-    f = sorted(serie)
-    return serie[f[-1]] - serie[f[-2]]
+            if h.empty:
+                continue
+            s = h.dropna(subset=["followers_count"]).sort_values("snapshot_date")
+            if len(s) >= 2:
+                total += int(s["followers_count"].iloc[-1]) - int(s["followers_count"].iloc[-2])
+                hubo = True
+    return total if hubo else None
 
 
 # ── KPIs globales ───────────────────────────────────────────────────
@@ -165,36 +173,52 @@ total_reach = sum(d["ig_reach"]  for d in datos_portales)
 tasa_global = round(total_eng / total_seg * 100, 2) if total_seg else 0
 portales_activos = len(activos)
 
-# Variación día a día (verde/roja). None = sin dato diario suficiente → sin flecha.
-d_viz = _delta_diaria("ig", "views")
+# Variación del último día (verde/roja), por portal (robusta a días faltantes).
+# Solo en métricas con flujo diario claro: seguidores, engagement y alcance IG.
+# Visualizaciones y tasa no llevan flecha (no son un flujo diario comparable).
 d_seg = _delta_seguidores()
 d_eng = _delta_diaria("fb", "page_post_engagements")
 d_rch = _delta_diaria("ig", "reach")
 
 c1, c2, c3, c4, c5 = st.columns(5)
-c1.metric("🎯 Visualizaciones totales", f"{total_viz:,}", delta=d_viz,
+c1.metric("🎯 Visualizaciones (mes)", f"{total_viz:,}",
           help="Reproducciones de Instagram (Reels + videos + fotos) más el alcance "
-               "de Facebook, acumulado del último mes. La flecha es la variación "
-               "respecto al día anterior.")
+               "de Facebook, ACUMULADO de los últimos 30 días en toda la red.")
 c2.metric("👥 Seguidores totales", f"{total_seg:,}", delta=d_seg,
-          help="Seguidores de Facebook + Instagram sumados. La flecha son las altas "
-               "netas del último día.")
-c3.metric("💬 Engagement FB total", f"{total_eng:,}", delta=d_eng,
+          help="Seguidores de Facebook + Instagram sumados (foto de hoy). La flecha "
+               "son las altas netas del último día respecto al anterior.")
+c3.metric("💬 Engagement FB (mes)", f"{total_eng:,}", delta=d_eng,
           help="Interacciones con las publicaciones de Facebook (reacciones, "
-               "comentarios y compartidos) del último mes. La flecha es la variación "
-               "respecto al día anterior.")
-c4.metric("🎯 Alcance único IG total", f"{total_reach:,}", delta=d_rch,
-          help="Personas únicas alcanzadas en Instagram (suma del alcance diario del "
-               "mes). La flecha es la variación del alcance diario.")
-c5.metric("📊 Tasa eng. global", f"{tasa_global:.2f}%",
+               "comentarios y compartidos) del último mes. La flecha es cuánto cambió "
+               "el engagement del último día vs el anterior.")
+c4.metric("🎯 Alcance IG (mes)", f"{total_reach:,}", delta=d_rch,
+          help="Personas alcanzadas en Instagram durante el mes. La flecha es cuánto "
+               "cambió el alcance del último día vs el anterior.")
+c5.metric("📊 Tasa de engagement", f"{tasa_global:.2f}%",
           help="Engagement de Facebook ÷ seguidores totales: qué tan activa es la "
-               "audiencia respecto a su tamaño.")
+               "audiencia respecto a su tamaño. Cuanto más alta, mejor.")
 
 st.caption(
-    "Las **flechas verdes/rojas** muestran la variación respecto al día anterior "
-    "(donde la base ya tiene dato diario). Pasá el cursor por el ⓘ de cada métrica "
-    "para ver qué mide."
+    "Los números grandes son el **acumulado del último mes** (en seguidores, la foto "
+    "de hoy). La **flecha verde/roja** es la variación del **último día** con dato vs "
+    "el día anterior — verde sube, roja baja."
 )
+
+with st.expander("📖 Qué mide cada indicador y por qué importa"):
+    st.markdown(
+        "- **🎯 Visualizaciones (mes):** cuánto se *vio* tu contenido en toda la red "
+        "(reproducciones de IG + alcance de FB). Es el termómetro de difusión total.\n"
+        "- **👥 Seguidores totales:** el tamaño de tu audiencia propia (FB + IG). La "
+        "flecha muestra si la red ganó o perdió seguidores en el último día.\n"
+        "- **💬 Engagement FB:** cuánta gente *interactúa* (reacciones, comentarios, "
+        "compartidos). Mide qué tan involucrada está la audiencia, no solo cuántos son.\n"
+        "- **🎯 Alcance IG:** a cuántas **personas únicas** llegaste en Instagram. A "
+        "diferencia de las visualizaciones, cuenta personas, no reproducciones.\n"
+        "- **📊 Tasa de engagement:** engagement ÷ seguidores. Pone el engagement en "
+        "contexto del tamaño: un portal chico puede tener mejor tasa que uno grande.\n\n"
+        "Esta vista reúne todo en un solo lugar para **comparar portales**, **ver la "
+        "evolución** y **detectar a tiempo** qué crece y qué cae."
+    )
 
 st.markdown("---")
 
