@@ -329,42 +329,5 @@ if len(resumenes) > 1:
         fig_b.update_layout(margin=dict(l=0, r=0, t=40, b=0), legend_title="")
         st.plotly_chart(fig_b, width='stretch')
 
-# ── Botón PDF — va aquí, después de que resumenes está disponible ────
-with st.sidebar:
-    st.markdown("---")
-    if st.button("📄 Generar brief PDF", use_container_width=True, type="primary"):
-        with st.spinner("Generando PDF... (puede tardar 30s por los posts)"):
-            try:
-                # Cargar posts de cada portal para el top 10
-                all_posts_ig, all_posts_fb = [], []
-                for p in PORTALES_ACTIVOS:
-                    pig, pfb = cargar_posts_pdf(
-                        p["nombre"], p.get("facebook_page_id"),
-                        p.get("instagram_id"), p["access_token"],
-                        p.get("ig_only", False), live
-                    )
-                    all_posts_ig.extend(pig)
-                    all_posts_fb.extend(pfb)
-
-                pdf_bytes = generar_brief(
-                    resumenes=resumenes,
-                    totales={
-                        "total_imp": gran_total_imp,
-                        "total_seg": gran_total_seg,
-                        "total_eng": gran_total_eng,
-                        "total_fb":  gran_total_fb,
-                        "total_ig":  gran_total_ig,
-                    },
-                    top_ig=all_posts_ig,
-                    top_fb=all_posts_fb,
-                )
-                fecha = datetime.now().strftime("%Y%m%d")
-                st.sidebar.download_button(
-                    label="⬇️ Descargar informe",
-                    data=pdf_bytes,
-                    file_name=f"informe_fstats_{fecha}.pdf",
-                    mime="application/pdf",
-                    use_container_width=True,
-                )
-            except Exception as e:
-                st.sidebar.error(f"Error: {e}")
+# El informe PDF se genera ahora desde la página de Estadísticas Globales, así la
+# barra lateral queda igual en todas las páginas (solo la navegación).

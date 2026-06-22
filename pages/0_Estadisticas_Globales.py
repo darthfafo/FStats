@@ -133,35 +133,42 @@ def _alcance_por_tipo(portales):
         out[d["nombre"]] = {"follower": float(fr), "non_follower": float(nf)}
     return out
 
-def _delta_diaria(plataforma, metric_name):
-    """Variación del último día con dato vs el anterior, calculada POR PORTAL y
-    sumada. Hacerlo por portal evita falsos saltos gigantes cuando a un portal le
-    falta el dato de un día (si se sumara global, ese hueco se vería como una caída
-    enorme). None si ningún portal tiene al menos dos días."""
+def _delta_periodo(plataforma, metric_name, dias=30):
+    """Variación de PERÍODO: total de los últimos `dias` vs el período anterior
+    equivalente, sumando POR PORTAL. Comparar períodos (no días sueltos) evita el
+    ruido de un día viral aislado y es coherente con que los KPIs son del mes. Si
+    un portal no tiene historia para dos ventanas completas, usa la mayor ventana
+    pareja disponible. None si ningún portal tiene datos suficientes."""
     total, hubo = 0, False
     for d in activos:
         df = _df_seguro(_wr.daily_metric, d["nombre"], plataforma, metric_name)
         if df.empty:
             continue
-        s = df.dropna(subset=["metric_value"]).sort_values("metric_date")
-        if len(s) >= 2:
-            total += int(s["metric_value"].iloc[-1]) - int(s["metric_value"].iloc[-2])
-            hubo = True
+        vals = (df.dropna(subset=["metric_value"]).sort_values("metric_date")
+                  ["metric_value"].astype(int).tolist())
+        w = min(dias, len(vals) // 2)
+        if w < 3:                      # muy pocos días para comparar dos períodos
+            continue
+        total += sum(vals[-w:]) - sum(vals[-2 * w:-w])
+        hubo = True
     return total if hubo else None
 
-def _delta_seguidores():
-    """Altas netas de seguidores del último día, sumando la variación POR PORTAL
-    (FB + IG). Por portal evita falsos saltos por días faltantes."""
+def _delta_periodo_seguidores(dias=30):
+    """Crecimiento neto de seguidores en los últimos `dias` (foto de hoy vs la de
+    hace ~`dias`), sumando POR PORTAL (FB + IG). None si no hay historia."""
     total, hubo = 0, False
     for d in activos:
         for plat in ("fb", "ig"):
             h = _df_seguro(_wr.followers_history, d["nombre"], plat)
             if h.empty:
                 continue
-            s = h.dropna(subset=["followers_count"]).sort_values("snapshot_date")
-            if len(s) >= 2:
-                total += int(s["followers_count"].iloc[-1]) - int(s["followers_count"].iloc[-2])
-                hubo = True
+            vals = (h.dropna(subset=["followers_count"]).sort_values("snapshot_date")
+                     ["followers_count"].astype(int).tolist())
+            if len(vals) < 2:
+                continue
+            w = min(dias, len(vals) - 1)
+            total += vals[-1] - vals[-1 - w]
+            hubo = True
     return total if hubo else None
 
 
@@ -173,12 +180,13 @@ total_reach = sum(d["ig_reach"]  for d in datos_portales)
 tasa_global = round(total_eng / total_seg * 100, 2) if total_seg else 0
 portales_activos = len(activos)
 
-# Variación del último día (verde/roja), por portal (robusta a días faltantes).
-# Solo en métricas con flujo diario claro: seguidores, engagement y alcance IG.
-# Visualizaciones y tasa no llevan flecha (no son un flujo diario comparable).
-d_seg = _delta_seguidores()
-d_eng = _delta_diaria("fb", "page_post_engagements")
-d_rch = _delta_diaria("ig", "reach")
+# Variación de PERÍODO (verde/roja): últimos 30 días vs los 30 anteriores,
+# calculada por portal. Comparar períodos (no días sueltos) evita el ruido de un
+# día viral y es coherente con que los KPIs son del mes. Visualizaciones y tasa
+# no llevan flecha (no son un flujo diario acumulable comparable).
+d_seg = _delta_periodo_seguidores()
+d_eng = _delta_periodo("fb", "page_post_engagements")
+d_rch = _delta_periodo("ig", "reach")
 
 c1, c2, c3, c4, c5 = st.columns(5)
 c1.metric("🎯 Visualizaciones (mes)", f"{total_viz:,}",
@@ -186,22 +194,23 @@ c1.metric("🎯 Visualizaciones (mes)", f"{total_viz:,}",
                "de Facebook, ACUMULADO de los últimos 30 días en toda la red.")
 c2.metric("👥 Seguidores totales", f"{total_seg:,}", delta=d_seg,
           help="Seguidores de Facebook + Instagram sumados (foto de hoy). La flecha "
-               "son las altas netas del último día respecto al anterior.")
+               "es el crecimiento neto de los últimos 30 días.")
 c3.metric("💬 Engagement FB (mes)", f"{total_eng:,}", delta=d_eng,
           help="Interacciones con las publicaciones de Facebook (reacciones, "
-               "comentarios y compartidos) del último mes. La flecha es cuánto cambió "
-               "el engagement del último día vs el anterior.")
+               "comentarios y compartidos) del último mes. La flecha compara estos "
+               "30 días con los 30 anteriores.")
 c4.metric("🎯 Alcance IG (mes)", f"{total_reach:,}", delta=d_rch,
-          help="Personas alcanzadas en Instagram durante el mes. La flecha es cuánto "
-               "cambió el alcance del último día vs el anterior.")
+          help="Personas alcanzadas en Instagram durante el mes. La flecha compara "
+               "el alcance de estos 30 días con el de los 30 anteriores.")
 c5.metric("📊 Tasa de engagement", f"{tasa_global:.2f}%",
           help="Engagement de Facebook ÷ seguidores totales: qué tan activa es la "
                "audiencia respecto a su tamaño. Cuanto más alta, mejor.")
 
 st.caption(
     "Los números grandes son el **acumulado del último mes** (en seguidores, la foto "
-    "de hoy). La **flecha verde/roja** es la variación del **último día** con dato vs "
-    "el día anterior — verde sube, roja baja."
+    "de hoy). La **flecha verde/roja** compara ese período con el **período anterior "
+    "equivalente** (hasta 30 días) — verde mejora, roja empeora. Mientras la base "
+    "acumula historia, la ventana se va ampliando hasta los 30 días completos."
 )
 
 with st.expander("📖 Qué mide cada indicador y por qué importa"):
@@ -259,17 +268,20 @@ if activos:
 
     if modo_trend == _MODO_VIVO:
         from datetime import datetime as _dt, timedelta as _td
+        # "En vivo" = SOLO los últimos 30 días (el histórico completo está en la
+        # otra opción). Filtramos las series por este corte.
+        corte_30 = (_dt.now() - _td(days=30)).strftime("%Y-%m-%d")
         fecha_inicio_global = (_dt.now() - _td(days=29)).strftime("%Y-%m-%d")
         notas_inicio = []
         for d in activos:
             color = _colores_trend[d["nombre"]]
-            # IG = línea continua
-            if d["ig_daily"]:
-                items_ig = sorted(d["ig_daily"].items())
+            # IG = línea continua (últimos 30 días)
+            items_ig = [(k, v) for k, v in sorted(d["ig_daily"].items()) if k >= corte_30]
+            if items_ig:
                 fechas_ig = [k for k, v in items_ig]
                 vals_ig   = [v for k, v in items_ig]
                 nombre_ig = d["nombre"] + " (IG)"
-                if fechas_ig and fechas_ig[0] > fecha_inicio_global:
+                if fechas_ig[0] > fecha_inicio_global:
                     nombre_ig += f" · desde {fechas_ig[0][8:10]}/{fechas_ig[0][5:7]}"
                     notas_inicio.append(f"**{d['nombre']} IG**: datos desde {fechas_ig[0][8:10]}/{fechas_ig[0][5:7]}")
                 fig_trend.add_trace(go.Scatter(
@@ -277,13 +289,13 @@ if activos:
                     connectgaps=False, line=dict(color=color, width=2),
                     marker=dict(size=4, color=color, opacity=0.7), opacity=0.95))
                 hay_datos = True
-            # FB = línea punteada
-            if d["fb_daily"]:
-                items_fb = sorted(d["fb_daily"].items())
+            # FB = línea punteada (últimos 30 días)
+            items_fb = [(k, v) for k, v in sorted(d["fb_daily"].items()) if k >= corte_30]
+            if items_fb:
                 fechas_fb = [k for k, v in items_fb]
                 vals_fb   = [v for k, v in items_fb]
                 nombre_fb = d["nombre"] + " (FB)"
-                if fechas_fb and fechas_fb[0] > fecha_inicio_global:
+                if fechas_fb[0] > fecha_inicio_global:
                     nombre_fb += f" · desde {fechas_fb[0][8:10]}/{fechas_fb[0][5:7]}"
                     notas_inicio.append(f"**{d['nombre']} FB**: datos desde {fechas_fb[0][8:10]}/{fechas_fb[0][5:7]}")
                 fig_trend.add_trace(go.Scatter(
@@ -818,3 +830,40 @@ if activos:
 
 else:
     st.info("No hay portales activos con datos disponibles aún.")
+
+st.markdown("---")
+
+# ── Informe ejecutivo en PDF ─────────────────────────────────────────
+st.subheader("📄 Informe ejecutivo en PDF")
+st.markdown(
+    "Generá un **informe en PDF** listo para compartir o presentar, con el resumen "
+    "del último mes de **toda la red**: los KPIs y totales, el ranking de portales por "
+    "visualizaciones, las tendencias de alcance, el desglose por portal y el top de "
+    "publicaciones de Instagram. *(Es una primera versión; la vamos a seguir "
+    "mejorando.)*"
+)
+
+if st.button("📄 Generar informe PDF", type="primary", key="gen_pdf"):
+    with st.spinner("Generando informe… (puede tardar unos segundos)"):
+        try:
+            from pdf_report import generar_brief
+            resumenes = [{**d, "ig_daily_seg": d.get("ig_daily_seg", {})}
+                         for d in datos_portales]
+            totales = {
+                "total_imp": total_viz,
+                "total_seg": total_seg,
+                "total_eng": total_eng,
+                "total_fb":  sum(d.get("fb_imp", 0) for d in datos_portales),
+                "total_ig":  sum(d.get("ig_imp", 0) for d in datos_portales),
+            }
+            top_ig = [{**p, "portal": d["nombre"]}
+                      for d in activos for p in d.get("posts_ig", [])]
+            pdf_bytes = generar_brief(resumenes=resumenes, totales=totales,
+                                      top_ig=top_ig, top_fb=[])
+            st.download_button(
+                "⬇️ Descargar informe PDF", data=pdf_bytes,
+                file_name=f"informe_fstats_{datetime.now():%Y%m%d}.pdf",
+                mime="application/pdf", type="primary", key="dl_pdf")
+            st.success("Informe generado — tocá **Descargar informe PDF**.")
+        except Exception as e:
+            st.error(f"No se pudo generar el PDF: {e}")
