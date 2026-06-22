@@ -16,7 +16,7 @@ CHANGELOG = [
         "cambios": [
             "Nuevo encabezado de marketing y KPIs en tarjetas azules con explicación siempre visible.",
             "La participación de cada portal pasa de anillo a treemap (aprovecha mejor el espacio).",
-            "Tarjetas de portal en grilla responsive, con los datos reordenados y más legibles.",
+            "Tarjetas de portal azules (estilo KPI), responsive en widescreen, con 👁️ que resume lo visto (alcance/visualizaciones).",
             "Mejor legibilidad del texto gris en toda la app (tema claro y oscuro).",
             "Bitácora de versiones (esta sección).",
             "Viste Esto queda oculto del panel y la ingesta hasta configurar su acceso.",
