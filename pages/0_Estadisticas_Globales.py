@@ -81,6 +81,8 @@ live = st.session_state.get("fstats_live", False)
 with st.spinner("Cargando datos de todos los portales..."):
     datos_portales = []
     for p in PORTALES:
+        if p.get("oculto"):          # portal oculto hasta configurar su acceso
+            continue
         token = p.get("access_token","")
         if pendiente(token):
             datos_portales.append({"nombre": p["nombre"], "pendiente": True,
