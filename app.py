@@ -155,6 +155,17 @@ section[data-testid="stSidebar"] ul { display: none !important; }
     background: rgba(148,163,184,0.04);
 }
 
+/* Tarjetas de portal: mismo azul que los KPI de arriba, con texto claro */
+div[class*="st-key-pcard"] {
+    background: linear-gradient(135deg, #0f172a, #1e3a5f) !important;
+    border: 1px solid rgba(148,163,184,0.20) !important;
+    border-radius: 14px !important;
+}
+div[class*="st-key-pcard"] h4,
+div[class*="st-key-pcard"] [data-testid="stMarkdownContainer"],
+div[class*="st-key-pcard"] [data-testid="stMetricValue"] { color: #f1f5f9 !important; }
+div[class*="st-key-pcard"] [data-testid="stMetricLabel"] * { color: #cbd5e1 !important; }
+
 /* Responsive: hero inline divs en portales */
 @media (max-width: 768px) {
     div[style*="font-size:60px"], div[style*="font-size: 60px"] {
@@ -321,16 +332,17 @@ st.markdown(
 )
 
 st.markdown("---")
-st.subheader("🗂️ Detalle por portal")
-st.caption(
-    "El desempeño de cada marca por separado: su alcance del mes, cuánto pesa en "
-    "el total y cómo se reparte entre Facebook e Instagram. Entrá a cualquiera para "
-    "ver sus estadísticas completas."
+st.subheader("🔍 Cada portal bajo la lupa")
+st.markdown(
+    "El desempeño de cada marca por separado: su alcance del mes, cuánto pesa en el "
+    "total de la red y cómo se reparte entre Facebook e Instagram. Tocá **Ver "
+    "estadísticas** para entrar al detalle completo de cada una."
 )
 
-# ── Tarjetas por portal (grilla responsive: filas de 2-3 según cantidad) ─
+# ── Tarjetas por portal — azules (estilo KPI), hasta 4 por fila (responsive) ─
+# 👁️ resume "visto": en FB es el alcance único, en IG las visualizaciones.
 n_portales = len(resumenes)
-por_fila = 2 if n_portales <= 4 else 3
+por_fila = min(n_portales, 4) or 1
 
 for fila_ini in range(0, n_portales, por_fila):
     fila = resumenes[fila_ini:fila_ini + por_fila]
@@ -338,11 +350,11 @@ for fila_ini in range(0, n_portales, por_fila):
     for j, resumen in enumerate(fila):
         i = fila_ini + j
         with cols[j]:
-            with st.container(border=True):
+            with st.container(border=True, key=f"pcard_{i}"):
                 st.markdown(f"#### {resumen['icono']} {resumen['nombre']}")
                 pct = (resumen["total_imp"] / gran_total_imp * 100) if gran_total_imp else 0
                 st.metric("Alcance total · 30 días", f"{resumen['total_imp']:,}",
-                          help="Facebook alcance único + Instagram visualizaciones del mes")
+                          help="👁️ = visto. FB: alcance único · IG: visualizaciones")
                 st.progress(min(pct / 100, 1.0), text=f"{pct:.1f}% del alcance de la red")
 
                 es_ig_only = resumen.get("ig_only", False) or (
@@ -350,12 +362,12 @@ for fila_ini in range(0, n_portales, por_fila):
                 if not es_ig_only:
                     st.markdown(
                         f"**📘 Facebook**  \n"
-                        f"Alcance **{resumen['fb_imp']:,}** · Eng. **{resumen['fb_eng']:,}** "
+                        f"👁️ **{resumen['fb_imp']:,}** · 💬 **{resumen['fb_eng']:,}** "
                         f"· 👥 **{resumen['fb_seg']:,}**"
                     )
                 st.markdown(
                     f"**📸 Instagram**  \n"
-                    f"Visualiz. **{resumen['ig_imp']:,}** · Alcance **{resumen['ig_reach']:,}** "
+                    f"👁️ **{resumen['ig_imp']:,}** · 💬 **{resumen['ig_engaged']:,}** "
                     f"· 👥 **{resumen['ig_seg']:,}**"
                 )
                 if st.button("Ver estadísticas completas →", key=f"btn_{i}",
