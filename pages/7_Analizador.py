@@ -60,7 +60,7 @@ if uploaded and st.button("⚡ Analizar", type="primary"):
           <div style="color:#94a3b8;font-size:12px;font-weight:700;letter-spacing:2px;
                       text-transform:uppercase">Potencial de viralidad</div>
           <div style="color:{_color(score)};font-size:clamp(40px,10vw,72px);font-weight:900;
-                      line-height:1;margin:6px 0">{score}<span style="font-size:24px;color:#64748b">/100</span></div>
+                      line-height:1;margin:6px 0">{score}<span style="font-size:24px;color:#94a3b8">/100</span></div>
         </div>""", unsafe_allow_html=True)
         st.caption(sr.get("explanation", ""))
 

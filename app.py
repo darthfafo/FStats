@@ -114,7 +114,7 @@ section[data-testid="stSidebar"] ul { display: none !important; }
     word-break: keep-all;
 }
 .hero .sub {
-    color: #64748b;
+    color: #94a3b8;
     font-size: clamp(12px, 2vw, 15px);
 }
 
@@ -129,7 +129,7 @@ section[data-testid="stSidebar"] ul { display: none !important; }
 }
 
 /* Tarjetas KPI azules (mismo estilo que el hero, en chico) */
-.kpi-grid { display: flex; gap: 14px; flex-wrap: wrap; margin: 4px 0 6px 0; }
+.kpi-grid { display: flex; gap: 14px; flex-wrap: wrap; margin: 4px 0 22px 0; }
 .kpi-card {
     flex: 1 1 165px;
     background: linear-gradient(135deg, #0f172a, #1e3a5f);
@@ -138,14 +138,22 @@ section[data-testid="stSidebar"] ul { display: none !important; }
     padding: 16px 18px;
 }
 .kpi-card .k-label {
-    color: #94a3b8; font-size: 11.5px; font-weight: 700; letter-spacing: 1px;
+    color: #e2e8f0; font-size: 11.5px; font-weight: 700; letter-spacing: 1px;
     text-transform: uppercase;
 }
 .kpi-card .k-value {
     color: #fff; font-size: clamp(22px, 4vw, 30px); font-weight: 800;
     line-height: 1.1; margin-top: 6px;
 }
-.kpi-card .k-sub { color: #64748b; font-size: 11.5px; margin-top: 4px; }
+/* Subtítulo legible (claro) en cualquier tema, porque la tarjeta es oscura fija */
+.kpi-card .k-sub { color: #cbd5e1; font-size: 11.5px; margin-top: 4px; }
+
+/* st.container(border=True) con look de tarjeta (Detalle por portal) */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    border-radius: 14px !important;
+    border-color: rgba(148,163,184,0.18) !important;
+    background: rgba(148,163,184,0.04);
+}
 
 /* Responsive: hero inline divs en portales */
 @media (max-width: 768px) {
@@ -269,13 +277,13 @@ gran_total_ig  = sum(r["ig_imp"]      for r in resumenes)
 tasa_eng       = (gran_total_eng / gran_total_seg * 100) if gran_total_seg > 0 else 0
 
 # ── Encabezado del panel ───────────────────────────────────────────
-st.markdown(f"""
-<div class="panel-head">
-    <div class="h-title">📊 Panel general</div>
-    <div class="h-sub">Resumen en vivo de toda la red — los números clave de los últimos 30 días,
-    sumando {len(PORTALES_ACTIVOS)} portal(es) de Facebook e Instagram.</div>
-</div>
-""", unsafe_allow_html=True)
+# Título y bajada con componentes nativos (se adaptan al tema claro/oscuro).
+st.title("🚀 Performance de la Red")
+st.caption(
+    "El pulso de tu audiencia, consolidado: qué contenido convierte, qué red "
+    "crece y dónde está tu mayor oportunidad de alcance — todo en un tablero "
+    "para decidir con datos, no con corazonadas."
+)
 
 # ── HERO — Total de visualizaciones ────────────────────────────────
 st.markdown(f"""
@@ -319,7 +327,12 @@ with st.expander("📖 Qué significa cada dato"):
     )
 
 st.markdown("---")
-st.subheader("📊 Detalle por portal")
+st.subheader("🗂️ Detalle por portal")
+st.caption(
+    "El desempeño de cada marca por separado: su alcance del mes, cuánto pesa en "
+    "el total y cómo se reparte entre Facebook e Instagram. Entrá a cualquiera para "
+    "ver sus estadísticas completas."
+)
 
 # ── Tarjetas por portal ────────────────────────────────────────────
 cols_portales = st.columns(max(len(resumenes), 1))
@@ -356,41 +369,48 @@ for i, resumen in enumerate(resumenes):
                          key=f"btn_{i}", use_container_width=True, type="primary"):
                 st.switch_page(resumen["pagina"])
 
-# ── Gráfico comparativo (cuando haya más de 1 portal) ─────────────
+# ── Participación de cada portal (treemap: aprovecha mejor el espacio) ─
 if len(resumenes) > 1:
     st.markdown("---")
-    st.subheader("📊 Distribución de alcance entre portales")
+    st.subheader("📊 Participación de cada portal en el alcance total")
+    st.caption(
+        "Cuánto aporta cada portal al total de visualizaciones de la red. El tamaño "
+        "de cada bloque es proporcional a su alcance: de un vistazo se ve quién "
+        "tracciona más y dónde está concentrada la audiencia."
+    )
 
-    col_donut, col_bars = st.columns(2)
+    df_part = pd.DataFrame([
+        {"Portal": r["nombre"], "Visualizaciones": r["total_imp"]}
+        for r in resumenes if r["total_imp"] > 0
+    ])
+    if not df_part.empty:
+        fig_tm = px.treemap(
+            df_part, path=["Portal"], values="Visualizaciones",
+            color="Visualizaciones", color_continuous_scale="Tealgrn")
+        fig_tm.update_traces(
+            texttemplate="<b>%{label}</b><br>%{value:,}<br>%{percentRoot:.1%} del total",
+            textposition="middle center", textfont_size=15,
+            marker=dict(line=dict(width=1, color="rgba(0,0,0,0.35)")))
+        fig_tm.update_layout(margin=dict(l=0, r=0, t=6, b=0), height=320,
+                             coloraxis_showscale=False, paper_bgcolor="rgba(0,0,0,0)")
+        st.plotly_chart(fig_tm, width='stretch')
+    else:
+        st.info("Todavía no hay alcance cargado para mostrar la participación.")
 
-    with col_donut:
-        df_donut = pd.DataFrame([
-            {"Portal": r["nombre"], "Visualizaciones": r["total_imp"]}
-            for r in resumenes
-        ])
-        fig_d = px.pie(
-            df_donut, values="Visualizaciones", names="Portal",
-            hole=0.55,
-            color_discrete_sequence=["#1877F2", "#E1306C", "#16a34a", "#f59e0b"],
-            title="Participación total"
-        )
-        fig_d.update_traces(textposition="outside", textinfo="percent+label")
-        fig_d.update_layout(showlegend=False, margin=dict(l=0, r=0, t=40, b=0))
-        st.plotly_chart(fig_d, width='stretch')
-
-    with col_bars:
-        df_dist = pd.DataFrame([
-            {"Portal": r["nombre"], "Facebook": r["fb_imp"], "Instagram": r["ig_imp"]}
-            for r in resumenes
-        ])
-        df_melt = df_dist.melt(id_vars="Portal", var_name="Red", value_name="Alcance")
-        fig_b = px.bar(
-            df_melt, x="Portal", y="Alcance", color="Red",
-            color_discrete_map={"Facebook": "#1877F2", "Instagram": "#E1306C"},
-            barmode="group", title="FB vs IG por portal"
-        )
-        fig_b.update_layout(margin=dict(l=0, r=0, t=40, b=0), legend_title="")
-        st.plotly_chart(fig_b, width='stretch')
+    st.markdown("#### 📘 Facebook vs 📸 Instagram por portal")
+    st.caption("En qué red concentra su alcance cada portal — útil para decidir dónde reforzar.")
+    df_dist = pd.DataFrame([
+        {"Portal": r["nombre"], "Facebook": r["fb_imp"], "Instagram": r["ig_imp"]}
+        for r in resumenes
+    ])
+    df_melt = df_dist.melt(id_vars="Portal", var_name="Red", value_name="Alcance")
+    fig_b = px.bar(
+        df_melt, x="Portal", y="Alcance", color="Red",
+        color_discrete_map={"Facebook": "#1877F2", "Instagram": "#E1306C"},
+        barmode="group")
+    fig_b.update_layout(margin=dict(l=0, r=0, t=10, b=0), legend_title="",
+                        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
+    st.plotly_chart(fig_b, width='stretch')
 
 # El informe PDF se genera ahora desde la página de Estadísticas Globales, así la
 # barra lateral queda igual en todas las páginas (solo la navegación).

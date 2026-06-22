@@ -38,7 +38,7 @@ if portal is None or not credenciales_ok(portal):
         <div style="color:white; font-size:28px; font-weight:800; margin:12px 0">
             Boca en Linea — Pendiente de configuración
         </div>
-        <div style="color:#64748b; font-size:15px">
+        <div style="color:#94a3b8; font-size:15px">
             Una vez que el administrador envíe el token de acceso,<br>
             completá los datos en el archivo <code>.env</code> y el panel se activa automáticamente.
         </div>
