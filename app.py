@@ -346,20 +346,24 @@ por_fila = min(n_portales, 5) or 1
 
 st.markdown("""
 <style>
-/* Tarjetas de portal del inicio: compactar para que entren 5 por fila */
+/* Tarjetas de portal del inicio: 5 por fila, pero con tipografía grande.
+   El número (stMetricValue) es el protagonista: más grande que su etiqueta y
+   que llena el ancho como la barra de progreso. Las stats de FB/IG van una por
+   línea (ver el markdown más abajo), así no hay líneas largas que obliguen a
+   achicar el número. */
 [class*="st-key-pcard_"] [data-testid="stMetricValue"] {
-    font-size: 1.5rem; line-height: 1.15;
+    font-size: 2.1rem; line-height: 1.1; font-weight: 800;
 }
 [class*="st-key-pcard_"] [data-testid="stMetricLabel"] p {
-    font-size: 0.72rem;
+    font-size: 0.8rem;
 }
 [class*="st-key-pcard_"] h4 {
-    font-size: 0.98rem; line-height: 1.2; margin-bottom: 4px;
+    font-size: 1.1rem; line-height: 1.2; margin-bottom: 6px;
 }
 [class*="st-key-pcard_"] [data-testid="stMarkdownContainer"] p {
-    font-size: 0.82rem;
+    font-size: 0.92rem; line-height: 1.55;
 }
-[class*="st-key-pcard_"] button p { font-size: 0.8rem; }
+[class*="st-key-pcard_"] button p { font-size: 0.86rem; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -381,13 +385,15 @@ for fila_ini in range(0, n_portales, por_fila):
                 if not es_ig_only:
                     st.markdown(
                         f"**📘 Facebook**  \n"
-                        f"👁️ **{resumen['fb_imp']:,}** · 💬 **{resumen['fb_eng']:,}** "
-                        f"· 👥 **{resumen['fb_seg']:,}**"
+                        f"👁️ **{resumen['fb_imp']:,}**  \n"
+                        f"💬 **{resumen['fb_eng']:,}**  \n"
+                        f"👥 **{resumen['fb_seg']:,}**"
                     )
                 st.markdown(
                     f"**📸 Instagram**  \n"
-                    f"👁️ **{resumen['ig_imp']:,}** · 💬 **{resumen['ig_engaged']:,}** "
-                    f"· 👥 **{resumen['ig_seg']:,}**"
+                    f"👁️ **{resumen['ig_imp']:,}**  \n"
+                    f"💬 **{resumen['ig_engaged']:,}**  \n"
+                    f"👥 **{resumen['ig_seg']:,}**"
                 )
                 if st.button("Ver estadísticas completas →", key=f"btn_{i}",
                              use_container_width=True, type="primary"):
