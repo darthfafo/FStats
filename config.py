@@ -221,6 +221,7 @@ PORTALES = [
         "nombre":           "Boca en Linea",
         "icono":            "🇸🇪",
         "ig_only":          True,
+        "oculto":           True,   # oculto del panel, stats e ingesta hasta nuevo aviso
         "facebook_page_id": None,
         "instagram_id":     _secret("META_INSTAGRAM_ID_BOCA",     "PENDIENTE"),
         "access_token":     _secret("META_PAGE_ACCESS_TOKEN_BOCA", "PENDIENTE"),
