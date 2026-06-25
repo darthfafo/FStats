@@ -5,10 +5,18 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.2"
+APP_VERSION = "1.9.3"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.3",
+        "fecha":   "2026-06-24",
+        "titulo":  "Viste Esto completo (FB + IG)",
+        "cambios": [
+            "Viste Esto queda totalmente conectado con su token propio sin vencimiento; se corrigió el ID de la página de Facebook (el correcto del Graph API es 1083370151536332).",
+        ],
+    },
     {
         "version": "1.9.2",
         "fecha":   "2026-06-24",

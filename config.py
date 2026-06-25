@@ -205,7 +205,7 @@ PORTALES = [
         "nombre":           "VISTE ESTO?",
         "icono":            "👁️",
         "ig_only":          False,
-        "facebook_page_id": _secret("META_PAGE_ID_VISTE",          "61590332163724"),
+        "facebook_page_id": _secret("META_PAGE_ID_VISTE",          "1083370151536332"),
         # Aceptamos el @usuario como valor por defecto: la ingesta resuelve el
         # ID numérico real consultando las cuentas que administra el token (ver
         # InstagramCollector._adopt_page_token). Si preferís fijar el ID numérico,
