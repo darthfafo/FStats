@@ -78,40 +78,44 @@ class FacebookCollector:
         """
         Para páginas NPE donde /posts?fields=reactions falla, usa la Batch API
         para obtener reactions de cada post individualmente.
+
+        La Batch API admite hasta 50 sub-requests por llamada, así que recorremos
+        TODOS los posts en lotes de 50 (antes solo se enriquecían los primeros 50).
         """
         import json as _json
-        try:
-            batch = [
-                {"method": "GET",
-                 "relative_url": f"{p['id']}?fields=reactions.summary(true),comments.summary(true),shares"}
-                for p in posts[:50]
-            ]
-            r = requests.post(
-                self.base_url,
-                params={"access_token": self.access_token},
-                json={"batch": batch}
-            )
-            if not r.ok:
-                return
-            responses = r.json()
-            for i, resp in enumerate(responses or []):
-                if i >= len(posts):
-                    break
-                if resp and resp.get("code") == 200:
-                    try:
-                        data = _json.loads(resp.get("body", "{}"))
-                        if data.get("reactions"):
-                            posts[i]["reactions"] = data["reactions"]
-                        if data.get("comments"):
-                            posts[i]["comments"] = data["comments"]
-                        if data.get("shares"):
-                            posts[i]["shares"] = data["shares"]
-                    except Exception:
-                        pass
-            enriched = sum(1 for p in posts if p.get("reactions") or p.get("comments"))
-            print(f"[FB] ✓ Batch reactions enriched {enriched}/{len(posts)} posts")
-        except Exception as e:
-            print(f"[FB] ✗ Batch reactions error: {e}")
+        for start in range(0, len(posts), 50):
+            chunk = posts[start:start + 50]   # slicing comparte las mismas dicts
+            try:
+                batch = [
+                    {"method": "GET",
+                     "relative_url": f"{p['id']}?fields=reactions.summary(true),comments.summary(true),shares"}
+                    for p in chunk
+                ]
+                r = requests.post(
+                    self.base_url,
+                    params={"access_token": self.access_token},
+                    json={"batch": batch}
+                )
+                if not r.ok:
+                    continue
+                for i, resp in enumerate(r.json() or []):
+                    if i >= len(chunk):
+                        break
+                    if resp and resp.get("code") == 200:
+                        try:
+                            data = _json.loads(resp.get("body", "{}"))
+                            if data.get("reactions"):
+                                chunk[i]["reactions"] = data["reactions"]
+                            if data.get("comments"):
+                                chunk[i]["comments"] = data["comments"]
+                            if data.get("shares"):
+                                chunk[i]["shares"] = data["shares"]
+                        except Exception:
+                            pass
+            except Exception as e:
+                print(f"[FB] ✗ Batch reactions error (lote {start}): {e}")
+        enriched = sum(1 for p in posts if p.get("reactions") or p.get("comments"))
+        print(f"[FB] ✓ Batch reactions enriched {enriched}/{len(posts)} posts")
 
     def get_recent_posts(self, limit=30):
         """
@@ -194,23 +198,23 @@ class FacebookCollector:
                      for v in vals if v.get("value", 0) > 0}
             return total, daily
 
-        # ── Alcance: probamos candidatos hasta dar con uno válido ──────
+        # ── Alcance: page_impressions_unique fue deprecada por Meta (jun 2026).
+        # La intentamos UNA vez; si responde, la usamos; si no, más abajo caemos a
+        # page_views_total como proxy. Sus variantes organic/viral también están
+        # deprecadas: no las probamos para no llenar el log de "errores" que no lo son.
         token_muerto = False
-        for metric in ("page_impressions_unique",
-                       "page_impressions_organic_unique",
-                       "page_impressions_viral_unique"):
-            try:
-                total, daily = _serie(metric)
-                if daily:
-                    result["alcance"], result["daily_alcance"] = total, daily
-                    print(f"[FB] ✓ alcance vía {metric}")
-                    break
-            except Exception as e:
-                print(f"[FB] ✗ alcance {metric}: {e}")
-                if _es_error_permiso(e):
-                    print("[FB] token inválido/expirado: corto page insights.")
-                    token_muerto = True
-                    break
+        try:
+            total, daily = _serie("page_impressions_unique")
+            if daily:
+                result["alcance"], result["daily_alcance"] = total, daily
+                print("[FB] ✓ alcance vía page_impressions_unique")
+        except Exception as e:
+            if _es_error_permiso(e):
+                print("[FB] token inválido/expirado: corto page insights.")
+                token_muerto = True
+            else:
+                print("[FB] alcance: page_impressions_unique deprecada por Meta; "
+                      "uso page_views_total como proxy.")
 
         # ── Engagement y vistas (siguen vigentes) ──────────────────────
         for metric, total_key, daily_key in (

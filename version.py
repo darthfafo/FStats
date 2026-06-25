@@ -5,10 +5,19 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.3"
+APP_VERSION = "1.9.4"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.4",
+        "fecha":   "2026-06-24",
+        "titulo":  "Ingesta de Facebook más limpia",
+        "cambios": [
+            "El alcance de página prueba una sola vez la métrica deprecada (en vez de tres) antes de usar el proxy, así el log no se llena de falsos errores.",
+            "Las reacciones de los posts de Facebook ahora se enriquecen para los 100 posts (antes solo los primeros 50), recorriendo la Batch API en lotes.",
+        ],
+    },
     {
         "version": "1.9.3",
         "fecha":   "2026-06-24",
