@@ -336,10 +336,32 @@ st.markdown(
     "estadísticas** para entrar al detalle completo de cada una."
 )
 
-# ── Tarjetas por portal — azules (estilo KPI), hasta 4 por fila (responsive) ─
+# ── Tarjetas por portal — azules (estilo KPI), hasta 5 por fila (responsive) ─
 # 👁️ resume "visto": en FB es el alcance único, en IG las visualizaciones.
+# Con 5 portales activos buscamos que entren los 5 en una sola fila: el CSS de
+# abajo (scopeado a .st-key-pcard_*) achica número/título/etiqueta para que no
+# se desborden en columnas más angostas. Si algún día son >5, se reparten en filas.
 n_portales = len(resumenes)
-por_fila = min(n_portales, 4) or 1
+por_fila = min(n_portales, 5) or 1
+
+st.markdown("""
+<style>
+/* Tarjetas de portal del inicio: compactar para que entren 5 por fila */
+[class*="st-key-pcard_"] [data-testid="stMetricValue"] {
+    font-size: 1.5rem; line-height: 1.15;
+}
+[class*="st-key-pcard_"] [data-testid="stMetricLabel"] p {
+    font-size: 0.72rem;
+}
+[class*="st-key-pcard_"] h4 {
+    font-size: 0.98rem; line-height: 1.2; margin-bottom: 4px;
+}
+[class*="st-key-pcard_"] [data-testid="stMarkdownContainer"] p {
+    font-size: 0.82rem;
+}
+[class*="st-key-pcard_"] button p { font-size: 0.8rem; }
+</style>
+""", unsafe_allow_html=True)
 
 for fila_ini in range(0, n_portales, por_fila):
     fila = resumenes[fila_ini:fila_ini + por_fila]

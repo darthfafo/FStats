@@ -5,10 +5,18 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.4"
+APP_VERSION = "1.9.5"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.5",
+        "fecha":   "2026-06-24",
+        "titulo":  "Los 5 portales en una sola fila",
+        "cambios": [
+            "Las tarjetas de portal del inicio entran las 5 en una misma fila; se compactó el número, el título y las etiquetas para que no se desborden.",
+        ],
+    },
     {
         "version": "1.9.4",
         "fecha":   "2026-06-24",
