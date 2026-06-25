@@ -283,7 +283,7 @@ with st.spinner("Cargando datos de todos los portales..."):
 gran_total_imp = sum(r["total_imp"]   for r in resumenes)
 gran_total_seg = sum(r["total_seg"]   for r in resumenes)
 gran_total_eng = sum(r.get("fb_eng",0) + r.get("ig_engaged",0) for r in resumenes)
-gran_total_fb  = sum(r["fb_imp"]      for r in resumenes)
+gran_total_fb  = sum(r.get("fb_vistas", 0) for r in resumenes)  # vistas reales (FB ya no da alcance)
 gran_total_ig  = sum(r["ig_imp"]      for r in resumenes)
 tasa_eng       = (gran_total_eng / gran_total_seg * 100) if gran_total_seg > 0 else 0
 
@@ -292,7 +292,7 @@ st.markdown(f"""
 <div class="hero">
     <div class="label">🎯 Total visualizaciones — Últimos 30 días — Todas las fuentes</div>
     <div class="total">{gran_total_imp:,}</div>
-    <div class="sub">Facebook alcance único + Instagram visualizaciones totales · {len(PORTALES_ACTIVOS)} portal(es)</div>
+    <div class="sub">Visualizaciones de Instagram + vistas de Facebook · {len(PORTALES_ACTIVOS)} portal(es)</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -300,7 +300,7 @@ st.markdown(f"""
 st.markdown(f"""
 <div class="kpi-grid">
   <div class="kpi-card"><div class="k-label">📘 Facebook</div>
-    <div class="k-value">{gran_total_fb:,}</div><div class="k-sub">Alcance único · 30d</div></div>
+    <div class="k-value">{gran_total_fb:,}</div><div class="k-sub">Vistas de página · 30d</div></div>
   <div class="kpi-card"><div class="k-label">📸 Instagram</div>
     <div class="k-value">{gran_total_ig:,}</div><div class="k-sub">Visualizaciones · 30d</div></div>
   <div class="kpi-card"><div class="k-label">💬 Engagement</div>
@@ -331,7 +331,7 @@ with st.expander("📖 Qué significa cada dato"):
 st.markdown("---")
 st.subheader("🔍 Cada portal bajo la lupa")
 st.markdown(
-    "El desempeño de cada marca por separado: su alcance del mes, cuánto pesa en el "
+    "El desempeño de cada marca por separado: su difusión del mes, cuánto pesa en el "
     "total de la red y cómo se reparte entre Facebook e Instagram. Tocá **Ver "
     "estadísticas** para entrar al detalle completo de cada una."
 )
@@ -392,17 +392,19 @@ for fila_ini in range(0, n_portales, por_fila):
             with st.container(border=True, key=f"pcard_{i}"):
                 st.markdown(f"#### {resumen['icono']} {resumen['nombre']}")
                 pct = (resumen["total_imp"] / gran_total_imp * 100) if gran_total_imp else 0
-                st.metric("Alcance total · 30 días", f"{resumen['total_imp']:,}",
-                          help="👁️ = visto. FB: alcance único · IG: visualizaciones")
-                st.progress(min(pct / 100, 1.0), text=f"{pct:.1f}% del alcance de la red")
+                st.metric("Visualizaciones · 30 días", f"{resumen['total_imp']:,}",
+                          help="Difusión total: IG visualizaciones + FB vistas de página")
+                st.progress(min(pct / 100, 1.0), text=f"{pct:.1f}% de la difusión de la red")
 
                 es_ig_only = resumen.get("ig_only", False) or (
                     resumen["fb_imp"] == 0 and resumen["fb_seg"] == 0)
                 if not es_ig_only:
+                    # FB ya no expone alcance (Meta lo deprecó): lideramos con
+                    # engagement (real) y mostramos vistas de página, no un alcance falso.
                     st.markdown(
                         f"**📘 Facebook**  \n"
-                        f"👁️ **{resumen['fb_imp']:,}**  \n"
                         f"💬 **{resumen['fb_eng']:,}**  \n"
+                        f"👁️ **{resumen['fb_vistas']:,}**  \n"
                         f"👥 **{resumen['fb_seg']:,}**"
                     )
                 st.markdown(
