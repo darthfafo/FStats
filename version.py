@@ -5,10 +5,20 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.10"
+APP_VERSION = "1.9.11"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.11",
+        "fecha":   "2026-06-24",
+        "titulo":  "Inicio: participación como barra minimalista",
+        "cambios": [
+            "Se reemplazó el treemap de participación por una barra minimalista con porciones proporcionales al aporte de cada portal, con leyenda.",
+            "Se quitó el gráfico de barras 'Facebook vs Instagram por portal' (ya no tenía sentido sin el alcance de FB).",
+            "El número de visualizaciones de cada tarjeta ahora tiene el mismo look que los KPIs de arriba (blanco, en negrita).",
+        ],
+    },
     {
         "version": "1.9.10",
         "fecha":   "2026-06-24",

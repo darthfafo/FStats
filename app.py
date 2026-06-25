@@ -377,15 +377,13 @@ st.markdown("""
 /* Tipografía de las tarjetas de portal: el número es el protagonista (escala con
    clamp: grande en compu, se achica solo en pantallas angostas), más grande que
    su etiqueta. Las stats de FB/IG van una por línea (ver el markdown más abajo). */
-[class*="st-key-pcard_"] [data-testid="stMetricValue"] {
-    font-size: clamp(2rem, 2.8vw, 2.7rem); line-height: 1.05; font-weight: 800;
+/* Número principal con el MISMO look que los KPIs de arriba (blanco, bold, grande) */
+[class*="st-key-pcard_"] .pcard-kpi-label {
+    color: #94a3b8; font-size: 0.82rem; font-weight: 600; margin-top: 2px;
 }
-[class*="st-key-pcard_"] [data-testid="stMetricLabel"] {
-    white-space: normal !important;   /* que la etiqueta envuelva, no se trunque con "…" */
-}
-[class*="st-key-pcard_"] [data-testid="stMetricLabel"] p {
-    font-size: 0.88rem; white-space: normal; overflow: visible;
-    overflow-wrap: normal; word-break: normal;   /* que no parta palabras a la mitad */
+[class*="st-key-pcard_"] .pcard-kpi-value {
+    color: #fff; font-size: clamp(1.5rem, 2.2vw, 1.95rem); font-weight: 800;
+    line-height: 1.05; margin: 2px 0 6px; white-space: nowrap;   /* mismo look que los KPI; sin cortar el número */
 }
 [class*="st-key-pcard_"] h4 {
     font-size: 1.4rem; line-height: 1.2; margin-bottom: 6px;
@@ -421,8 +419,10 @@ for fila_ini in range(0, n_portales, por_fila):
             with st.container(border=True, key=f"pcard_{i}"):
                 st.markdown(f"#### {resumen['icono']} {resumen['nombre']}")
                 pct = (resumen["total_imp"] / gran_total_imp * 100) if gran_total_imp else 0
-                st.metric("Visualizaciones · 30 días", f"{resumen['total_imp']:,}",
-                          help="Difusión total: IG visualizaciones + FB vistas de página")
+                st.markdown(
+                    f'<div class="pcard-kpi-label">Visualizaciones · 30 días</div>'
+                    f'<div class="pcard-kpi-value">{resumen["total_imp"]:,}</div>',
+                    unsafe_allow_html=True)
                 st.progress(min(pct / 100, 1.0), text=f"{pct:.1f}% de la difusión de la red")
 
                 es_ig_only = resumen.get("ig_only", False) or (
@@ -446,48 +446,43 @@ for fila_ini in range(0, n_portales, por_fila):
                              use_container_width=True, type="primary"):
                     st.switch_page(resumen["pagina"])
 
-# ── Participación de cada portal (treemap: aprovecha mejor el espacio) ─
+# ── Participación de cada portal — barra minimalista de porciones ─────
 if len(resumenes) > 1:
     st.markdown("---")
-    st.subheader("📊 Participación de cada portal en el alcance total")
+    st.subheader("📊 Participación de cada portal en las visualizaciones")
     st.caption(
-        "Cuánto aporta cada portal al total de visualizaciones de la red. El tamaño "
-        "de cada bloque es proporcional a su alcance: de un vistazo se ve quién "
-        "tracciona más y dónde está concentrada la audiencia."
+        "Cuánto aporta cada portal al total de visualizaciones de la red. "
+        "El ancho de cada porción es proporcional a su aporte."
     )
 
-    df_part = pd.DataFrame([
-        {"Portal": r["nombre"], "Visualizaciones": r["total_imp"]}
-        for r in resumenes if r["total_imp"] > 0
-    ])
-    if not df_part.empty:
-        fig_tm = px.treemap(
-            df_part, path=["Portal"], values="Visualizaciones",
-            color="Visualizaciones", color_continuous_scale="Tealgrn")
-        fig_tm.update_traces(
-            texttemplate="<b>%{label}</b><br>%{value:,}<br>%{percentRoot:.1%} del total",
-            textposition="middle center", textfont_size=15,
-            marker=dict(line=dict(width=1, color="rgba(0,0,0,0.35)")))
-        fig_tm.update_layout(margin=dict(l=0, r=0, t=6, b=0), height=320,
-                             coloraxis_showscale=False, paper_bgcolor="rgba(0,0,0,0)")
-        st.plotly_chart(fig_tm, width='stretch')
+    partes = sorted([r for r in resumenes if r["total_imp"] > 0],
+                    key=lambda r: r["total_imp"], reverse=True)
+    total_part = sum(r["total_imp"] for r in partes)
+    if partes and total_part:
+        _PAL = ["#0EA5E9", "#a855f7", "#EA580C", "#22C55E", "#f472b6", "#fbbf24"]
+        segs, leyenda = "", ""
+        for i, r in enumerate(partes):
+            p   = r["total_imp"] / total_part * 100
+            col = _PAL[i % len(_PAL)]
+            # etiqueta adentro solo si la porción es lo bastante ancha
+            dentro = (f'{r["nombre"]} · {p:.0f}%' if p >= 12
+                      else (f'{p:.0f}%' if p >= 4 else ""))
+            segs += (f'<div title="{r["nombre"]}: {r["total_imp"]:,} ({p:.1f}%)" '
+                     f'style="width:{p}%;background:{col};display:flex;align-items:center;'
+                     f'justify-content:center;color:#fff;font-size:0.8rem;font-weight:700;'
+                     f'white-space:nowrap;overflow:hidden;padding:0 2px">{dentro}</div>')
+            leyenda += (f'<span style="display:inline-flex;align-items:center;gap:6px;'
+                        f'margin:0 16px 6px 0;font-size:0.85rem;color:#cbd5e1">'
+                        f'<span style="width:12px;height:12px;border-radius:3px;'
+                        f'background:{col};display:inline-block"></span>'
+                        f'{r["nombre"]} · {r["total_imp"]:,} ({p:.1f}%)</span>')
+        st.markdown(
+            f'<div style="display:flex;height:52px;border-radius:10px;overflow:hidden;'
+            f'gap:2px;margin-top:4px">{segs}</div>'
+            f'<div style="margin-top:12px;line-height:1.9">{leyenda}</div>',
+            unsafe_allow_html=True)
     else:
-        st.info("Todavía no hay alcance cargado para mostrar la participación.")
-
-    st.markdown("#### 📘 Facebook vs 📸 Instagram por portal")
-    st.caption("En qué red concentra su alcance cada portal — útil para decidir dónde reforzar.")
-    df_dist = pd.DataFrame([
-        {"Portal": r["nombre"], "Facebook": r["fb_imp"], "Instagram": r["ig_imp"]}
-        for r in resumenes
-    ])
-    df_melt = df_dist.melt(id_vars="Portal", var_name="Red", value_name="Alcance")
-    fig_b = px.bar(
-        df_melt, x="Portal", y="Alcance", color="Red",
-        color_discrete_map={"Facebook": "#1877F2", "Instagram": "#E1306C"},
-        barmode="group")
-    fig_b.update_layout(margin=dict(l=0, r=0, t=10, b=0), legend_title="",
-                        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
-    st.plotly_chart(fig_b, width='stretch')
+        st.info("Todavía no hay visualizaciones cargadas para mostrar la participación.")
 
 # El informe PDF se genera ahora desde la página de Estadísticas Globales, así la
 # barra lateral queda igual en todas las páginas (solo la navegación).
