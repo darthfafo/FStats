@@ -12,11 +12,8 @@ st.markdown(RESPONSIVE_CSS, unsafe_allow_html=True)
 sidebar_nav(current="")
 
 st.markdown("## 📊 Estadísticas Globales")
-st.markdown(
-    "**Vista ejecutiva de toda la red en un solo lugar.** Reúne el desempeño de "
-    "todos los portales para **compararlos entre sí**, **seguir su evolución** y "
-    "**detectar a tiempo** qué crece y qué cae. Los indicadores de abajo resumen el "
-    "último mes de toda la red; más abajo se abren por portal, audiencia y contenido."
+st.caption(
+    "El desempeño del último mes de toda la red, para comparar portales y ver su evolución."
 )
 st.markdown("---")
 
