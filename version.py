@@ -5,10 +5,19 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.6"
+APP_VERSION = "1.9.7"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.7",
+        "fecha":   "2026-06-24",
+        "titulo":  "Tarjetas de portal responsive en el celular",
+        "cambios": [
+            "En el celular las tarjetas de portal pasan a 2 por fila (antes se apilaban de a una y desperdiciaban el ancho); en escritorio siguen las 5 en una fila.",
+            "El número de alcance escala con el tamaño de pantalla y la etiqueta ya no se trunca en columnas angostas.",
+        ],
+    },
     {
         "version": "1.9.6",
         "fecha":   "2026-06-24",

@@ -346,16 +346,17 @@ por_fila = min(n_portales, 5) or 1
 
 st.markdown("""
 <style>
-/* Tarjetas de portal del inicio: 5 por fila, pero con tipografía grande.
-   El número (stMetricValue) es el protagonista: más grande que su etiqueta y
-   que llena el ancho como la barra de progreso. Las stats de FB/IG van una por
-   línea (ver el markdown más abajo), así no hay líneas largas que obliguen a
-   achicar el número. */
+/* Tipografía de las tarjetas de portal: el número es el protagonista (escala con
+   clamp: grande en compu, se achica solo en pantallas angostas), más grande que
+   su etiqueta. Las stats de FB/IG van una por línea (ver el markdown más abajo). */
 [class*="st-key-pcard_"] [data-testid="stMetricValue"] {
-    font-size: 2.1rem; line-height: 1.1; font-weight: 800;
+    font-size: clamp(1.7rem, 2.2vw, 2.2rem); line-height: 1.1; font-weight: 800;
+}
+[class*="st-key-pcard_"] [data-testid="stMetricLabel"] {
+    white-space: normal !important;   /* que la etiqueta envuelva, no se trunque con "…" */
 }
 [class*="st-key-pcard_"] [data-testid="stMetricLabel"] p {
-    font-size: 0.8rem;
+    font-size: 0.8rem; white-space: normal; overflow: visible;
 }
 [class*="st-key-pcard_"] h4 {
     font-size: 1.1rem; line-height: 1.2; margin-bottom: 6px;
@@ -364,6 +365,21 @@ st.markdown("""
     font-size: 0.92rem; line-height: 1.55;
 }
 [class*="st-key-pcard_"] button p { font-size: 0.86rem; }
+
+/* Responsive: en escritorio quedan las 5 en una fila (st.columns nativo). En el
+   celular Streamlit las apilaría de a una (desperdicia el ancho); las forzamos a
+   2 por fila envolviendo la fila de columnas. */
+@media (max-width: 640px) {
+    [data-testid="stHorizontalBlock"]:has([class*="st-key-pcard_"]) {
+        flex-wrap: wrap !important;
+        gap: 12px !important;
+    }
+    [data-testid="stHorizontalBlock"]:has([class*="st-key-pcard_"]) > [data-testid="stColumn"] {
+        flex: 1 1 calc(50% - 6px) !important;
+        min-width: calc(50% - 6px) !important;
+        width: calc(50% - 6px) !important;
+    }
+}
 </style>
 """, unsafe_allow_html=True)
 
