@@ -280,12 +280,38 @@ with st.spinner("Cargando datos de todos los portales..."):
         resumenes.append(r)
 
 # Totales globales
-gran_total_imp = sum(r["total_imp"]   for r in resumenes)
-gran_total_seg = sum(r["total_seg"]   for r in resumenes)
-gran_total_eng = sum(r.get("fb_eng",0) + r.get("ig_engaged",0) for r in resumenes)
-gran_total_fb  = sum(r.get("fb_vistas", 0) for r in resumenes)  # vistas reales (FB ya no da alcance)
-gran_total_ig  = sum(r["ig_imp"]      for r in resumenes)
-tasa_eng       = (gran_total_eng / gran_total_seg * 100) if gran_total_seg > 0 else 0
+gran_total_imp   = sum(r["total_imp"]   for r in resumenes)
+gran_total_seg   = sum(r["total_seg"]   for r in resumenes)
+gran_total_eng   = sum(r.get("fb_eng",0) + r.get("ig_engaged",0) for r in resumenes)
+gran_total_reach = sum(r.get("ig_reach", 0) for r in resumenes)  # personas únicas (reach real de IG)
+gran_total_ig    = sum(r["ig_imp"]      for r in resumenes)
+tasa_eng         = (gran_total_eng / gran_total_seg * 100) if gran_total_seg > 0 else 0
+
+# Crecimiento neto de seguidores en ~30 días, leído de la base histórica (FB+IG,
+# sumando por portal). Usa la mayor ventana disponible hasta 30 días; None si la
+# base todavía no tiene dos fotos para comparar.
+import warehouse.reader as _wr
+def _crecimiento_seguidores(dias=30):
+    total, hubo = 0, False
+    for r in resumenes:
+        for plat in ("fb", "ig"):
+            try:
+                h = _wr.followers_history(r["nombre"], plat)
+            except Exception:
+                continue
+            if h is None or h.empty:
+                continue
+            vals = (h.dropna(subset=["followers_count"]).sort_values("snapshot_date")
+                      ["followers_count"].astype(int).tolist())
+            if len(vals) < 2:
+                continue
+            w = min(dias, len(vals) - 1)
+            total += vals[-1] - vals[-1 - w]
+            hubo = True
+    return total if hubo else None
+crec_seg  = _crecimiento_seguidores()
+crec_str  = f"{crec_seg:+,}" if crec_seg is not None else "—"
+crec_sub  = "Altas netas · 30d" if crec_seg is not None else "Necesita histórico"
 
 # ── HERO — Total de visualizaciones ────────────────────────────────
 st.markdown(f"""
@@ -299,10 +325,10 @@ st.markdown(f"""
 # ── KPIs en tarjetas azules (estilo dashboard) ─────────────────────
 st.markdown(f"""
 <div class="kpi-grid">
-  <div class="kpi-card"><div class="k-label">📘 Facebook</div>
-    <div class="k-value">{gran_total_fb:,}</div><div class="k-sub">Vistas de página · 30d</div></div>
-  <div class="kpi-card"><div class="k-label">📸 Instagram</div>
-    <div class="k-value">{gran_total_ig:,}</div><div class="k-sub">Visualizaciones · 30d</div></div>
+  <div class="kpi-card"><div class="k-label">🎯 Alcance · personas únicas</div>
+    <div class="k-value">{gran_total_reach:,}</div><div class="k-sub">Personas distintas · 30d</div></div>
+  <div class="kpi-card"><div class="k-label">📈 Crecimiento seguidores</div>
+    <div class="k-value">{crec_str}</div><div class="k-sub">{crec_sub}</div></div>
   <div class="kpi-card"><div class="k-label">💬 Engagement</div>
     <div class="k-value">{gran_total_eng:,}</div><div class="k-sub">Interacciones · 30d</div></div>
   <div class="kpi-card"><div class="k-label">👥 Seguidores</div>
@@ -315,11 +341,13 @@ st.markdown(f"""
 with st.expander("📖 Qué significa cada dato"):
     st.markdown(
         "- **🎯 Total visualizaciones:** la suma de todo lo que se *vio* en la red en "
-        "30 días — alcance único de Facebook + visualizaciones de Instagram. Es el "
+        "30 días — visualizaciones de Instagram + vistas de Facebook. Es el "
         "termómetro de difusión general.\n"
-        "- **📘 Facebook:** personas **únicas** alcanzadas en Facebook en el mes.\n"
-        "- **📸 Instagram:** **visualizaciones** totales en Instagram (reproducciones de "
-        "Reels, videos y fotos) del mes.\n"
+        "- **🎯 Alcance (personas únicas):** a cuántas **personas distintas** llegó la "
+        "red en el mes (reach real de Instagram). A diferencia de las visualizaciones, "
+        "cuenta personas, no reproducciones.\n"
+        "- **📈 Crecimiento de seguidores:** altas **netas** de seguidores (FB + IG) en "
+        "el último mes. Verde grande = la audiencia crece.\n"
         "- **💬 Engagement (30d):** interacciones con el contenido — reacciones, "
         "comentarios y compartidos. Mide qué tan involucrada está la audiencia.\n"
         "- **👥 Seguidores totales:** el tamaño de tu audiencia propia (FB + IG), foto "
@@ -350,21 +378,22 @@ st.markdown("""
    clamp: grande en compu, se achica solo en pantallas angostas), más grande que
    su etiqueta. Las stats de FB/IG van una por línea (ver el markdown más abajo). */
 [class*="st-key-pcard_"] [data-testid="stMetricValue"] {
-    font-size: clamp(1.7rem, 2.2vw, 2.2rem); line-height: 1.1; font-weight: 800;
+    font-size: clamp(2rem, 2.8vw, 2.7rem); line-height: 1.05; font-weight: 800;
 }
 [class*="st-key-pcard_"] [data-testid="stMetricLabel"] {
     white-space: normal !important;   /* que la etiqueta envuelva, no se trunque con "…" */
 }
 [class*="st-key-pcard_"] [data-testid="stMetricLabel"] p {
-    font-size: 0.8rem; white-space: normal; overflow: visible;
+    font-size: 0.88rem; white-space: normal; overflow: visible;
+    overflow-wrap: normal; word-break: normal;   /* que no parta palabras a la mitad */
 }
 [class*="st-key-pcard_"] h4 {
-    font-size: 1.1rem; line-height: 1.2; margin-bottom: 6px;
+    font-size: 1.4rem; line-height: 1.2; margin-bottom: 6px;
 }
 [class*="st-key-pcard_"] [data-testid="stMarkdownContainer"] p {
-    font-size: 0.92rem; line-height: 1.55;
+    font-size: 1.1rem; line-height: 1.5;
 }
-[class*="st-key-pcard_"] button p { font-size: 0.86rem; }
+[class*="st-key-pcard_"] button p { font-size: 0.9rem; }
 
 /* Responsive: en escritorio quedan las 5 en una fila (st.columns nativo). En el
    celular Streamlit las apilaría de a una (desperdicia el ancho); las forzamos a
