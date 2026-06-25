@@ -5,10 +5,18 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.1"
+APP_VERSION = "1.9.2"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.2",
+        "fecha":   "2026-06-24",
+        "titulo":  "Fix: errores de la API ya no se confunden con token vencido",
+        "cambios": [
+            "Arreglo de un bug que abortaba los insights de Facebook cuando Meta deprecaba una métrica: el error 'code 100' se confundía con 'code 10' (token sin permiso) por coincidencia de subcadena. Ahora se distingue bien y el alcance/engagement de página deja de perderse de más.",
+        ],
+    },
     {
         "version": "1.9.1",
         "fecha":   "2026-06-24",

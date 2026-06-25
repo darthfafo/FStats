@@ -9,9 +9,13 @@ load_dotenv()
 def _es_error_permiso(e):
     """¿El error de la API es por permisos/scopes faltantes del token? (code 10
     o code 190 / 'permission'). Si lo es, no tiene sentido reintentar otras
-    métricas con el mismo token: van a fallar igual."""
+    métricas con el mismo token: van a fallar igual.
+
+    OJO: anclamos con ':' ("code 10:") porque el mensaje tiene formato
+    "code {n}: ..."; sin el ':' la subcadena "code 10" matchea "code 100"
+    (parámetro inválido / métrica deprecada), que NO es un problema de token."""
     msg = str(e).lower()
-    return ("code 190" in msg or "code 10" in msg or "permission" in msg
+    return ("code 190:" in msg or "code 10:" in msg or "permission" in msg
             or "must be granted" in msg)
 
 
