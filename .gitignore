@@ -25,6 +25,7 @@ renovar_tokens.py
 get_bm_id.py
 fix_warnings.py
 diagnostico.py
+verificar_tokens.py
 
 # Datos locales
 data/

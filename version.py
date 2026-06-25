@@ -5,10 +5,20 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.8.1"
+APP_VERSION = "1.9.0"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.0",
+        "fecha":   "2026-06-24",
+        "titulo":  "Tokens reconectados y Viste con Facebook",
+        "cambios": [
+            "Se regeneraron los accesos de Meta como System User Tokens sin vencimiento (uno por portafolio); cada portal con su token propio. La Calle y El Americano pasaron a app/portafolio propios.",
+            "Viste Esto ahora muestra Facebook además de Instagram (pestañas FB/IG, como el resto de los portales).",
+            "Aviso: durante el período con tokens vencidos quedaron días sin datos; las series diarias se recuperan solo hasta ~30 días atrás (límite de la API de Meta); los huecos más viejos no son recuperables.",
+        ],
+    },
     {
         "version": "1.8.1",
         "fecha":   "2026-06-22",
