@@ -285,7 +285,6 @@ gran_total_seg   = sum(r["total_seg"]   for r in resumenes)
 gran_total_eng   = sum(r.get("fb_eng",0) + r.get("ig_engaged",0) for r in resumenes)
 gran_total_reach = sum(r.get("ig_reach", 0) for r in resumenes)  # personas únicas (reach real de IG)
 gran_total_ig    = sum(r["ig_imp"]      for r in resumenes)
-tasa_eng         = (gran_total_eng / gran_total_seg * 100) if gran_total_seg > 0 else 0
 
 # Crecimiento neto de seguidores en ~30 días, leído de la base histórica (FB+IG,
 # sumando por portal). Usa la mayor ventana disponible hasta 30 días; None si la
@@ -313,6 +312,36 @@ crec_seg  = _crecimiento_seguidores()
 crec_str  = f"{crec_seg:+,}" if crec_seg is not None else "—"
 crec_sub  = "Altas netas · 30d" if crec_seg is not None else "Necesita histórico"
 
+# Engagement por publicación (30d): interacciones de los posts ÷ cantidad de posts,
+# sumando FB + IG de todos los portales. Más interpretable que la "tasa" (que daba
+# >100% porque dividía interacciones de 30d por seguidores).
+from datetime import date as _date, timedelta as _td
+def _engagement_por_pub(dias=30):
+    corte = _date.today() - _td(days=dias)
+    tot_int = tot_pub = 0
+    for r in resumenes:
+        try:
+            dfi = _wr.posts(r["nombre"], "ig")
+            if dfi is not None and not dfi.empty and "published_date" in dfi:
+                m = dfi[pd.to_datetime(dfi["published_date"]).dt.date >= corte]
+                tot_int += int((m["like_count"].fillna(0) + m["comments_count"].fillna(0)).sum())
+                tot_pub += len(m)
+        except Exception:
+            pass
+        try:
+            dff = _wr.posts(r["nombre"], "fb")
+            if dff is not None and not dff.empty and "created_date" in dff:
+                m = dff[pd.to_datetime(dff["created_date"]).dt.date >= corte]
+                tot_int += int((m["reactions_count"].fillna(0) + m["comments_count"].fillna(0)
+                                + m["shares_count"].fillna(0)).sum())
+                tot_pub += len(m)
+        except Exception:
+            pass
+    return (tot_int / tot_pub) if tot_pub else None
+eng_pub     = _engagement_por_pub()
+eng_pub_str = f"{eng_pub:,.0f}" if eng_pub is not None else "—"
+eng_pub_sub = "Interacciones por post · 30d" if eng_pub is not None else "Necesita posts cargados"
+
 # ── HERO — Total de visualizaciones ────────────────────────────────
 st.markdown(f"""
 <div class="hero">
@@ -333,8 +362,8 @@ st.markdown(f"""
     <div class="k-value">{gran_total_eng:,}</div><div class="k-sub">Interacciones · 30d</div></div>
   <div class="kpi-card"><div class="k-label">👥 Seguidores</div>
     <div class="k-value">{gran_total_seg:,}</div><div class="k-sub">Audiencia propia (hoy)</div></div>
-  <div class="kpi-card"><div class="k-label">📊 Tasa engagement</div>
-    <div class="k-value">{tasa_eng:.1f}%</div><div class="k-sub">Engagement ÷ seguidores</div></div>
+  <div class="kpi-card"><div class="k-label">⚡ Engagement / publicación</div>
+    <div class="k-value">{eng_pub_str}</div><div class="k-sub">{eng_pub_sub}</div></div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -352,8 +381,9 @@ with st.expander("📖 Qué significa cada dato"):
         "comentarios y compartidos. Mide qué tan involucrada está la audiencia.\n"
         "- **👥 Seguidores totales:** el tamaño de tu audiencia propia (FB + IG), foto "
         "de hoy.\n"
-        "- **📊 Tasa de engagement:** engagement ÷ seguidores. Pone el engagement en "
-        "contexto del tamaño de la audiencia."
+        "- **⚡ Engagement por publicación:** interacciones promedio que recibe cada "
+        "post (FB + IG) en el mes. Mide qué tan bien resuena cada pieza de contenido, "
+        "sin distorsión por el tamaño de la audiencia."
     )
 
 st.markdown("---")
