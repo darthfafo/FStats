@@ -284,7 +284,6 @@ gran_total_imp   = sum(r["total_imp"]   for r in resumenes)
 gran_total_seg   = sum(r["total_seg"]   for r in resumenes)
 gran_total_eng   = sum(r.get("fb_eng",0) + r.get("ig_engaged",0) for r in resumenes)
 gran_total_reach = sum(r.get("ig_reach", 0) for r in resumenes)  # personas únicas (reach real de IG)
-gran_total_ig    = sum(r["ig_imp"]      for r in resumenes)
 
 # Crecimiento neto de seguidores en ~30 días, leído de la base histórica (FB+IG,
 # sumando por portal). Usa la mayor ventana disponible hasta 30 días; None si la
@@ -310,37 +309,8 @@ def _crecimiento_seguidores(dias=30):
     return total if hubo else None
 crec_seg  = _crecimiento_seguidores()
 crec_str  = f"{crec_seg:+,}" if crec_seg is not None else "—"
-crec_sub  = "Altas netas · 30d" if crec_seg is not None else "Necesita histórico"
-
-# Engagement por publicación (30d): interacciones de los posts ÷ cantidad de posts,
-# sumando FB + IG de todos los portales. Más interpretable que la "tasa" (que daba
-# >100% porque dividía interacciones de 30d por seguidores).
-from datetime import date as _date, timedelta as _td
-def _engagement_por_pub(dias=30):
-    corte = _date.today() - _td(days=dias)
-    tot_int = tot_pub = 0
-    for r in resumenes:
-        try:
-            dfi = _wr.posts(r["nombre"], "ig")
-            if dfi is not None and not dfi.empty and "published_date" in dfi:
-                m = dfi[pd.to_datetime(dfi["published_date"]).dt.date >= corte]
-                tot_int += int((m["like_count"].fillna(0) + m["comments_count"].fillna(0)).sum())
-                tot_pub += len(m)
-        except Exception:
-            pass
-        try:
-            dff = _wr.posts(r["nombre"], "fb")
-            if dff is not None and not dff.empty and "created_date" in dff:
-                m = dff[pd.to_datetime(dff["created_date"]).dt.date >= corte]
-                tot_int += int((m["reactions_count"].fillna(0) + m["comments_count"].fillna(0)
-                                + m["shares_count"].fillna(0)).sum())
-                tot_pub += len(m)
-        except Exception:
-            pass
-    return (tot_int / tot_pub) if tot_pub else None
-eng_pub     = _engagement_por_pub()
-eng_pub_str = f"{eng_pub:,.0f}" if eng_pub is not None else "—"
-eng_pub_sub = "Interacciones por post · 30d" if eng_pub is not None else "Necesita posts cargados"
+crec_sub  = ("Seguidores netos ganados en ~30 días (FB + IG)"
+             if crec_seg is not None else "Necesita histórico cargado")
 
 # ── HERO — Total de visualizaciones ────────────────────────────────
 st.markdown(f"""
@@ -354,51 +324,48 @@ st.markdown(f"""
 # ── KPIs en tarjetas azules (estilo dashboard) ─────────────────────
 st.markdown(f"""
 <div class="kpi-grid">
-  <div class="kpi-card"><div class="k-label">🎯 Alcance · personas únicas</div>
-    <div class="k-value">{gran_total_reach:,}</div><div class="k-sub">Personas distintas · 30d</div></div>
-  <div class="kpi-card"><div class="k-label">📈 Crecimiento seguidores</div>
+  <div class="kpi-card"><div class="k-label">🎯 Alcance</div>
+    <div class="k-value">{gran_total_reach:,}</div><div class="k-sub">Personas distintas alcanzadas en el mes (reach de Instagram)</div></div>
+  <div class="kpi-card"><div class="k-label">📈 Crecimiento</div>
     <div class="k-value">{crec_str}</div><div class="k-sub">{crec_sub}</div></div>
   <div class="kpi-card"><div class="k-label">💬 Engagement</div>
-    <div class="k-value">{gran_total_eng:,}</div><div class="k-sub">Interacciones · 30d</div></div>
+    <div class="k-value">{gran_total_eng:,}</div><div class="k-sub">Interacciones del mes (FB + IG): reacciones, comentarios, compartidos</div></div>
   <div class="kpi-card"><div class="k-label">👥 Seguidores</div>
-    <div class="k-value">{gran_total_seg:,}</div><div class="k-sub">Audiencia propia (hoy)</div></div>
-  <div class="kpi-card"><div class="k-label">⚡ Engagement / publicación</div>
-    <div class="k-value">{eng_pub_str}</div><div class="k-sub">{eng_pub_sub}</div></div>
+    <div class="k-value">{gran_total_seg:,}</div><div class="k-sub">Audiencia total propia hoy (FB + IG)</div></div>
 </div>
 """, unsafe_allow_html=True)
 
 with st.expander("📖 Qué significa cada dato"):
     st.markdown(
-        "- **🎯 Total visualizaciones:** la suma de todo lo que se *vio* en la red en "
-        "30 días — visualizaciones de Instagram + vistas de Facebook. Es el "
-        "termómetro de difusión general.\n"
-        "- **🎯 Alcance (personas únicas):** a cuántas **personas distintas** llegó la "
-        "red en el mes (reach real de Instagram). A diferencia de las visualizaciones, "
-        "cuenta personas, no reproducciones.\n"
-        "- **📈 Crecimiento de seguidores:** altas **netas** de seguidores (FB + IG) en "
-        "el último mes. Verde grande = la audiencia crece.\n"
-        "- **💬 Engagement (30d):** interacciones con el contenido — reacciones, "
-        "comentarios y compartidos. Mide qué tan involucrada está la audiencia.\n"
-        "- **👥 Seguidores totales:** el tamaño de tu audiencia propia (FB + IG), foto "
-        "de hoy.\n"
-        "- **⚡ Engagement por publicación:** interacciones promedio que recibe cada "
-        "post (FB + IG) en el mes. Mide qué tan bien resuena cada pieza de contenido, "
-        "sin distorsión por el tamaño de la audiencia."
+        "- **🎯 Total visualizaciones:** cuánto se *vio* el contenido de toda la red en "
+        "30 días — visualizaciones de Instagram (reproducciones de reels/videos/fotos) "
+        "+ vistas de página de Facebook. Es el termómetro de difusión general; cuenta "
+        "**reproducciones**, no personas.\n"
+        "- **🎯 Alcance:** a cuántas **personas distintas** llegó la red en el mes "
+        "(reach real de Instagram). A diferencia de las visualizaciones, cuenta "
+        "**personas**, no reproducciones (una persona que vio 5 veces cuenta 1).\n"
+        "- **📈 Crecimiento:** cuántos seguidores **netos** ganó (o perdió) la red en "
+        "los últimos ~30 días, sumando Facebook + Instagram. En verde si creció.\n"
+        "- **💬 Engagement:** total de **interacciones** del mes (reacciones, comentarios "
+        "y compartidos, FB + IG). Mide qué tan involucrada está la audiencia, no solo "
+        "cuánta gente la ve.\n"
+        "- **👥 Seguidores:** el tamaño de tu **audiencia propia** hoy (suma de "
+        "seguidores de Facebook + Instagram de todos los portales)."
     )
 
 st.markdown("---")
 st.subheader("🔍 Cada portal bajo la lupa")
 st.markdown(
-    "El desempeño de cada marca por separado: su difusión del mes, cuánto pesa en el "
-    "total de la red y cómo se reparte entre Facebook e Instagram. Tocá **Ver "
-    "estadísticas** para entrar al detalle completo de cada una."
+    "El desempeño de cada marca por separado: sus visualizaciones del mes, su alcance, "
+    "engagement y seguidores (Facebook + Instagram), y cuánto pesa en el total de la "
+    "red. Tocá **Ver estadísticas** para entrar al detalle completo de cada una."
 )
 
 # ── Banner por portal: uno full-width por portal, apilados, cada uno con el
 # color de su marca (borde + tinte). Aprovecha el ancho y despliega FB/IG sin
 # amontonar. En el celular las columnas se apilan solas. ───────────────────────
 COLOR_PORTAL = {
-    "Chubut Noticias": "#60a5fa", "Atento Chubut": "#22d3ee",
+    "Chubut Noticias": "#64748b", "Atento Chubut": "#22d3ee",
     "La Calle Online": "#f97316", "El Americano": "#22c55e",
     "Viste esto?":     "#a855f7", "Boca en Linea": "#fbbf24",
 }
@@ -407,17 +374,17 @@ def _color_banner(nombre, i):
     return COLOR_PORTAL.get(nombre) or _PAL_BANNER[i % len(_PAL_BANNER)]
 
 _css_banner = """
-[class*="st-key-pbanner_"] { padding: 12px 20px !important; }
+[class*="st-key-pbanner_"] { padding: 14px 22px !important; overflow: hidden; }
 .pb-head { display:flex; align-items:center; gap:8px; margin-bottom:2px; }
 .pb-icon { font-size:1.35rem; }
 .pb-name { font-size:1.2rem; font-weight:800; line-height:1.15; }
 .pb-label { color:#cbd5e1; font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.6px; }
 .pb-num { color:#fff; font-size:clamp(1.7rem,2.4vw,2.3rem); font-weight:900; line-height:1.05; white-space:nowrap; }
 .pb-pct { color:#cbd5e1; font-size:0.78rem; margin-top:1px; }
-.pb-bar { height:5px; border-radius:3px; background:rgba(148,163,184,0.2); margin-top:7px; overflow:hidden; max-width:260px; }
-.pb-net { color:#e2e8f0; font-size:0.88rem; font-weight:700; margin-bottom:3px; }
-.pb-stats { color:#e2e8f0; font-size:0.98rem; line-height:1.75; }
-.pb-stats b { color:#fff; font-weight:800; }
+.pb-bar { height:5px; border-radius:3px; background:rgba(148,163,184,0.2); margin-top:7px; overflow:hidden; width:100%; box-sizing:border-box; }
+.pb-stat-label { color:#cbd5e1; font-size:0.8rem; font-weight:700; }
+.pb-stat-val { color:#fff; font-size:clamp(1.1rem,1.6vw,1.45rem); font-weight:800; line-height:1.1; margin-top:1px; white-space:nowrap; }
+.pb-stat-sub { color:#cbd5e1; font-size:0.72rem; }
 """
 _css_colores = ""
 for i, r in enumerate(resumenes):
@@ -430,13 +397,12 @@ for i, r in enumerate(resumenes):
 st.markdown(f"<style>{_css_banner}{_css_colores}</style>", unsafe_allow_html=True)
 
 for i, resumen in enumerate(resumenes):
-    _c  = _color_banner(resumen["nombre"], i)
-    pct = (resumen["total_imp"] / gran_total_imp * 100) if gran_total_imp else 0
-    es_ig_only = resumen.get("ig_only", False) or (
-        resumen["fb_imp"] == 0 and resumen["fb_seg"] == 0)
+    _c      = _color_banner(resumen["nombre"], i)
+    pct     = (resumen["total_imp"] / gran_total_imp * 100) if gran_total_imp else 0
+    eng_tot = resumen.get("fb_eng", 0) + resumen.get("ig_engaged", 0)
     with st.container(border=True, key=f"pbanner_{i}"):
-        c_name, c_fb, c_ig, c_btn = st.columns([3, 2.4, 2.4, 1.5],
-                                               vertical_alignment="center")
+        c_name, c_alc, c_eng, c_seg, c_btn = st.columns(
+            [3, 1.9, 1.9, 1.9, 1.6], vertical_alignment="center")
         with c_name:
             st.markdown(
                 f'<div class="pb-head"><span class="pb-icon">{resumen["icono"]}</span>'
@@ -447,24 +413,23 @@ for i, resumen in enumerate(resumenes):
                 f'<div class="pb-bar"><div style="height:100%;border-radius:3px;'
                 f'width:{min(pct,100):.1f}%;background:{_c}"></div></div>',
                 unsafe_allow_html=True)
-        with c_fb:
-            if es_ig_only:
-                st.markdown('<div class="pb-net">📘 Facebook</div>'
-                            '<div class="pb-stats" style="color:#cbd5e1">Sin Facebook</div>',
-                            unsafe_allow_html=True)
-            else:
-                st.markdown(
-                    '<div class="pb-net">📘 Facebook</div>'
-                    f'<div class="pb-stats">💬 <b>{resumen["fb_eng"]:,}</b> engagement<br>'
-                    f'👁️ <b>{resumen["fb_vistas"]:,}</b> vistas<br>'
-                    f'👥 <b>{resumen["fb_seg"]:,}</b> seguidores</div>',
-                    unsafe_allow_html=True)
-        with c_ig:
+        with c_alc:
             st.markdown(
-                '<div class="pb-net">📸 Instagram</div>'
-                f'<div class="pb-stats">👁️ <b>{resumen["ig_imp"]:,}</b> visualizaciones<br>'
-                f'💬 <b>{resumen["ig_engaged"]:,}</b> interacciones<br>'
-                f'👥 <b>{resumen["ig_seg"]:,}</b> seguidores</div>',
+                '<div class="pb-stat-label">🎯 Alcance</div>'
+                f'<div class="pb-stat-val">{resumen.get("ig_reach", 0):,}</div>'
+                '<div class="pb-stat-sub">personas únicas</div>',
+                unsafe_allow_html=True)
+        with c_eng:
+            st.markdown(
+                '<div class="pb-stat-label">💬 Engagement</div>'
+                f'<div class="pb-stat-val">{eng_tot:,}</div>'
+                '<div class="pb-stat-sub">interacciones · FB + IG</div>',
+                unsafe_allow_html=True)
+        with c_seg:
+            st.markdown(
+                '<div class="pb-stat-label">👥 Seguidores</div>'
+                f'<div class="pb-stat-val">{resumen["total_seg"]:,}</div>'
+                '<div class="pb-stat-sub">FB + IG</div>',
                 unsafe_allow_html=True)
         with c_btn:
             if st.button("Ver estadísticas →", key=f"btn_{i}",

@@ -5,10 +5,19 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.18"
+APP_VERSION = "1.9.19"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.19",
+        "fecha":   "2026-06-24",
+        "titulo":  "Inicio: banners más limpios y KPIs mejor explicados",
+        "cambios": [
+            "Cada banner de portal muestra menos datos y más claros: visualizaciones (grande), y al costado alcance (personas únicas), engagement total y seguidores totales (FB + IG combinados), en vez del desglose Facebook/Instagram que aportaba poco. Chubut Noticias pasa a gris oscuro y la barra de participación queda contenida dentro del banner.",
+            "KPIs de arriba: se quitó 'Engagement por publicación' (confundía), 'Alcance' quedó como etiqueta corta, y se reescribieron las explicaciones de todas las cifras (las notas anteriores eran de la primera versión).",
+        ],
+    },
     {
         "version": "1.9.18",
         "fecha":   "2026-06-24",
