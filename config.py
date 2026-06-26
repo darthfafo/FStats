@@ -104,7 +104,7 @@ _NAV_PORTALES = [
     ("📡", "Atento Chubut",    "pages/2_Atento_Chubut.py"),
     ("🗞️", "La Calle Online", "pages/3_La_Calle_Online.py"),
     ("🌎", "El Americano",     "pages/4_El_Americano.py"),
-    ("👁️", "VISTE ESTO?",     "pages/5_Viste_Esto.py"),
+    ("👁️", "Viste esto?",     "pages/5_Viste_Esto.py"),
 ]
 
 def sidebar_nav(current="", show_update=True, extra_widgets=None):
@@ -211,7 +211,7 @@ PORTALES = [
         "pagina":           "pages/4_El_Americano.py"
     },
     {
-        "nombre":           "VISTE ESTO?",
+        "nombre":           "Viste esto?",
         "icono":            "👁️",
         "ig_only":          False,
         "facebook_page_id": _secret("META_PAGE_ID_VISTE",          "1083370151536332"),

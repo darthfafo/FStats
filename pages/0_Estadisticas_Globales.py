@@ -100,7 +100,7 @@ import warehouse.reader as _wr
 _COLORES_PORTAL = {
     "Chubut Noticias": "#E2E8F0", "Atento Chubut": "#0EA5E9",
     "La Calle Online": "#EA580C", "El Americano": "#22C55E",
-    "VISTE ESTO?": "#a855f7", "Boca en Linea": "#fbbf24",
+    "Viste esto?": "#a855f7", "Boca en Linea": "#fbbf24",
 }
 _PALETA = ["#a855f7", "#fbbf24", "#14b8a6", "#f472b6", "#38bdf8"]
 
@@ -240,7 +240,7 @@ st.markdown("---")
 # Misma métrica sobre los mismos ejes (escala log); un selector elige la fuente:
 # API en vivo (máx 30 días) o base de datos histórica (crece sola).
 st.markdown('<div class="grupo-titulo">📡 Alcance de la red</div>', unsafe_allow_html=True)
-st.subheader("📈 Tendencia de alcance diario de Instagram — todos los portales")
+st.subheader("📈 Tendencia de alcance diario — todos los portales")
 
 if activos:
     PORTAL_COLOR = {
@@ -270,6 +270,7 @@ if activos:
     fig_trend = go.Figure()
     hay_datos = False
     nota_extra = []
+    ymax = 0   # mayor valor graficado, para recortar el vacío de abajo en el eje log
 
     if modo_trend == _MODO_VIVO:
         from datetime import datetime as _dt, timedelta as _td
@@ -285,6 +286,7 @@ if activos:
             if items_ig:
                 fechas_ig = [k for k, v in items_ig]
                 vals_ig   = [v for k, v in items_ig]
+                ymax = max(ymax, max(vals_ig) if vals_ig else 0)
                 nombre_ig = d["nombre"] + " (IG)"
                 if fechas_ig[0] > fecha_inicio_global:
                     nombre_ig += f" · desde {fechas_ig[0][8:10]}/{fechas_ig[0][5:7]}"
@@ -311,6 +313,7 @@ if activos:
                 if not df_ig.empty:
                     hay_datos = True
                     con_traza = True
+                    ymax = max(ymax, int(df_ig["metric_value"].max()))
                     fig_trend.add_trace(go.Scatter(
                         x=df_ig["metric_date"], y=df_ig["metric_value"],
                         mode="lines+markers", name=d["nombre"] + " (IG)",
@@ -334,6 +337,11 @@ if activos:
             hay_datos = None  # aviso ya mostrado
 
     if hay_datos:
+        import math
+        # Recortamos el vacío de abajo: mostramos ~4,5 décadas desde el máximo, así
+        # Viste (que arranca cerca de 1) no deja media escala vacía.
+        techo   = math.log10(ymax) + 0.15 if ymax > 0 else 7.5
+        rango_y = [max(0, techo - 4.5), techo]
         fig_trend.update_layout(
             showlegend=True,
             legend=dict(orientation="h", yanchor="top", y=-0.12, xanchor="left",
@@ -341,7 +349,7 @@ if activos:
             margin=dict(l=0, r=0, t=10, b=130),
             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
             xaxis=dict(gridcolor="rgba(255,255,255,0.08)", showgrid=True),
-            yaxis=dict(type="log", title="Alcance (escala log.)",
+            yaxis=dict(type="log", title="Alcance (escala log.)", range=rango_y,
                        gridcolor="rgba(255,255,255,0.08)", tickformat=".2s"),
             hovermode="x unified")
         st.plotly_chart(fig_trend, width='stretch')
@@ -626,27 +634,7 @@ st.markdown("---")
 
 # ── Ranking por visualizaciones ─────────────────────────────────────
 st.markdown('<div class="grupo-titulo">🎬 Contenido y posicionamiento</div>', unsafe_allow_html=True)
-st.subheader("🏆 Ranking de portales por visualizaciones totales")
-
 if activos:
-    df_rank = pd.DataFrame([
-        {"Portal": d["nombre"], "Facebook": d["fb_imp"], "Instagram": d["ig_imp"],
-         "Total": d["total_imp"]}
-        for d in sorted(activos, key=lambda x: x["total_imp"], reverse=True)
-    ])
-
-    # Solo el gráfico FB vs IG (sin el duplicado de Total)
-    df_melt = df_rank.melt(id_vars="Portal", value_vars=["Facebook","Instagram"],
-                           var_name="Red", value_name="Alcance")
-    fig2 = px.bar(df_melt, x="Alcance", y="Portal", color="Red", orientation="h",
-                  color_discrete_map={"Facebook":"#1877F2","Instagram":"#E1306C"},
-                  barmode="group")
-    fig2.update_layout(margin=dict(l=0,r=0,t=10,b=0),
-                       yaxis=dict(autorange="reversed"), legend_title="",
-                       height=220)
-    st.plotly_chart(fig2, width='stretch')
-
-    st.markdown("---")
 
 
     # ── Rendimiento de reels por portal ──────────────────────────────

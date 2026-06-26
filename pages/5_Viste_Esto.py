@@ -4,7 +4,7 @@ import plotly.express as px
 from datetime import datetime
 from config import PORTALES, RESPONSIVE_CSS, sidebar_nav, fb_source, ig_source
 
-st.set_page_config(page_title="VISTE ESTO?", page_icon="👁️", layout="wide")
+st.set_page_config(page_title="Viste esto?", page_icon="👁️", layout="wide")
 
 st.markdown(RESPONSIVE_CSS, unsafe_allow_html=True)
 st.markdown("""
@@ -28,11 +28,11 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-portal = next((p for p in PORTALES if p["nombre"] == "VISTE ESTO?"), None)
+portal = next((p for p in PORTALES if p["nombre"] == "Viste esto?"), None)
 
-sidebar_nav(current="VISTE ESTO?")
+sidebar_nav(current="Viste esto?")
 
-st.title("👁️ VISTE ESTO?")
+st.title("👁️ Viste esto?")
 st.markdown("---")
 
 def credenciales_ok(p):
@@ -46,7 +46,7 @@ if portal is None or not credenciales_ok(portal):
     <div class="pendiente-box">
         <div style="font-size:64px;margin-bottom:16px">⏳</div>
         <div style="color:#94a3b8;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase">Esperando credenciales</div>
-        <div style="color:white;font-size:clamp(18px,4vw,28px);font-weight:800;margin:12px 0">VISTE ESTO? — Pendiente de configuración</div>
+        <div style="color:white;font-size:clamp(18px,4vw,28px);font-weight:800;margin:12px 0">Viste esto? — Pendiente de configuración</div>
         <div style="color:#94a3b8;font-size:15px">Una vez que el administrador envíe el token de acceso,<br>
         completá los datos en los secrets y el panel se activa automáticamente.</div>
     </div>""", unsafe_allow_html=True)

@@ -24,7 +24,7 @@ PORTAL_ID_MAP = {
     "Atento Chubut":   "atento_chubut",
     "La Calle Online": "la_calle_online",
     "El Americano":    "el_americano",
-    "VISTE ESTO?":     "viste_esto",
+    "Viste esto?":     "viste_esto",
     "Boca en Linea":   "boca_en_linea",
 }
 
