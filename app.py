@@ -394,87 +394,82 @@ st.markdown(
     "estadísticas** para entrar al detalle completo de cada una."
 )
 
-# ── Tarjetas por portal — azules (estilo KPI), hasta 5 por fila (responsive) ─
-# 👁️ resume "visto": en FB es el alcance único, en IG las visualizaciones.
-# Con 5 portales activos buscamos que entren los 5 en una sola fila: el CSS de
-# abajo (scopeado a .st-key-pcard_*) achica número/título/etiqueta para que no
-# se desborden en columnas más angostas. Si algún día son >5, se reparten en filas.
-n_portales = len(resumenes)
-por_fila = min(n_portales, 5) or 1
+# ── Banner por portal: uno full-width por portal, apilados, cada uno con el
+# color de su marca (borde + tinte). Aprovecha el ancho y despliega FB/IG sin
+# amontonar. En el celular las columnas se apilan solas. ───────────────────────
+COLOR_PORTAL = {
+    "Chubut Noticias": "#60a5fa", "Atento Chubut": "#22d3ee",
+    "La Calle Online": "#f97316", "El Americano": "#22c55e",
+    "Viste esto?":     "#a855f7", "Boca en Linea": "#fbbf24",
+}
+_PAL_BANNER = ["#38bdf8", "#a855f7", "#f472b6", "#fbbf24", "#14b8a6"]
+def _color_banner(nombre, i):
+    return COLOR_PORTAL.get(nombre) or _PAL_BANNER[i % len(_PAL_BANNER)]
 
-st.markdown("""
-<style>
-/* Tipografía de las tarjetas de portal: el número es el protagonista (escala con
-   clamp: grande en compu, se achica solo en pantallas angostas), más grande que
-   su etiqueta. Las stats de FB/IG van una por línea (ver el markdown más abajo). */
-/* Número principal con el MISMO look que los KPIs de arriba (blanco, bold, grande) */
-[class*="st-key-pcard_"] .pcard-kpi-label {
-    color: #94a3b8; font-size: 0.82rem; font-weight: 600; margin-top: 2px;
-}
-[class*="st-key-pcard_"] .pcard-kpi-value {
-    color: #fff; font-size: clamp(1.5rem, 2.2vw, 1.95rem); font-weight: 800;
-    line-height: 1.05; margin: 2px 0 6px; white-space: nowrap;   /* mismo look que los KPI; sin cortar el número */
-}
-[class*="st-key-pcard_"] h4 {
-    font-size: 1.4rem; line-height: 1.2; margin-bottom: 6px;
-}
-[class*="st-key-pcard_"] [data-testid="stMarkdownContainer"] p {
-    font-size: 1.1rem; line-height: 1.5;
-}
-[class*="st-key-pcard_"] button p { font-size: 0.9rem; }
+_css_banner = """
+[class*="st-key-pbanner_"] { padding: 12px 20px !important; }
+.pb-head { display:flex; align-items:center; gap:8px; margin-bottom:2px; }
+.pb-icon { font-size:1.35rem; }
+.pb-name { font-size:1.2rem; font-weight:800; line-height:1.15; }
+.pb-label { color:#cbd5e1; font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.6px; }
+.pb-num { color:#fff; font-size:clamp(1.7rem,2.4vw,2.3rem); font-weight:900; line-height:1.05; white-space:nowrap; }
+.pb-pct { color:#cbd5e1; font-size:0.78rem; margin-top:1px; }
+.pb-bar { height:5px; border-radius:3px; background:rgba(148,163,184,0.2); margin-top:7px; overflow:hidden; max-width:260px; }
+.pb-net { color:#e2e8f0; font-size:0.88rem; font-weight:700; margin-bottom:3px; }
+.pb-stats { color:#e2e8f0; font-size:0.98rem; line-height:1.75; }
+.pb-stats b { color:#fff; font-weight:800; }
+"""
+_css_colores = ""
+for i, r in enumerate(resumenes):
+    _c = _color_banner(r["nombre"], i)
+    _css_colores += (
+        f".st-key-pbanner_{i} {{ border-left:6px solid {_c} !important; "
+        f"background:linear-gradient(90deg,{_c}24,rgba(148,163,184,0.04) 30%) !important; }}"
+        f".st-key-pbanner_{i} .pb-name {{ color:{_c}; }}"
+    )
+st.markdown(f"<style>{_css_banner}{_css_colores}</style>", unsafe_allow_html=True)
 
-/* Responsive: en escritorio quedan las 5 en una fila (st.columns nativo). En el
-   celular Streamlit las apilaría de a una (desperdicia el ancho); las forzamos a
-   2 por fila envolviendo la fila de columnas. */
-@media (max-width: 640px) {
-    [data-testid="stHorizontalBlock"]:has([class*="st-key-pcard_"]) {
-        flex-wrap: wrap !important;
-        gap: 12px !important;
-    }
-    [data-testid="stHorizontalBlock"]:has([class*="st-key-pcard_"]) > [data-testid="stColumn"] {
-        flex: 1 1 calc(50% - 6px) !important;
-        min-width: calc(50% - 6px) !important;
-        width: calc(50% - 6px) !important;
-    }
-}
-</style>
-""", unsafe_allow_html=True)
-
-for fila_ini in range(0, n_portales, por_fila):
-    fila = resumenes[fila_ini:fila_ini + por_fila]
-    cols = st.columns(por_fila)
-    for j, resumen in enumerate(fila):
-        i = fila_ini + j
-        with cols[j]:
-            with st.container(border=True, key=f"pcard_{i}"):
-                st.markdown(f"#### {resumen['icono']} {resumen['nombre']}")
-                pct = (resumen["total_imp"] / gran_total_imp * 100) if gran_total_imp else 0
+for i, resumen in enumerate(resumenes):
+    _c  = _color_banner(resumen["nombre"], i)
+    pct = (resumen["total_imp"] / gran_total_imp * 100) if gran_total_imp else 0
+    es_ig_only = resumen.get("ig_only", False) or (
+        resumen["fb_imp"] == 0 and resumen["fb_seg"] == 0)
+    with st.container(border=True, key=f"pbanner_{i}"):
+        c_name, c_fb, c_ig, c_btn = st.columns([3, 2.4, 2.4, 1.5],
+                                               vertical_alignment="center")
+        with c_name:
+            st.markdown(
+                f'<div class="pb-head"><span class="pb-icon">{resumen["icono"]}</span>'
+                f'<span class="pb-name">{resumen["nombre"]}</span></div>'
+                f'<div class="pb-label">Visualizaciones · 30 días</div>'
+                f'<div class="pb-num">{resumen["total_imp"]:,}</div>'
+                f'<div class="pb-pct">{pct:.1f}% de la difusión de la red</div>'
+                f'<div class="pb-bar"><div style="height:100%;border-radius:3px;'
+                f'width:{min(pct,100):.1f}%;background:{_c}"></div></div>',
+                unsafe_allow_html=True)
+        with c_fb:
+            if es_ig_only:
+                st.markdown('<div class="pb-net">📘 Facebook</div>'
+                            '<div class="pb-stats" style="color:#cbd5e1">Sin Facebook</div>',
+                            unsafe_allow_html=True)
+            else:
                 st.markdown(
-                    f'<div class="pcard-kpi-label">Visualizaciones · 30 días</div>'
-                    f'<div class="pcard-kpi-value">{resumen["total_imp"]:,}</div>',
+                    '<div class="pb-net">📘 Facebook</div>'
+                    f'<div class="pb-stats">💬 <b>{resumen["fb_eng"]:,}</b> engagement<br>'
+                    f'👁️ <b>{resumen["fb_vistas"]:,}</b> vistas<br>'
+                    f'👥 <b>{resumen["fb_seg"]:,}</b> seguidores</div>',
                     unsafe_allow_html=True)
-                st.progress(min(pct / 100, 1.0), text=f"{pct:.1f}% de la difusión de la red")
-
-                es_ig_only = resumen.get("ig_only", False) or (
-                    resumen["fb_imp"] == 0 and resumen["fb_seg"] == 0)
-                if not es_ig_only:
-                    # FB ya no expone alcance (Meta lo deprecó): lideramos con
-                    # engagement (real) y mostramos vistas de página, no un alcance falso.
-                    st.markdown(
-                        f"**📘 Facebook**  \n"
-                        f"💬 **{resumen['fb_eng']:,}**  \n"
-                        f"👁️ **{resumen['fb_vistas']:,}**  \n"
-                        f"👥 **{resumen['fb_seg']:,}**"
-                    )
-                st.markdown(
-                    f"**📸 Instagram**  \n"
-                    f"👁️ **{resumen['ig_imp']:,}**  \n"
-                    f"💬 **{resumen['ig_engaged']:,}**  \n"
-                    f"👥 **{resumen['ig_seg']:,}**"
-                )
-                if st.button("Ver estadísticas completas →", key=f"btn_{i}",
-                             use_container_width=True, type="primary"):
-                    st.switch_page(resumen["pagina"])
+        with c_ig:
+            st.markdown(
+                '<div class="pb-net">📸 Instagram</div>'
+                f'<div class="pb-stats">👁️ <b>{resumen["ig_imp"]:,}</b> visualizaciones<br>'
+                f'💬 <b>{resumen["ig_engaged"]:,}</b> interacciones<br>'
+                f'👥 <b>{resumen["ig_seg"]:,}</b> seguidores</div>',
+                unsafe_allow_html=True)
+        with c_btn:
+            if st.button("Ver estadísticas →", key=f"btn_{i}",
+                         use_container_width=True, type="primary"):
+                st.switch_page(resumen["pagina"])
 
 # ── Participación de cada portal — barra minimalista de porciones ─────
 if len(resumenes) > 1:
