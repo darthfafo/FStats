@@ -390,9 +390,9 @@ for d in datos_portales:
     filas.append({
         "Portal":             d["nombre"],
         "Estado":             "✅ Activo" if not d.get("pendiente") and d["total_imp"]>0 else "⏳ Pendiente",
-        "📘 FB Alcance":      d["fb_imp"],
+        "📘 FB Vistas":       d["fb_vistas"],
         "📸 IG Visualiz.":    d["ig_imp"],
-        "🎯 Total":           d["total_imp"],
+        "🎯 Total visualiz.": d["total_imp"],
         "👥 Seguidores":      d["total_seg"],
         "💬 Engagement FB":   d["fb_eng"],
         "📊 Tasa eng.":       f"{d['tasa_eng']:.2f}%",

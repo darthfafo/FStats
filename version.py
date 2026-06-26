@@ -5,10 +5,19 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.12"
+APP_VERSION = "1.9.13"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.13",
+        "fecha":   "2026-06-24",
+        "titulo":  "Facebook lidera con engagement en todo el panel",
+        "cambios": [
+            "En las 5 páginas de portal, la pestaña de Facebook ahora encabeza con el engagement (real) en vez del alcance (que Meta deprecó); el gráfico 'Alcance diario' pasó a 'Difusión diaria' (vistas) y se quitó el alcance falso del encabezado.",
+            "En Estadísticas Globales la columna 'FB Alcance' de la tabla pasó a 'FB Vistas'.",
+        ],
+    },
     {
         "version": "1.9.12",
         "fecha":   "2026-06-24",

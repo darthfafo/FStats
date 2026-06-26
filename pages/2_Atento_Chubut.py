@@ -132,7 +132,7 @@ st.markdown(f"""
         <div style="text-align:center">
             <div style="color:#60a5fa;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase">📘 Facebook</div>
             <div style="color:white;font-size:clamp(18px,4vw,28px);font-weight:800">{imp_fb_total:,}</div>
-            <div style="color:#475569;font-size:11px">alcance único · {seg_fb:,} seguidores</div>
+            <div style="color:#475569;font-size:11px">vistas · {seg_fb:,} seguidores</div>
         </div>
         <div style="text-align:center">
             <div style="color:#e879f9;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase">📸 Instagram</div>
@@ -166,28 +166,26 @@ with tab_fb:
 
     st.markdown(f"""
     <div class="bloque-imp" style="background:linear-gradient(135deg,#1e40af,#2563eb)">
-        <div class="label">🎯 Personas alcanzadas en Facebook — último mes</div>
-        <div class="valor">{imp['total_imp']:,}</div>
-        <div class="sub">Alcance único · personas distintas que vieron el contenido</div>
+        <div class="label">💬 Engagement en Facebook — último mes</div>
+        <div class="valor">{eng_total:,}</div>
+        <div class="sub">Interacciones: reacciones, comentarios y compartidos</div>
     </div>
     """, unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
-    c1, c2, c3 = st.columns(3)
+    c1, c2 = st.columns(2)
     c1.metric("👥 Seguidores",        f"{info.get('followers_count', 0):,}")
-    c2.metric("💬 Engagement (30d)",  f"{eng_total:,}",
-              help="Interacciones totales (fuente: Meta insights)")
-    c3.metric("🖥️ Vistas de página",  f"{imp.get('vistas', 0):,}")
+    c2.metric("🖥️ Vistas de página",  f"{imp.get('vistas', 0):,}")
 
     st.markdown("---")
     col_izq, col_der = st.columns(2)
 
     with col_izq:
-        st.subheader("📈 Alcance diario")
+        st.subheader("📈 Difusión diaria")
         if imp["daily"]:
-            df = pd.DataFrame([{"Fecha": k, "Personas alcanzadas": v}
+            df = pd.DataFrame([{"Fecha": k, "Vistas": v}
                                 for k, v in sorted(imp["daily"].items())])
-            fig = px.line(df, x="Fecha", y="Personas alcanzadas",
+            fig = px.line(df, x="Fecha", y="Vistas",
                           color_discrete_sequence=["#2563eb"])
             fig.update_traces(fill="tozeroy", fillcolor="rgba(37,99,235,0.15)", line_width=2)
             fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=10, b=0))
