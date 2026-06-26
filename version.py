@@ -5,10 +5,19 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.20"
+APP_VERSION = "1.9.21"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.21",
+        "fecha":   "2026-06-24",
+        "titulo":  "Banners del inicio responsive (compu y celular)",
+        "cambios": [
+            "El contenido de cada banner pasa a una fila flexible que se reacomoda sola: en computadora va todo en una línea y en el celular los stats se ordenan en una grilla prolija (antes se apilaban de a uno y quedaba feo).",
+            "La etiqueta dice 'Último mes' en vez de '30 días' y los banners tienen separación entre sí.",
+        ],
+    },
     {
         "version": "1.9.20",
         "fecha":   "2026-06-24",

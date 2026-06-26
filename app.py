@@ -374,13 +374,19 @@ def _color_banner(nombre, i):
     return COLOR_PORTAL.get(nombre) or _PAL_BANNER[i % len(_PAL_BANNER)]
 
 _css_banner = """
-[class*="st-key-pbanner_"] { padding: 14px 22px !important; overflow: hidden; }
+[class*="st-key-pbanner_"] { padding: 16px 22px !important; margin-bottom: 14px !important; overflow: hidden; }
+/* Contenido en una fila flexible que se reacomoda sola: en compu todo en una
+   línea; en el celular el bloque principal toma el ancho y los stats se acomodan
+   abajo en una grilla (en vez de apilarse feo de a uno). */
+.pb-row { display:flex; flex-wrap:wrap; align-items:center; gap:10px 18px; }
+.pb-main { flex:0 1 200px; }
 .pb-head { display:flex; align-items:center; gap:8px; margin-bottom:2px; }
 .pb-icon { font-size:1.35rem; }
 .pb-name { font-size:1.2rem; font-weight:800; line-height:1.15; }
 .pb-label { color:#cbd5e1; font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.6px; }
 .pb-num { color:#fff; font-size:clamp(1.7rem,2.4vw,2.3rem); font-weight:900; line-height:1.05; white-space:nowrap; }
 .pb-pct { color:#cbd5e1; font-size:0.8rem; margin-top:2px; }
+.pb-stat { flex:0 1 auto; min-width:94px; }
 .pb-stat-label { color:#cbd5e1; font-size:0.8rem; font-weight:700; }
 .pb-stat-val { color:#fff; font-size:clamp(1.1rem,1.6vw,1.45rem); font-weight:800; line-height:1.1; margin-top:1px; white-space:nowrap; }
 .pb-stat-sub { color:#cbd5e1; font-size:0.72rem; }
@@ -398,37 +404,30 @@ for i, r in enumerate(resumenes):
 st.markdown(f"<style>{_css_banner}{_css_colores}</style>", unsafe_allow_html=True)
 
 for i, resumen in enumerate(resumenes):
-    _c      = _color_banner(resumen["nombre"], i)
     pct     = (resumen["total_imp"] / gran_total_imp * 100) if gran_total_imp else 0
     eng_tot = resumen.get("fb_eng", 0) + resumen.get("ig_engaged", 0)
     with st.container(border=True, key=f"pbanner_{i}"):
-        c_name, c_alc, c_eng, c_seg, c_btn = st.columns(
-            [3, 1.9, 1.9, 1.9, 1.6], vertical_alignment="center")
-        with c_name:
+        c_content, c_btn = st.columns([6.2, 1.3], vertical_alignment="center")
+        with c_content:
             st.markdown(
-                f'<div class="pb-head"><span class="pb-icon">{resumen["icono"]}</span>'
-                f'<span class="pb-name">{resumen["nombre"]}</span></div>'
-                f'<div class="pb-label">Visualizaciones · 30 días</div>'
-                f'<div class="pb-num">{resumen["total_imp"]:,}</div>'
-                f'<div class="pb-pct">{pct:.1f}% de la difusión de la red</div>',
-                unsafe_allow_html=True)
-        with c_alc:
-            st.markdown(
-                '<div class="pb-stat-label">🎯 Alcance</div>'
-                f'<div class="pb-stat-val">{resumen.get("ig_reach", 0):,}</div>'
-                '<div class="pb-stat-sub">personas únicas</div>',
-                unsafe_allow_html=True)
-        with c_eng:
-            st.markdown(
-                '<div class="pb-stat-label">💬 Engagement</div>'
-                f'<div class="pb-stat-val">{eng_tot:,}</div>'
-                '<div class="pb-stat-sub">interacciones · FB + IG</div>',
-                unsafe_allow_html=True)
-        with c_seg:
-            st.markdown(
-                '<div class="pb-stat-label">👥 Seguidores</div>'
-                f'<div class="pb-stat-val">{resumen["total_seg"]:,}</div>'
-                '<div class="pb-stat-sub">FB + IG</div>',
+                '<div class="pb-row">'
+                  '<div class="pb-main">'
+                    f'<div class="pb-head"><span class="pb-icon">{resumen["icono"]}</span>'
+                    f'<span class="pb-name">{resumen["nombre"]}</span></div>'
+                    '<div class="pb-label">Visualizaciones · último mes</div>'
+                    f'<div class="pb-num">{resumen["total_imp"]:,}</div>'
+                    f'<div class="pb-pct">{pct:.1f}% de la difusión de la red</div>'
+                  '</div>'
+                  '<div class="pb-stat"><div class="pb-stat-label">🎯 Alcance</div>'
+                    f'<div class="pb-stat-val">{resumen.get("ig_reach", 0):,}</div>'
+                    '<div class="pb-stat-sub">personas únicas</div></div>'
+                  '<div class="pb-stat"><div class="pb-stat-label">💬 Engagement</div>'
+                    f'<div class="pb-stat-val">{eng_tot:,}</div>'
+                    '<div class="pb-stat-sub">interacciones</div></div>'
+                  '<div class="pb-stat"><div class="pb-stat-label">👥 Seguidores</div>'
+                    f'<div class="pb-stat-val">{resumen["total_seg"]:,}</div>'
+                    '<div class="pb-stat-sub">FB + IG</div></div>'
+                '</div>',
                 unsafe_allow_html=True)
         with c_btn:
             if st.button("Ver estadísticas →", key=f"btn_{i}",
