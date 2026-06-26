@@ -5,10 +5,19 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.19"
+APP_VERSION = "1.9.20"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.20",
+        "fecha":   "2026-06-24",
+        "titulo":  "Banners del inicio: sin la barra problemática",
+        "cambios": [
+            "Se quitó la barra de participación de cada banner (quedaba cortada en computadora y fea en el celular); el porcentaje de difusión sigue como texto y la participación se ve en la barra de porciones de más abajo.",
+            "El nombre de Chubut Noticias va en blanco (su acento es gris y antes no se leía).",
+        ],
+    },
     {
         "version": "1.9.19",
         "fecha":   "2026-06-24",

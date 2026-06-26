@@ -380,8 +380,7 @@ _css_banner = """
 .pb-name { font-size:1.2rem; font-weight:800; line-height:1.15; }
 .pb-label { color:#cbd5e1; font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.6px; }
 .pb-num { color:#fff; font-size:clamp(1.7rem,2.4vw,2.3rem); font-weight:900; line-height:1.05; white-space:nowrap; }
-.pb-pct { color:#cbd5e1; font-size:0.78rem; margin-top:1px; }
-.pb-bar { height:5px; border-radius:3px; background:rgba(148,163,184,0.2); margin-top:7px; overflow:hidden; width:100%; box-sizing:border-box; }
+.pb-pct { color:#cbd5e1; font-size:0.8rem; margin-top:2px; }
 .pb-stat-label { color:#cbd5e1; font-size:0.8rem; font-weight:700; }
 .pb-stat-val { color:#fff; font-size:clamp(1.1rem,1.6vw,1.45rem); font-weight:800; line-height:1.1; margin-top:1px; white-space:nowrap; }
 .pb-stat-sub { color:#cbd5e1; font-size:0.72rem; }
@@ -389,10 +388,12 @@ _css_banner = """
 _css_colores = ""
 for i, r in enumerate(resumenes):
     _c = _color_banner(r["nombre"], i)
+    # Si el acento es gris (Chubut), el nombre va casi blanco para que se lea.
+    _name_c = "#e2e8f0" if _c == "#64748b" else _c
     _css_colores += (
         f".st-key-pbanner_{i} {{ border-left:6px solid {_c} !important; "
         f"background:linear-gradient(90deg,{_c}24,rgba(148,163,184,0.04) 30%) !important; }}"
-        f".st-key-pbanner_{i} .pb-name {{ color:{_c}; }}"
+        f".st-key-pbanner_{i} .pb-name {{ color:{_name_c}; }}"
     )
 st.markdown(f"<style>{_css_banner}{_css_colores}</style>", unsafe_allow_html=True)
 
@@ -409,9 +410,7 @@ for i, resumen in enumerate(resumenes):
                 f'<span class="pb-name">{resumen["nombre"]}</span></div>'
                 f'<div class="pb-label">Visualizaciones · 30 días</div>'
                 f'<div class="pb-num">{resumen["total_imp"]:,}</div>'
-                f'<div class="pb-pct">{pct:.1f}% de la difusión de la red</div>'
-                f'<div class="pb-bar"><div style="height:100%;border-radius:3px;'
-                f'width:{min(pct,100):.1f}%;background:{_c}"></div></div>',
+                f'<div class="pb-pct">{pct:.1f}% de la difusión de la red</div>',
                 unsafe_allow_html=True)
         with c_alc:
             st.markdown(
