@@ -240,7 +240,7 @@ st.markdown("---")
 # Misma métrica sobre los mismos ejes (escala log); un selector elige la fuente:
 # API en vivo (máx 30 días) o base de datos histórica (crece sola).
 st.markdown('<div class="grupo-titulo">📡 Alcance de la red</div>', unsafe_allow_html=True)
-st.subheader("📈 Tendencia de alcance diario — todos los portales")
+st.subheader("📈 Tendencia de alcance diario de Instagram — todos los portales")
 
 if activos:
     PORTAL_COLOR = {
@@ -294,20 +294,6 @@ if activos:
                     connectgaps=False, line=dict(color=color, width=2),
                     marker=dict(size=4, color=color, opacity=0.7), opacity=0.95))
                 hay_datos = True
-            # FB = línea punteada (últimos 30 días)
-            items_fb = [(k, v) for k, v in sorted(d["fb_daily"].items()) if k >= corte_30]
-            if items_fb:
-                fechas_fb = [k for k, v in items_fb]
-                vals_fb   = [v for k, v in items_fb]
-                nombre_fb = d["nombre"] + " (FB)"
-                if fechas_fb[0] > fecha_inicio_global:
-                    nombre_fb += f" · desde {fechas_fb[0][8:10]}/{fechas_fb[0][5:7]}"
-                    notas_inicio.append(f"**{d['nombre']} FB**: datos desde {fechas_fb[0][8:10]}/{fechas_fb[0][5:7]}")
-                fig_trend.add_trace(go.Scatter(
-                    x=fechas_fb, y=vals_fb, mode="lines+markers", name=nombre_fb,
-                    connectgaps=False, line=dict(color=color, width=1.5, dash="dot"),
-                    marker=dict(size=3, color=color, opacity=0.5), opacity=0.7))
-                hay_datos = True
         if any(len(d.get("ig_daily", {})) < 25 for d in activos if d.get("ig_daily")):
             nota_extra.append("Los puntos (•) marcan días con dato; una brecha indica día sin datos.")
         if notas_inicio:
@@ -330,15 +316,6 @@ if activos:
                         mode="lines+markers", name=d["nombre"] + " (IG)",
                         connectgaps=False, line=dict(color=color, width=2),
                         marker=dict(size=4, color=color, opacity=0.7)))
-                df_fb = wreader.daily_metric(d["nombre"], "fb", "page_impressions_unique")
-                if not df_fb.empty:
-                    hay_datos = True
-                    con_traza = True
-                    fig_trend.add_trace(go.Scatter(
-                        x=df_fb["metric_date"], y=df_fb["metric_value"],
-                        mode="lines+markers", name=d["nombre"] + " (FB)",
-                        connectgaps=False, line=dict(color=color, width=1.5, dash="dot"),
-                        marker=dict(size=3, color=color, opacity=0.5)))
                 if not con_traza:
                     sin_hist.append(d["nombre"])
             nota_extra.append(
@@ -371,7 +348,7 @@ if activos:
         partes = [
             "📐 **Escala logarítmica**: cada división = 10× el valor anterior, "
             "permite comparar portales con audiencias muy distintas.",
-            "**Línea continua** = Instagram · **Punteada** = Facebook (alcance único).",
+            "Cada línea = **alcance diario** (personas únicas) de Instagram por portal.",
         ]
         partes.extend(nota_extra)
         st.caption("  \n".join(partes))
@@ -409,11 +386,9 @@ st.markdown("---")
 st.markdown('<div class="grupo-titulo">👥 Audiencia</div>', unsafe_allow_html=True)
 st.subheader("👥 Seguidores y su aporte a la audiencia")
 st.caption(
-    "Cuánto pesa cada portal en la base total de seguidores y, cuando hay datos "
-    "de la base histórica, qué parte de esa base alcanzás. Los **reels de prueba** "
-    "se muestran solo a no-seguidores, así que inflan el alcance de no-seguidores: "
-    "por eso la métrica principal acá es la **cobertura de seguidores**, que no se "
-    "ve afectada por ellos."
+    "Cuánto pesa cada portal en la base total de seguidores. El alcance a "
+    "no-seguidores incluye los **reels de prueba** (que solo se muestran a "
+    "no-seguidores), así que está inflado: tomalo como un techo."
 )
 
 if activos:
@@ -426,88 +401,47 @@ if activos:
     tot_nf = sum(v["non_follower"] for v in alc.values()) if hay_cob else 0
     cob_global = (tot_fr / contrib["total_seguidores"]) if (hay_cob and contrib["total_seguidores"]) else 0
 
-    k1, k2, k3 = st.columns(3)
-    k1.metric("👥 Seguidores totales", f"{contrib['total_seguidores']:,}",
-              help="Suma de seguidores de FB + IG de todos los portales.")
-    if hay_cob:
-        k2.metric("🎯 Cobertura de seguidores", f"{cob_global*100:.0f}%",
-                  help="Alcance diario promedio a tu base ÷ seguidores: qué parte "
-                       "de tus seguidores ve tu contenido en un día típico. Los "
-                       "reels de prueba NO afectan esta métrica.")
-        k3.metric("🌐 Alcance diario a no-seguidores", f"{int(tot_nf):,}",
-                  help="Personas que no te siguen, alcanzadas en un día promedio. "
-                       "Incluye reels de prueba (que solo se muestran a no-seguidores), "
-                       "así que es un techo, no alcance orgánico.")
-    else:
-        k2.metric("🎯 Cobertura de seguidores", "—",
-                  help="Se calcula con el desglose seguidores/no-seguidores que "
-                       "carga la ingesta. Corré el workflow para activarla.")
-        k3.metric("🌐 Alcance a no-seguidores", "—",
-                  help="Disponible tras la primera ingesta del desglose follow_type.")
+    nf_str = f"{int(tot_nf):,}" if hay_cob else "—"
+    st.markdown(f"""
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="k-label">👥 Seguidores totales</div>
+        <div class="k-value">{contrib['total_seguidores']:,}</div><div class="k-sub">FB + IG · toda la red</div></div>
+      <div class="kpi-card"><div class="k-label">🌐 Alcance a no-seguidores</div>
+        <div class="k-value">{nf_str}</div><div class="k-sub">Día promedio · incluye reels de prueba</div></div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    col_a, col_b = st.columns(2)
-
-    # Gráfico A (siempre): aporte de cada portal a la base de seguidores.
-    with col_a:
-        df_share = pd.DataFrame([
-            {"Portal": f["nombre"], "Seguidores": f["seguidores"],
-             "pct": f["share_seguidores"] * 100}
-            for f in sorted(cf, key=lambda x: x["seguidores"], reverse=True)
-        ])
-        fig_share = go.Figure(go.Bar(
-            x=df_share["Seguidores"], y=df_share["Portal"], orientation="h",
-            marker_color="#0EA5E9",
-            text=[f"{p:.0f}%" for p in df_share["pct"]], textposition="auto"))
-        fig_share.update_layout(
-            title="Aporte a la base de seguidores",
-            margin=dict(l=0, r=0, t=40, b=0), height=max(220, 56 * len(df_share)),
-            yaxis=dict(autorange="reversed"), xaxis_title="seguidores",
-            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
-        st.plotly_chart(fig_share, width='stretch')
-
-    # Gráfico B (si hay datos): cobertura de seguidores por portal.
-    with col_b:
-        df_cob = pd.DataFrame()
-        if hay_cob:
-            filas_cob = [
-                {"Portal": f["nombre"], "cob": alc[f["nombre"]]["follower"] / f["seguidores"] * 100}
-                for f in cf
-                if f["nombre"] in alc and f["seguidores"]
-            ]
-            df_cob = pd.DataFrame(sorted(filas_cob, key=lambda x: x["cob"], reverse=True))
-        if not df_cob.empty:
-            fig_cob = go.Figure(go.Bar(
-                x=df_cob["cob"], y=df_cob["Portal"], orientation="h",
-                marker_color="#22C55E",
-                text=[f"{c:.0f}%" for c in df_cob["cob"]], textposition="auto"))
-            fig_cob.update_layout(
-                title="Cobertura de seguidores (día promedio)",
-                margin=dict(l=0, r=0, t=40, b=0), height=max(220, 56 * len(df_cob)),
-                yaxis=dict(autorange="reversed"), xaxis_title="% de tu base alcanzada/día",
-                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
-            st.plotly_chart(fig_cob, width='stretch')
-        else:
-            st.info("La **cobertura de seguidores** aparece acá cuando corras la "
-                    "ingesta (usa el desglose seguidores/no-seguidores de IG).")
+    # Aporte de cada portal a la base de seguidores.
+    df_share = pd.DataFrame([
+        {"Portal": f["nombre"], "Seguidores": f["seguidores"],
+         "pct": f["share_seguidores"] * 100}
+        for f in sorted(cf, key=lambda x: x["seguidores"], reverse=True)
+    ])
+    fig_share = go.Figure(go.Bar(
+        x=df_share["Seguidores"], y=df_share["Portal"], orientation="h",
+        marker_color="#0EA5E9",
+        text=[f"{p:.0f}%" for p in df_share["pct"]], textposition="auto"))
+    fig_share.update_layout(
+        title="Aporte a la base de seguidores",
+        margin=dict(l=0, r=0, t=40, b=0), height=max(220, 56 * len(df_share)),
+        yaxis=dict(autorange="reversed"), xaxis_title="seguidores",
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
+    st.plotly_chart(fig_share, width='stretch')
 
     # Detalle por portal.
     filas_det = []
     for f in cf:
         a = alc.get(f["nombre"]) if hay_cob else None
-        cobertura = (a["follower"] / f["seguidores"] * 100) if (a and f["seguidores"]) else None
         filas_det.append({
             "Portal":             f["nombre"],
             "👥 Seguidores":      f["seguidores"],
             "📊 % de seguidores": f"{f['share_seguidores']*100:.0f}%",
-            "🎯 Cobertura/día":   f"{cobertura:.0f}%" if cobertura is not None else "—",
             "🌐 No-seg/día*":     f"{int(a['non_follower']):,}" if a else "—",
         })
     st.dataframe(pd.DataFrame(filas_det), width='stretch', hide_index=True)
 
     st.caption(
         "📊 **% de seguidores** = cuánto pesa cada portal en la base total.  \n"
-        "🎯 **Cobertura/día** = alcance diario promedio a tus seguidores ÷ tu base. "
-        "Es la métrica más confiable: no la afectan los reels de prueba.  \n"
         "🌐 **No-seg/día** = alcance diario a no-seguidores. (*) Incluye reels de "
         "prueba, que por diseño solo llegan a no-seguidores, así que está inflado.  \n"
         "ℹ️ FB e IG se cuentan por separado; quien sigue ambas puede contarse dos veces."
