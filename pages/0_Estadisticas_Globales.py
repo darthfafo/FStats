@@ -528,62 +528,7 @@ else:
 
 st.markdown("---")
 
-# ── 2) Tendencia de alcance: seguidores vs no-seguidores ────────────
-st.subheader("🌐 Tendencia de alcance: seguidores vs no-seguidores")
-st.caption(
-    "Alcance diario a tu base de **seguidores** (línea llena, métrica limpia) frente "
-    "al alcance a **no-seguidores** (línea punteada). El de no-seguidores incluye "
-    "reels de prueba —que solo se muestran a no-seguidores—, así que está inflado: "
-    "mirá sobre todo la línea de seguidores."
-)
-
-_fr_tot, _nf_tot = {}, {}
-for d in activos:
-    rt = _df_seguro(_wr.reach_by_follow_type, d["nombre"])
-    if rt.empty:
-        continue
-    rt = rt.assign(metric_date=lambda x: pd.to_datetime(x["metric_date"]))
-    piv = rt.pivot_table(index="metric_date", columns="follow_type",
-                         values="reach_value", aggfunc="sum").fillna(0)
-    if "follower" in piv.columns:
-        _fr_tot[d["nombre"]] = piv["follower"]
-    if "non_follower" in piv.columns:
-        _nf_tot[d["nombre"]] = piv["non_follower"]
-
-if _fr_tot or _nf_tot:
-    fig_t = go.Figure()
-    if _fr_tot:
-        serie_fr = pd.concat(_fr_tot, axis=1).sort_index().fillna(0).sum(axis=1)
-        fig_t.add_trace(go.Scatter(
-            x=serie_fr.index, y=serie_fr.values, mode="lines+markers",
-            name="Seguidores", line=dict(color="#22C55E", width=2.5),
-            marker=dict(size=5)))
-    if _nf_tot:
-        serie_nf = pd.concat(_nf_tot, axis=1).sort_index().fillna(0).sum(axis=1)
-        fig_t.add_trace(go.Scatter(
-            x=serie_nf.index, y=serie_nf.values, mode="lines+markers",
-            name="No-seguidores (incl. reels de prueba)",
-            line=dict(color="#38bdf8", width=1.8, dash="dot"),
-            marker=dict(size=4, opacity=0.6)))
-    fig_t.update_layout(
-        margin=dict(l=0, r=0, t=10, b=60), height=320,
-        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-        legend=dict(orientation="h", y=-0.2, font=dict(size=10.5)),
-        yaxis=dict(title="Alcance diario (total portales)",
-                   gridcolor="rgba(255,255,255,0.08)", tickformat=".2s"),
-        xaxis=dict(gridcolor="rgba(255,255,255,0.08)"),
-        hovermode="x unified")
-    st.plotly_chart(fig_t, width='stretch')
-else:
-    st.info(
-        "🛠️ La tendencia por tipo de seguidor se nutre de una tabla que llena la "
-        "ingesta (desglose follow_type de IG). Apenas corras el workflow, este "
-        "gráfico empieza a acumular histórico."
-    )
-
-st.markdown("---")
-
-# ── 3) Demografía de la audiencia (Instagram) ───────────────────────
+# ── 2) Demografía de la audiencia (Instagram) ───────────────────────
 st.subheader("🧭 Demografía de la audiencia — Instagram")
 
 _AUD = {"Seguidores": "follower", "Audiencia que interactúa": "engaged"}

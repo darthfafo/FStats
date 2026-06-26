@@ -5,10 +5,20 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.16"
+APP_VERSION = "1.9.17"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.17",
+        "fecha":   "2026-06-24",
+        "titulo":  "Secciones internas con PIN + esquema de la base",
+        "cambios": [
+            "El Analizador, la Realimentación y la Bitácora quedan protegidos con un PIN (se valida una vez por sesión). El PIN se guarda solo como hash, nunca en texto plano.",
+            "La Bitácora suma una sección con el esquema de la base de datos (tablas y campos del warehouse), relevado en vivo.",
+            "Estadísticas Globales: se quitó el gráfico 'seguidores vs no-seguidores' (el alcance a seguidores es chico y el de no-seguidores está inflado por los reels de prueba, así que confundía más de lo que aportaba).",
+        ],
+    },
     {
         "version": "1.9.16",
         "fecha":   "2026-06-24",

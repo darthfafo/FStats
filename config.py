@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
 import os
+import hashlib
 import streamlit as st
 
 load_dotenv()
@@ -161,6 +162,32 @@ def _secret(key, default="PENDIENTE"):
     # Una env var presente pero vacía (típico en CI cuando falta el secret)
     # no debe pisar el valor por defecto.
     return val if val not in (None, "") else default
+
+
+# ── PIN de acceso a secciones internas (Analizador, Realimentación, Bitácora) ──
+# Se guarda SOLO el hash SHA-256 (nunca el PIN en texto plano); se puede override
+# desde secrets con FSTATS_PIN_HASH.
+_PIN_HASH = _secret("FSTATS_PIN_HASH",
+                    "251cd2d8d9d3d6281a8bf72251a7af1f3c4d323906806474772960f3968a7342")
+
+def require_pin(seccion="esta sección"):
+    """Bloquea la página hasta ingresar el PIN correcto. Validado una vez en la
+    sesión, no se vuelve a pedir. Se compara por hash (el PIN nunca está en claro)."""
+    if st.session_state.get("fstats_pin_ok"):
+        return
+    st.markdown("## 🔒 Sección protegida")
+    st.caption(f"Ingresá el PIN para acceder a **{seccion}**.")
+    with st.form("pin_form"):
+        pin    = st.text_input("PIN", type="password", max_chars=16)
+        entrar = st.form_submit_button("Entrar")
+    if entrar:
+        if hashlib.sha256(pin.strip().encode()).hexdigest() == _PIN_HASH:
+            st.session_state["fstats_pin_ok"] = True
+            st.rerun()
+        else:
+            st.error("PIN incorrecto.")
+    st.stop()
+
 
 PORTALES = [
     {

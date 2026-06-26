@@ -3,11 +3,12 @@ import tempfile
 
 import streamlit as st
 
-from config import RESPONSIVE_CSS, sidebar_nav
+from config import RESPONSIVE_CSS, sidebar_nav, require_pin
 
 st.set_page_config(page_title="Analizador de Viralidad", page_icon="🚀", layout="wide")
 st.markdown(RESPONSIVE_CSS, unsafe_allow_html=True)
 sidebar_nav(current="")
+require_pin("el Analizador")
 
 st.title("🚀 Analizador de Potencial de Viralidad")
 st.caption("Subí un reel/video y obtené un score de potencial de viralidad + explicación.")

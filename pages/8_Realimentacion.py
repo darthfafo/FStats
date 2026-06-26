@@ -3,11 +3,12 @@ import os
 import pandas as pd
 import streamlit as st
 
-from config import PORTALES, RESPONSIVE_CSS, sidebar_nav
+from config import PORTALES, RESPONSIVE_CSS, sidebar_nav, require_pin
 
 st.set_page_config(page_title="Realimentación", page_icon="🔁", layout="wide")
 st.markdown(RESPONSIVE_CSS, unsafe_allow_html=True)
 sidebar_nav(current="")
+require_pin("la Realimentación")
 
 st.title("🔁 Realimentación y entrenamiento")
 st.caption("Traé reels reales del warehouse (ganadores y perdedores según cómo "
