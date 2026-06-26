@@ -5,10 +5,18 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.13"
+APP_VERSION = "1.9.14"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.14",
+        "fecha":   "2026-06-24",
+        "titulo":  "Hero de portal: solo el total",
+        "cambios": [
+            "El encabezado de cada página de portal ahora muestra únicamente el total de visualizaciones (Facebook + Instagram), centrado; se quitó el desglose FB/IG de al lado, que con FB en vistas ya no tenía sentido.",
+        ],
+    },
     {
         "version": "1.9.13",
         "fecha":   "2026-06-24",

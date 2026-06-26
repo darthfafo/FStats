@@ -102,7 +102,7 @@ st.markdown(f"""
 <div style="background:linear-gradient(135deg,#0f172a,#3b0764);
             border-radius:16px; padding:28px 32px; margin-bottom:20px;
             display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:20px;">
-    <div>
+    <div style="text-align:center;width:100%">
         <div style="color:#94a3b8;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase">
             📊 Total visualizaciones — último mes
         </div>
@@ -110,18 +110,6 @@ st.markdown(f"""
             {gran_total:,}
         </div>
         <div style="color:#94a3b8;font-size:13px">Facebook + Instagram</div>
-    </div>
-    <div style="display:flex;gap:32px;flex-wrap:wrap;">
-        <div style="text-align:center">
-            <div style="color:#60a5fa;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase">📘 Facebook</div>
-            <div style="color:white;font-size:clamp(18px,4vw,28px);font-weight:800">{imp_fb_total:,}</div>
-            <div style="color:#475569;font-size:11px">vistas · {seg_fb:,} seguidores</div>
-        </div>
-        <div style="text-align:center">
-            <div style="color:#a855f7;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase">📸 Instagram</div>
-            <div style="color:white;font-size:clamp(18px,4vw,28px);font-weight:800">{imp_ig_total:,}</div>
-            <div style="color:#475569;font-size:11px">visualizaciones · {seg_ig:,} seguidores</div>
-        </div>
     </div>
 </div>
 """, unsafe_allow_html=True)
