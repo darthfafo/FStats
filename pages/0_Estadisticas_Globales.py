@@ -370,23 +370,42 @@ st.markdown("---")
 # ── Tabla comparativa ────────────────────────────────────────────────
 st.subheader("📋 Tabla comparativa de portales")
 
-filas = []
+# Tabla en HTML para controlar el color de los encabezados (st.dataframe los
+# dibuja en canvas y no se pueden recolorear). Solo portales activos.
+_filas_html = ""
 for d in datos_portales:
-    filas.append({
-        "Portal":             d["nombre"],
-        "Estado":             "✅ Activo" if not d.get("pendiente") and d["total_imp"]>0 else "⏳ Pendiente",
-        "📘 FB Vistas":       d["fb_vistas"],
-        "📸 IG Visualiz.":    d["ig_imp"],
-        "🎯 Total visualiz.": d["total_imp"],
-        "👥 Seguidores":      d["total_seg"],
-        "💬 Engagement FB":   d["fb_eng"],
-        "📊 Tasa eng.":       f"{d['tasa_eng']:.2f}%",
-        "🎯 Alcance único IG":d["ig_reach"],
-        "💬 Interacc. IG":    d["ig_engaged"],
-    })
-
-df_tabla = pd.DataFrame(filas)
-st.dataframe(df_tabla, width='stretch', hide_index=True)
+    if d.get("pendiente") or d["total_imp"] <= 0:
+        continue
+    _filas_html += (
+        "<tr>"
+        f"<td class='tc-portal'>{d['nombre']}</td>"
+        f"<td>{d['ig_imp']:,}</td>"
+        f"<td>{d['total_imp']:,}</td>"
+        f"<td>{d['total_seg']:,}</td>"
+        f"<td>{d['fb_eng']:,}</td>"
+        f"<td>{d['tasa_eng']:.1f}%</td>"
+        f"<td>{d['ig_reach']:,}</td>"
+        f"<td>{d['ig_engaged']:,}</td>"
+        "</tr>"
+    )
+st.markdown(f"""
+<style>
+.tc-wrap {{ overflow-x:auto; margin-top:4px; }}
+.tc {{ width:100%; border-collapse:collapse; font-size:0.92rem; }}
+.tc th {{ color:#f1f5f9; font-weight:700; text-align:right; padding:9px 14px;
+          border-bottom:2px solid rgba(148,163,184,0.35); white-space:nowrap; }}
+.tc th:first-child {{ text-align:left; }}
+.tc td {{ color:#e2e8f0; text-align:right; padding:8px 14px;
+          border-bottom:1px solid rgba(148,163,184,0.12); white-space:nowrap; }}
+.tc td.tc-portal {{ text-align:left; font-weight:700; color:#fff; }}
+.tc tbody tr:hover td {{ background:rgba(148,163,184,0.07); }}
+</style>
+<div class="tc-wrap"><table class="tc"><thead><tr>
+<th>Portal</th><th>📸 IG visualiz.</th><th>🎯 Total visualiz.</th>
+<th>👥 Seguidores</th><th>💬 Engagement FB</th><th>📊 Tasa eng.</th>
+<th>🎯 Alcance IG</th><th>💬 Interacc. IG</th>
+</tr></thead><tbody>{_filas_html}</tbody></table></div>
+""", unsafe_allow_html=True)
 
 st.markdown("---")
 

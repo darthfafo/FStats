@@ -5,10 +5,18 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.21"
+APP_VERSION = "1.9.22"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.22",
+        "fecha":   "2026-06-24",
+        "titulo":  "Tabla comparativa más limpia y legible",
+        "cambios": [
+            "La tabla comparativa de Estadísticas Globales saca las columnas 'Estado' y 'FB Vistas', y los encabezados pasan de gris a un color legible (la tabla ahora es HTML, que sí permite recolorear los títulos).",
+        ],
+    },
     {
         "version": "1.9.21",
         "fecha":   "2026-06-24",
