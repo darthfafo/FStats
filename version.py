@@ -5,10 +5,19 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.29"
+APP_VERSION = "1.9.30"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.30",
+        "fecha":   "2026-06-27",
+        "titulo":  "Seguidores totales en el hero + fix del 0 de La Calle",
+        "cambios": [
+            "El hero de cada portal muestra los seguidores totales (Instagram + Facebook) en un número chico debajo del total de visualizaciones.",
+            "Corregido el conteo de seguidores que aparecía en 0 (p.ej. La Calle Online): ahora se toma el último snapshot con seguidores > 0, evitando el 0 transitorio de la ventana de ingesta que podía quedar cacheado.",
+        ],
+    },
     {
         "version": "1.9.29",
         "fecha":   "2026-06-27",

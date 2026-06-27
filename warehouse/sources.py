@@ -45,9 +45,12 @@ class WarehouseFacebookCollector:
         self.page_id = page_id
 
     def get_page_info(self):
+        # Tomamos el último snapshot con followers > 0: la ingesta hace DELETE→INSERT
+        # y, si el cache del app cae en esa ventana, un 0 transitorio quedaría pegado.
         rows = _q(
             """SELECT followers_count, fan_count FROM fb_page_info_daily
-               WHERE portal_id = ? ORDER BY snapshot_date DESC LIMIT 1""",
+               WHERE portal_id = ? AND COALESCE(followers_count, 0) > 0
+               ORDER BY snapshot_date DESC LIMIT 1""",
             [self.portal_id])
         if rows:
             f, fan = rows[0]
@@ -111,9 +114,12 @@ class WarehouseInstagramCollector:
         self.ig_id = ig_id
 
     def get_account_info(self):
+        # Último snapshot con followers > 0 (ver nota en FB.get_page_info): evita que
+        # un 0 transitorio de la ventana de ingesta quede cacheado como en La Calle.
         rows = _q(
             """SELECT followers_count, follows_count, media_count
-               FROM ig_account_info_daily WHERE portal_id = ?
+               FROM ig_account_info_daily
+               WHERE portal_id = ? AND COALESCE(followers_count, 0) > 0
                ORDER BY snapshot_date DESC LIMIT 1""", [self.portal_id])
         if rows:
             f, fo, mc = rows[0]

@@ -126,6 +126,10 @@ def mostrar_portal(nombre):
     gran_total   = imp_ig_total + imp_fb_total
     fuentes      = "Instagram + Facebook" if not es_ig_only else "Instagram"
 
+    seg_ig    = datos_ig["info"].get("followers_count", 0)
+    seg_fb    = datos_fb["info"].get("followers_count", 0) if datos_fb else 0
+    seg_total = seg_ig + seg_fb
+
     # ── HERO: total de visualizaciones ──────────────────────────────────
     st.markdown(f"""
     <div style="background:linear-gradient(135deg,#0f172a,#3b0764);border-radius:16px;
@@ -135,6 +139,8 @@ def mostrar_portal(nombre):
         <div style="color:#fff;font-size:clamp(28px,7vw,58px);font-weight:900;line-height:1;margin:8px 0 4px">
             {gran_total:,}</div>
         <div style="color:#cbd5e1;font-size:13px">{fuentes}</div>
+        <div style="color:#e9d5ff;font-size:15px;font-weight:700;margin-top:10px">
+            👥 {seg_total:,} <span style="color:#cbd5e1;font-weight:500;font-size:13px">seguidores totales</span></div>
     </div>
     """, unsafe_allow_html=True)
 
