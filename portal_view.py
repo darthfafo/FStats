@@ -138,52 +138,68 @@ def mostrar_portal(nombre):
         else:
             st.info("Sin datos de seguidores por día.")
 
-    # Rendimiento por tipo de contenido
+    # Evolución de visualizaciones por día (de las publicaciones de cada día).
+    st.markdown("---")
+    st.subheader("📈 Evolución de visualizaciones por día")
+    try:
+        _pv = _wr.posts(nombre, "ig")
+    except Exception:
+        _pv = None
+    if _pv is not None and not _pv.empty and "published_date" in _pv.columns:
+        _pv = _pv.assign(_d=pd.to_datetime(_pv["published_date"], errors="coerce"))
+        _pv["_views"] = _pv["plays"].where(_pv["plays"] > 0, _pv["reach"])
+        serie = _pv.dropna(subset=["_d"]).groupby(_pv["_d"].dt.date)["_views"].sum()
+        serie = serie[serie > 0]
+        if len(serie) >= 2:
+            dfv = pd.DataFrame({"Fecha": pd.to_datetime(list(serie.index)),
+                                "Visualizaciones": list(serie.values)})
+            fig = px.line(dfv, x="Fecha", y="Visualizaciones", markers=True,
+                          color_discrete_sequence=["#a855f7"])
+            fig.update_traces(line_width=2, marker=dict(size=5))
+            lay = dict(showlegend=False, margin=dict(l=0, r=0, t=10, b=0), xaxis_title="")
+            vmin, vmax = serie.min(), serie.max()
+            if vmin > 0 and vmax / vmin > 30:        # mucha varianza → log con rango acotado
+                import math
+                lay["yaxis"] = dict(type="log", title="visualizaciones", tickformat=".2s",
+                                    range=[max(0, math.log10(vmax) - 3.2), math.log10(vmax) + 0.12])
+            else:
+                lay["yaxis"] = dict(title="visualizaciones", tickformat=".2s")
+            fig.update_layout(**lay)
+            st.plotly_chart(fig, width='stretch')
+            st.caption("Visualizaciones que acumulan las publicaciones según el día en que "
+                       "se publicaron (plays de reels + reproducciones).")
+        else:
+            st.info("Todavía no hay suficientes días con visualizaciones para graficar la evolución.")
+    else:
+        st.info("Sin datos de publicaciones para la evolución de visualizaciones.")
+
+    # Rendimiento por tipo de contenido — resumen compacto (los reels rinden más).
     st.markdown("---")
     st.subheader("📊 Rendimiento por tipo de contenido")
     all_media = datos_ig.get("media", {}).get("data", [])
     if all_media:
         tipos_map = {}
-        iconos_t  = {"Reel": "🎬", "Video": "▶️", "Imagen": "📷", "Carrusel": "🖼️"}
         for post in all_media:
             mt = post.get("media_type", "IMAGE")
             pt = post.get("product_type", "")
-            if pt == "clips":            t = "Reel"
-            elif mt == "VIDEO":          t = "Video"
-            elif mt == "CAROUSEL_ALBUM": t = "Carrusel"
-            else:                        t = "Imagen"
-            tipos_map.setdefault(t, {"count": 0, "likes": 0, "comments": 0})
-            tipos_map[t]["count"]    += 1
-            tipos_map[t]["likes"]    += post.get("like_count", 0)
-            tipos_map[t]["comments"] += post.get("comments_count", 0)
-
-        tipo_cols = st.columns(len(tipos_map))
-        for idx, (tipo, data) in enumerate(tipos_map.items()):
-            avg = data["likes"] / data["count"] if data["count"] else 0
-            with tipo_cols[idx]:
-                with st.container(border=True):
-                    st.markdown(f"**{iconos_t.get(tipo, '')} {tipo}**")
-                    st.metric("Publicaciones",  data["count"])
-                    st.metric("Likes totales",  f"{data['likes']:,}")
-                    st.metric("Likes promedio", f"{avg:.0f}")
-
-        df_tipos = pd.DataFrame([
-            {"Tipo": t, "Publicaciones": d["count"],
-             "Avg Likes": round(d["likes"] / d["count"], 1) if d["count"] else 0}
-            for t, d in tipos_map.items()])
-        col_pie, col_bar = st.columns(2)
-        with col_pie:
-            fig_p = px.pie(df_tipos, values="Publicaciones", names="Tipo",
-                           title="Distribución por tipo",
-                           color_discrete_sequence=["#c026d3", "#7c3aed", "#db2777", "#9333ea"])
-            fig_p.update_layout(margin=dict(l=0, r=0, t=40, b=0))
-            st.plotly_chart(fig_p, width='stretch')
-        with col_bar:
-            fig_b = px.bar(df_tipos, x="Tipo", y="Avg Likes",
-                           title="Promedio de likes por tipo",
-                           color_discrete_sequence=["#c026d3"])
-            fig_b.update_layout(showlegend=False, margin=dict(l=0, r=0, t=40, b=0))
-            st.plotly_chart(fig_b, width='stretch')
+            if pt == "clips":            t = "🎬 Reel"
+            elif mt == "VIDEO":          t = "▶️ Video"
+            elif mt == "CAROUSEL_ALBUM": t = "🖼️ Carrusel"
+            else:                        t = "📷 Imagen"
+            tipos_map.setdefault(t, {"count": 0, "likes": 0})
+            tipos_map[t]["count"] += 1
+            tipos_map[t]["likes"] += post.get("like_count", 0)
+        orden = sorted(tipos_map.items(),
+                       key=lambda kv: (kv[1]["likes"] / kv[1]["count"]) if kv[1]["count"] else 0,
+                       reverse=True)
+        st.markdown("\n".join(
+            f"- **{t}** — {d['count']:,} publicaciones · "
+            f"**{round(d['likes'] / d['count']):,}** likes promedio · {d['likes']:,} likes totales"
+            for t, d in orden))
+        if orden:
+            st.caption(f"El formato que más rinde por publicación es **{orden[0][0]}**.")
+    else:
+        st.info("Sin datos de contenido para resumir.")
 
     # Top 10 publicaciones de Instagram
     st.markdown("---")
@@ -242,26 +258,22 @@ def mostrar_portal(nombre):
         ("🖥️ Vistas de página", f"{imp_fb.get('vistas', 0):,}",          "Veces que se vio la página · 30d"),
     ])
 
-    # Dos gráficos de crecimiento de seguidores.
-    col_acum, col_dia = st.columns(2)
-    with col_acum:
-        st.subheader("📈 Evolución de seguidores")
+    # Dos gráficos: actividad diaria de FB (engagement) + crecimiento de seguidores.
+    col_eng, col_dia = st.columns(2)
+    with col_eng:
+        st.subheader("📈 Engagement diario")
         try:
-            hist = _wr.followers_history(nombre, "fb")
+            de = _wr.daily_metric(nombre, "fb", "page_post_engagements")
         except Exception:
-            hist = None
-        if hist is not None and not hist.empty:
-            h = (hist.dropna(subset=["followers_count"])
-                     .assign(snapshot_date=lambda x: pd.to_datetime(x["snapshot_date"]))
-                     .sort_values("snapshot_date"))
-            fig = px.area(h, x="snapshot_date", y="followers_count",
-                          color_discrete_sequence=["#2563eb"])
-            fig.update_traces(fillcolor="rgba(37,99,235,0.15)", line_width=2)
+            de = None
+        if de is not None and not de.empty:
+            fig = px.bar(de, x="metric_date", y="metric_value",
+                         color_discrete_sequence=["#2563eb"])
             fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=10, b=0),
-                              xaxis_title="", yaxis_title="seguidores")
+                              xaxis_title="", yaxis_title="interacciones")
             st.plotly_chart(fig, width='stretch')
         else:
-            st.info("La evolución acumulada aparece cuando la base junte varios días de seguidores.")
+            st.info("Sin engagement diario en la base todavía.")
     with col_dia:
         st.subheader("👥 Nuevos seguidores por día")
         fan_data = {}

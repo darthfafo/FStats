@@ -5,10 +5,20 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.23"
+APP_VERSION = "1.9.24"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.24",
+        "fecha":   "2026-06-24",
+        "titulo":  "Portal: evolución de visualizaciones y FB con engagement diario",
+        "cambios": [
+            "El 'rendimiento por tipo de contenido' se resume en un par de líneas (los reels son lo que rinde) en vez de ocupar tanto espacio con tarjetas y gráficos.",
+            "Instagram suma el gráfico de evolución de visualizaciones por día del portal, con escala logarítmica y rango ajustado para que se vea bien en todos (días normales y reels virales en el mismo gráfico).",
+            "Facebook: la 'evolución de seguidores' (que quedaba plana y no aportaba) se reemplaza por el engagement diario, que sí varía y es la métrica fuerte de FB.",
+        ],
+    },
     {
         "version": "1.9.23",
         "fecha":   "2026-06-24",
