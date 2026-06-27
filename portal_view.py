@@ -8,6 +8,8 @@ quedó acotado porque Meta le sacó el alcance de página.
 
 Las 5 páginas pages/1..5 solo llaman a mostrar_portal("<nombre>").
 """
+import html
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -215,16 +217,25 @@ def mostrar_portal(nombre):
     else:
         st.info("Sin datos de contenido para resumir.")
 
-    # Top 10 publicaciones de Instagram
+    # Top 10 publicaciones de Instagram — tarjetas tipo ranking (hero + KPI), responsive.
     st.markdown("---")
     st.subheader("🏆 Top 10 publicaciones de Instagram")
     media_data = datos_ig.get("media", {})
     if media_data.get("data"):
+        # Visualizaciones por post: del warehouse (cubre todos los posts ingestados),
+        # con fallback a las métricas en vivo de los más recientes.
+        try:
+            _wp = _wr.posts(nombre, "ig")
+            views_lookup = {str(r["post_id"]): int((r["plays"] or 0) or (r["reach"] or 0))
+                            for _, r in _wp.iterrows()} if _wp is not None and not _wp.empty else {}
+        except Exception:
+            views_lookup = {}
         plays_lookup = {(p.get("id", "") or p.get("ts", "")): (p.get("plays", 0) or p.get("reach", 0))
                         for p in imp_ig.get("posts_data", [])}
+
         lista_ig = []
         for post in media_data["data"]:
-            cap = post.get("caption", "(Sin descripción)")
+            cap = post.get("caption", "") or "(Sin descripción)"
             mt  = post.get("media_type", "")
             pt  = post.get("product_type", "")
             if pt == "clips":            tl = "🎬 Reel"
@@ -232,30 +243,59 @@ def mostrar_portal(nombre):
             elif mt == "CAROUSEL_ALBUM": tl = "🖼️ Carrusel"
             else:                        tl = "📷 Imagen"
             pid   = post.get("id", "")
-            plays = plays_lookup.get(pid, 0) or plays_lookup.get(post.get("timestamp", "")[:10], 0)
+            views = (views_lookup.get(str(pid)) or plays_lookup.get(pid, 0)
+                     or plays_lookup.get(post.get("timestamp", "")[:10], 0))
             lista_ig.append({
-                "Fecha": post.get("timestamp", "")[:10], "Tipo": tl,
-                "Publicación": cap[:140] + ("..." if len(cap) > 140 else ""),
-                "❤️ Likes": post.get("like_count", 0),
-                "💬 Comentarios": post.get("comments_count", 0),
-                "▶️ Visualiz.": plays if plays > 0 else 0,
-                "🔗 Link": post.get("permalink", ""),
+                "ts": post.get("timestamp", "")[:10], "tipo": tl, "cap": cap,
+                "likes": post.get("like_count", 0),
+                "com":   post.get("comments_count", 0),
+                "views": int(views or 0),
+                "link":  post.get("permalink", ""),
             })
-        df_ig = pd.DataFrame(lista_ig).sort_values("❤️ Likes", ascending=False)
-        for _, row in df_ig.head(10).iterrows():
+        lista_ig.sort(key=lambda x: x["likes"], reverse=True)
+
+        st.markdown("""
+        <style>
+        .tp-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px; }
+        .tp-rank { font-size:1.7rem; font-weight:900; color:#a855f7; min-width:42px; line-height:1; }
+        .tp-main { flex:1 1 220px; min-width:170px; }
+        .tp-meta { color:#cbd5e1; font-size:0.82rem; margin-bottom:3px; }
+        .tp-meta a { color:#a855f7; text-decoration:none; font-weight:600; }
+        .tp-title { color:#f1f5f9; font-size:0.98rem; font-weight:600; line-height:1.3; }
+        .tp-stat { text-align:center; min-width:62px; }
+        .tp-stat b { display:block; color:#fff; font-size:1.15rem; font-weight:800; line-height:1.1; white-space:nowrap; }
+        .tp-stat span { color:#cbd5e1; font-size:0.66rem; }
+        </style>
+        """, unsafe_allow_html=True)
+
+        LIM = 110
+        for i, p in enumerate(lista_ig[:10], 1):
             with st.container(border=True):
-                cols = st.columns([4, 1.3, 1.3], vertical_alignment="center")
-                _link = row["🔗 Link"]
-                _tipo = f"[{row['Tipo']}]({_link})" if _link else row["Tipo"]
-                cols[0].markdown(f"📅 `{row['Fecha']}` · {_tipo}  \n{row['Publicación']}")
-                cols[1].markdown(
-                    f'<div style="font-size:1.35rem;font-weight:800;line-height:1.1;'
-                    f'white-space:nowrap">❤️ {row["❤️ Likes"]:,}</div>', unsafe_allow_html=True)
-                cols[2].markdown(
-                    f'<div style="font-size:1.35rem;font-weight:800;line-height:1.1;'
-                    f'white-space:nowrap">💬 {row["💬 Comentarios"]:,}</div>', unsafe_allow_html=True)
+                corto  = html.escape(p["cap"][:LIM].rstrip()) + ("…" if len(p["cap"]) > LIM else "")
+                tipo   = (f'<a href="{p["link"]}" target="_blank">{p["tipo"]}</a>'
+                          if p["link"] else p["tipo"])
+                vistas = f'{p["views"]:,}' if p["views"] else "—"
+                st.markdown(
+                    f'<div class="tp-row">'
+                    f'<div class="tp-rank">#{i}</div>'
+                    f'<div class="tp-main">'
+                    f'<div class="tp-meta">📅 {p["ts"]} · {tipo}</div>'
+                    f'<div class="tp-title">{corto}</div></div>'
+                    f'<div class="tp-stat">❤️<b>{p["likes"]:,}</b><span>likes</span></div>'
+                    f'<div class="tp-stat">💬<b>{p["com"]:,}</b><span>comentarios</span></div>'
+                    f'<div class="tp-stat">▶️<b>{vistas}</b><span>visualizaciones</span></div>'
+                    f'</div>', unsafe_allow_html=True)
+                if len(p["cap"]) > LIM:
+                    with st.expander("📖 Leer descripción completa"):
+                        st.write(p["cap"])
+
         with st.expander("📋 Ver todas las publicaciones de Instagram"):
-            st.dataframe(df_ig, width='stretch', hide_index=True)
+            df_all = pd.DataFrame([
+                {"Fecha": p["ts"], "Tipo": p["tipo"], "❤️ Likes": p["likes"],
+                 "💬 Coment.": p["com"], "▶️ Visualiz.": p["views"],
+                 "Publicación": p["cap"][:120]}
+                for p in lista_ig])
+            st.dataframe(df_all, width='stretch', hide_index=True)
     else:
         st.warning("No se pudieron cargar las publicaciones de Instagram.")
 
