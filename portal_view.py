@@ -167,17 +167,17 @@ def mostrar_portal(nombre):
             fig = px.line(dfv, x="Fecha", y="Visualizaciones", markers=True,
                           color_discrete_sequence=["#a855f7"])
             fig.update_traces(line_width=2, marker=dict(size=5))
-            x0 = dfv["Fecha"].min() - pd.Timedelta(days=2)
-            x1 = dfv["Fecha"].max() + pd.Timedelta(days=2)
+            # Sin rangos fijos: dejamos AUTORANGO (= lo que hace el botón "autoscale"),
+            # así carga ya encuadrado. La cola vieja ya se recortó arriba, por eso el
+            # autorango del eje X arranca en el período con datos continuos.
             lay = dict(showlegend=False, margin=dict(l=0, r=0, t=10, b=0),
-                       xaxis=dict(title="", range=[x0, x1]))   # rango fijo: carga ya encuadrado
+                       xaxis=dict(title="", autorange=True))
             vmin, vmax = serie.min(), serie.max()
-            if vmin > 0 and vmax / vmin > 30:        # mucha varianza → log con rango acotado
-                import math
-                lay["yaxis"] = dict(type="log", title="visualizaciones", tickformat=".2s",
-                                    range=[max(0, math.log10(vmax) - 3.2), math.log10(vmax) + 0.12])
+            if vmin > 0 and vmax / vmin > 30:        # mucha varianza → escala log
+                lay["yaxis"] = dict(type="log", title="visualizaciones",
+                                    tickformat=".2s", autorange=True)
             else:
-                lay["yaxis"] = dict(title="visualizaciones", tickformat=".2s")
+                lay["yaxis"] = dict(title="visualizaciones", tickformat=".2s", autorange=True)
             fig.update_layout(**lay)
             st.plotly_chart(fig, width='stretch')
             st.caption("Visualizaciones que acumulan las publicaciones según el día en que "

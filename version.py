@@ -5,10 +5,18 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.25"
+APP_VERSION = "1.9.26"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.26",
+        "fecha":   "2026-06-24",
+        "titulo":  "Evolución de visualizaciones: carga ya autoescalada",
+        "cambios": [
+            "El gráfico de evolución de visualizaciones ya no usa un rango fijo (que lo hacía cargar desencuadrado); ahora arranca en autorango —lo mismo que hace el botón 'autoscale'—, así se ve bien apenas carga sin tener que tocar nada.",
+        ],
+    },
     {
         "version": "1.9.25",
         "fecha":   "2026-06-24",
