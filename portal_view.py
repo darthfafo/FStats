@@ -54,6 +54,42 @@ def _kpis(items):
     st.markdown(f'<div class="kpi-grid">{cards}</div>', unsafe_allow_html=True)
 
 
+# ── Tarjeta de ranking (Top 10): rank + meta + título + KPIs + copy expandible.
+# Compartida entre las páginas de portal y Estadísticas Globales. ──────────────
+TOP_CSS = """
+<style>
+.tp-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px; }
+.tp-rank { font-size:1.7rem; font-weight:900; color:#a855f7; min-width:42px; line-height:1; }
+.tp-main { flex:1 1 220px; min-width:170px; }
+.tp-meta { color:#cbd5e1; font-size:0.82rem; margin-bottom:3px; }
+.tp-meta a { color:#a855f7; text-decoration:none; font-weight:600; }
+.tp-title { color:#f1f5f9; font-size:0.98rem; font-weight:600; line-height:1.3; }
+.tp-stat { text-align:center; min-width:62px; }
+.tp-stat b { display:block; color:#fff; font-size:1.15rem; font-weight:800; line-height:1.1; white-space:nowrap; }
+.tp-stat span { color:#cbd5e1; font-size:0.66rem; }
+</style>
+"""
+
+
+def tarjeta_ranking(rank, meta_html, titulo, stats, copy_full=None):
+    """Una tarjeta de ranking. stats: lista de (emoji, valor_str, etiqueta).
+    meta_html ya viene como HTML (puede traer un <a> con el link)."""
+    LIM = 110
+    titulo = titulo or ""
+    corto  = html.escape(titulo[:LIM].rstrip()) + ("…" if len(titulo) > LIM else "")
+    stats_html = "".join(
+        f'<div class="tp-stat">{e}<b>{v}</b><span>{l}</span></div>' for e, v, l in stats)
+    with st.container(border=True):
+        st.markdown(
+            f'<div class="tp-row"><div class="tp-rank">#{rank}</div>'
+            f'<div class="tp-main"><div class="tp-meta">{meta_html}</div>'
+            f'<div class="tp-title">{corto}</div></div>{stats_html}</div>',
+            unsafe_allow_html=True)
+        if copy_full and len(copy_full) > LIM:
+            with st.expander("📖 Leer descripción completa"):
+                st.write(copy_full)
+
+
 def mostrar_portal(nombre):
     portal = _portal(nombre)
     icono  = portal["icono"] if portal else "📊"
@@ -254,40 +290,16 @@ def mostrar_portal(nombre):
             })
         lista_ig.sort(key=lambda x: x["likes"], reverse=True)
 
-        st.markdown("""
-        <style>
-        .tp-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px; }
-        .tp-rank { font-size:1.7rem; font-weight:900; color:#a855f7; min-width:42px; line-height:1; }
-        .tp-main { flex:1 1 220px; min-width:170px; }
-        .tp-meta { color:#cbd5e1; font-size:0.82rem; margin-bottom:3px; }
-        .tp-meta a { color:#a855f7; text-decoration:none; font-weight:600; }
-        .tp-title { color:#f1f5f9; font-size:0.98rem; font-weight:600; line-height:1.3; }
-        .tp-stat { text-align:center; min-width:62px; }
-        .tp-stat b { display:block; color:#fff; font-size:1.15rem; font-weight:800; line-height:1.1; white-space:nowrap; }
-        .tp-stat span { color:#cbd5e1; font-size:0.66rem; }
-        </style>
-        """, unsafe_allow_html=True)
-
-        LIM = 110
+        st.markdown(TOP_CSS, unsafe_allow_html=True)
         for i, p in enumerate(lista_ig[:10], 1):
-            with st.container(border=True):
-                corto  = html.escape(p["cap"][:LIM].rstrip()) + ("…" if len(p["cap"]) > LIM else "")
-                tipo   = (f'<a href="{p["link"]}" target="_blank">{p["tipo"]}</a>'
-                          if p["link"] else p["tipo"])
-                vistas = f'{p["views"]:,}' if p["views"] else "—"
-                st.markdown(
-                    f'<div class="tp-row">'
-                    f'<div class="tp-rank">#{i}</div>'
-                    f'<div class="tp-main">'
-                    f'<div class="tp-meta">📅 {p["ts"]} · {tipo}</div>'
-                    f'<div class="tp-title">{corto}</div></div>'
-                    f'<div class="tp-stat">❤️<b>{p["likes"]:,}</b><span>likes</span></div>'
-                    f'<div class="tp-stat">💬<b>{p["com"]:,}</b><span>comentarios</span></div>'
-                    f'<div class="tp-stat">▶️<b>{vistas}</b><span>visualizaciones</span></div>'
-                    f'</div>', unsafe_allow_html=True)
-                if len(p["cap"]) > LIM:
-                    with st.expander("📖 Leer descripción completa"):
-                        st.write(p["cap"])
+            tipo   = (f'<a href="{p["link"]}" target="_blank">{p["tipo"]}</a>'
+                      if p["link"] else p["tipo"])
+            vistas = f'{p["views"]:,}' if p["views"] else "—"
+            tarjeta_ranking(i, f'📅 {p["ts"]} · {tipo}', p["cap"], [
+                ("❤️", f'{p["likes"]:,}', "likes"),
+                ("💬", f'{p["com"]:,}', "comentarios"),
+                ("▶️", vistas, "visualizaciones"),
+            ], copy_full=p["cap"])
 
         with st.expander("📋 Ver todas las publicaciones de Instagram"):
             df_all = pd.DataFrame([
@@ -350,23 +362,29 @@ def mostrar_portal(nombre):
         else:
             st.info("Sin datos de seguidores por día.")
 
-    # Top publicaciones de Facebook (en un expander para mantenerlo compacto).
-    with st.expander("📝 Top publicaciones de Facebook"):
-        posts_fb = datos_fb.get("posts", {})
-        if posts_fb.get("data"):
-            lista_fb = []
-            for post in posts_fb["data"]:
-                msg    = post.get("message", "(Sin texto)")
-                reac   = post.get("reactions") or post.get("likes") or {}
-                likes  = reac.get("summary", {}).get("total_count", 0)
-                com    = post.get("comments", {}).get("summary", {}).get("total_count", 0)
-                shares = post.get("shares", {}).get("count", 0)
-                lista_fb.append({
-                    "Fecha": post.get("created_time", "")[:10],
-                    "Publicación": msg[:120] + ("..." if len(msg) > 120 else ""),
-                    "❤️ Likes": likes, "💬 Comentarios": com, "🔁 Compartidos": shares,
-                })
-            df_fb = pd.DataFrame(lista_fb).sort_values("❤️ Likes", ascending=False)
-            st.dataframe(df_fb, width='stretch', hide_index=True)
-        else:
-            st.info("Sin datos de publicaciones de Facebook.")
+    # Top 10 publicaciones de Facebook — mismas tarjetas de ranking que Instagram.
+    st.markdown("---")
+    st.subheader("🏆 Top 10 publicaciones de Facebook")
+    posts_fb = datos_fb.get("posts", {}).get("data", [])
+    if posts_fb:
+        lista_fb = []
+        for post in posts_fb:
+            reac   = post.get("reactions") or post.get("likes") or {}
+            likes  = reac.get("summary", {}).get("total_count", 0)
+            com    = post.get("comments", {}).get("summary", {}).get("total_count", 0)
+            shares = post.get("shares", {}).get("count", 0)
+            lista_fb.append({
+                "ts": post.get("created_time", "")[:10],
+                "msg": post.get("message", "") or "(Sin texto)",
+                "likes": likes, "com": com, "shares": shares,
+            })
+        lista_fb.sort(key=lambda x: x["likes"], reverse=True)
+        st.markdown(TOP_CSS, unsafe_allow_html=True)
+        for i, p in enumerate(lista_fb[:10], 1):
+            tarjeta_ranking(i, f'📅 {p["ts"]}', p["msg"], [
+                ("❤️", f'{p["likes"]:,}', "reacciones"),
+                ("💬", f'{p["com"]:,}', "comentarios"),
+                ("🔁", f'{p["shares"]:,}', "compartidos"),
+            ], copy_full=p["msg"])
+    else:
+        st.info("Sin datos de publicaciones de Facebook.")

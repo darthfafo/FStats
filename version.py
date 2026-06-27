@@ -5,10 +5,19 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.28"
+APP_VERSION = "1.9.29"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.29",
+        "fecha":   "2026-06-27",
+        "titulo":  "Top 10 unificado en portales y Estadísticas Globales",
+        "cambios": [
+            "El Top 10 de Facebook de cada portal ahora usa el mismo diseño de tarjeta de ranking que el de Instagram (puesto, fecha, título recortado con descripción expandible, y reacciones/comentarios/compartidos como KPI).",
+            "En Estadísticas Globales, los Top 10 de Instagram y Facebook se rediseñaron igual que los de los portales: número de ranking visible, títulos prolijos (sin números cortados) y datos en formato tarjeta.",
+        ],
+    },
     {
         "version": "1.9.28",
         "fecha":   "2026-06-24",

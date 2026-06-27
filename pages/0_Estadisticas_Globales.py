@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 from config import PORTALES, RESPONSIVE_CSS, sidebar_nav, fb_source, ig_source
 from audience import contribucion_audiencia
+from portal_view import tarjeta_ranking, TOP_CSS
 
 st.set_page_config(page_title="Estadísticas Globales", page_icon="📊", layout="wide")
 
@@ -679,15 +680,17 @@ if activos:
         top10_ig = sorted(cand_ig, key=_difusion, reverse=True)[:10]
 
         if top10_ig and _difusion(top10_ig[0]) > 0:
+            st.markdown(TOP_CSS, unsafe_allow_html=True)
             for i, post in enumerate(top10_ig, 1):
-                icono = "🎬" if post["tipo"] == "reel" else "▶️" if post["tipo"] == "video" else "🖼️" if post["tipo"] == "carousel_album" else "📷"
-                with st.container(border=True):
-                    cols = st.columns([0.4, 3.3, 1.1, 1, 0.5])
-                    cols[0].markdown(f"**#{i}**")
-                    cols[1].markdown(f"{icono} **{post['portal']}** · `{post['ts']}`  \n{post.get('caption','')[:100]}")
-                    cols[2].metric("▶️ Difusión", f"{_difusion(post):,}")
-                    cols[3].metric("❤️ Likes", f"{post.get('likes',0):,}")
-                    cols[4].markdown(f"[🔗]({post.get('permalink','')})" if post.get("permalink") else "")
+                ic = {"reel": "🎬", "video": "▶️", "carousel_album": "🖼️"}.get(post["tipo"], "📷")
+                link = post.get("permalink", "")
+                ic_html = f'<a href="{link}" target="_blank">{ic}</a>' if link else ic
+                meta = f'{ic_html} <b>{post["portal"]}</b> · {post["ts"]}'
+                tarjeta_ranking(i, meta, post.get("caption", ""), [
+                    ("▶️", f'{_difusion(post):,}', "difusión"),
+                    ("❤️", f'{post.get("likes", 0):,}', "likes"),
+                    ("💬", f'{post.get("comments", 0):,}', "comentarios"),
+                ], copy_full=post.get("caption", ""))
         else:
             st.info("Sin métricas de difusión cargadas todavía (corré la ingesta para verlas).")
 
@@ -721,14 +724,14 @@ if activos:
 
     if todos_posts_fb:
         top10_fb = sorted(todos_posts_fb, key=lambda x: x["engagement"], reverse=True)[:10]
+        st.markdown(TOP_CSS, unsafe_allow_html=True)
         for i, post in enumerate(top10_fb, 1):
-            with st.container(border=True):
-                cols = st.columns([0.4, 3.5, 1, 1, 1])
-                cols[0].markdown(f"**#{i}**")
-                cols[1].markdown(f"📘 **{post['portal']}** · `{post['fecha']}`  \n{post['mensaje']}")
-                cols[2].metric("❤️ Likes",       f"{post['likes']:,}")
-                cols[3].metric("💬 Comentarios", f"{post['comentarios']:,}")
-                cols[4].metric("🔁 Compartidos", f"{post['compartidos']:,}")
+            meta = f'📘 <b>{post["portal"]}</b> · {post["fecha"]}'
+            tarjeta_ranking(i, meta, post["mensaje"], [
+                ("❤️", f'{post["likes"]:,}', "reacciones"),
+                ("💬", f'{post["comentarios"]:,}', "comentarios"),
+                ("🔁", f'{post["compartidos"]:,}', "compartidos"),
+            ], copy_full=post["mensaje"])
     else:
         st.info("Sin datos de publicaciones de Facebook en los último mes.")
 
