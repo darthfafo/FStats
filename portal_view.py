@@ -1,0 +1,301 @@
+"""
+Vista unificada de un portal (la misma para las 5 páginas de portal).
+
+Estructura: hero con el total de visualizaciones, luego Instagram COMPLETO
+(KPIs + gráficos + contenido) y, abajo, Facebook COMPACTO (KPIs + crecimiento de
+seguidores). Instagram va primero porque concentra casi toda la data; Facebook
+quedó acotado porque Meta le sacó el alcance de página.
+
+Las 5 páginas pages/1..5 solo llaman a mostrar_portal("<nombre>").
+"""
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+
+from config import PORTALES, fb_source, ig_source
+import warehouse.reader as _wr
+
+_PEND = ("PENDIENTE", "", None)
+
+
+def _portal(nombre):
+    return next((p for p in PORTALES if p["nombre"] == nombre), None)
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def _cargar_ig(nombre, ig_id, token, live):
+    ig = ig_source(nombre, ig_id, token, live)
+    return {
+        "info":        ig.get_account_info(),
+        "impresiones": ig.get_media_impressions(limit=25),
+        "media":       ig.get_all_media(max_posts=500),
+    }
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def _cargar_fb(nombre, page_id, token, live):
+    fb = fb_source(nombre, page_id, token, live)
+    return {
+        "info":        fb.get_page_info(),
+        "impresiones": fb.get_posts_impressions(),
+        "fan_growth":  fb.get_fan_growth(),
+        "posts":       fb.get_recent_posts(limit=100),
+    }
+
+
+def _kpis(items):
+    """items: lista de (label, valor_str, sub). Renderiza tarjetas KPI azules."""
+    cards = "".join(
+        f'<div class="kpi-card"><div class="k-label">{l}</div>'
+        f'<div class="k-value">{v}</div><div class="k-sub">{s}</div></div>'
+        for l, v, s in items)
+    st.markdown(f'<div class="kpi-grid">{cards}</div>', unsafe_allow_html=True)
+
+
+def mostrar_portal(nombre):
+    portal = _portal(nombre)
+    icono  = portal["icono"] if portal else "📊"
+    st.title(f"{icono} {nombre}")
+    st.markdown("---")
+
+    if portal is None or portal.get("access_token") in _PEND or portal.get("instagram_id") in _PEND:
+        st.info(f"**{nombre}** — pendiente de configuración (falta el token o el ID de Instagram).")
+        st.stop()
+
+    live = st.session_state.get("fstats_live", False)
+    es_ig_only = portal.get("ig_only", False) or portal.get("facebook_page_id") in _PEND
+
+    with st.spinner("Cargando estadísticas..."):
+        try:
+            datos_ig = _cargar_ig(nombre, portal["instagram_id"], portal["access_token"], live)
+            err_ig = None
+        except Exception as e:
+            datos_ig = {"info": {}, "impresiones": {"total_imp": 0, "total_reach": 0,
+                        "daily": {}, "daily_followers": {}, "posts_data": []}, "media": {"data": []}}
+            err_ig = str(e)
+        datos_fb, err_fb = None, None
+        if not es_ig_only:
+            try:
+                datos_fb = _cargar_fb(nombre, portal["facebook_page_id"], portal["access_token"], live)
+            except Exception as e:
+                datos_fb = {"info": {}, "impresiones": {"total_imp": 0, "daily": {}, "vistas": 0,
+                            "engagement": 0}, "fan_growth": {"data": []}, "posts": {"data": []}}
+                err_fb = str(e)
+
+    imp_ig       = datos_ig["impresiones"]
+    imp_ig_total = imp_ig.get("total_imp", 0)
+    imp_fb_total = datos_fb["impresiones"].get("total_imp", 0) if datos_fb else 0
+    gran_total   = imp_ig_total + imp_fb_total
+    fuentes      = "Instagram + Facebook" if not es_ig_only else "Instagram"
+
+    # ── HERO: total de visualizaciones ──────────────────────────────────
+    st.markdown(f"""
+    <div style="background:linear-gradient(135deg,#0f172a,#3b0764);border-radius:16px;
+                padding:24px 28px;margin-bottom:18px;text-align:center">
+        <div style="color:#cbd5e1;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase">
+            📊 Total visualizaciones — último mes</div>
+        <div style="color:#fff;font-size:clamp(28px,7vw,58px);font-weight:900;line-height:1;margin:8px 0 4px">
+            {gran_total:,}</div>
+        <div style="color:#cbd5e1;font-size:13px">{fuentes}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ════════════════════════ INSTAGRAM (completo) ══════════════════════
+    st.markdown('<div class="grupo-titulo">📸 Instagram</div>', unsafe_allow_html=True)
+    if err_ig:
+        st.error(f"⚠️ Error al cargar Instagram: {err_ig}")
+    info_ig = datos_ig["info"]
+    _kpis([
+        ("👥 Seguidores",     f"{info_ig.get('followers_count', 0):,}", "Audiencia de Instagram"),
+        ("▶️ Visualizaciones", f"{imp_ig_total:,}",                     "Reels + videos + fotos · 30d"),
+        ("🎯 Alcance",        f"{imp_ig.get('total_reach', 0):,}",      "Personas únicas alcanzadas · 30d"),
+        ("💬 Interacciones",  f"{imp_ig.get('engaged', 0):,}",          "Likes, comentarios y guardados · 30d"),
+    ])
+
+    col_izq, col_der = st.columns(2)
+    with col_izq:
+        st.subheader("📈 Alcance diario")
+        if imp_ig.get("daily"):
+            df = pd.DataFrame([{"Fecha": k, "Personas alcanzadas": v}
+                               for k, v in sorted(imp_ig["daily"].items())])
+            fig = px.line(df, x="Fecha", y="Personas alcanzadas",
+                          color_discrete_sequence=["#c026d3"])
+            fig.update_traces(fill="tozeroy", fillcolor="rgba(192,38,211,0.12)", line_width=2)
+            fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=10, b=0))
+            st.plotly_chart(fig, width='stretch')
+        else:
+            st.info("Sin datos de alcance diario.")
+    with col_der:
+        st.subheader("👥 Nuevos seguidores por día")
+        daily_seg = imp_ig.get("daily_followers", {})
+        df_seg = pd.DataFrame([{"Fecha": k, "Nuevos seguidores": v}
+                               for k, v in sorted(daily_seg.items()) if v > 0]) if daily_seg else pd.DataFrame()
+        if not df_seg.empty:
+            fig = px.bar(df_seg, x="Fecha", y="Nuevos seguidores",
+                         color_discrete_sequence=["#c026d3"])
+            fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=10, b=0))
+            st.plotly_chart(fig, width='stretch')
+        else:
+            st.info("Sin datos de seguidores por día.")
+
+    # Rendimiento por tipo de contenido
+    st.markdown("---")
+    st.subheader("📊 Rendimiento por tipo de contenido")
+    all_media = datos_ig.get("media", {}).get("data", [])
+    if all_media:
+        tipos_map = {}
+        iconos_t  = {"Reel": "🎬", "Video": "▶️", "Imagen": "📷", "Carrusel": "🖼️"}
+        for post in all_media:
+            mt = post.get("media_type", "IMAGE")
+            pt = post.get("product_type", "")
+            if pt == "clips":            t = "Reel"
+            elif mt == "VIDEO":          t = "Video"
+            elif mt == "CAROUSEL_ALBUM": t = "Carrusel"
+            else:                        t = "Imagen"
+            tipos_map.setdefault(t, {"count": 0, "likes": 0, "comments": 0})
+            tipos_map[t]["count"]    += 1
+            tipos_map[t]["likes"]    += post.get("like_count", 0)
+            tipos_map[t]["comments"] += post.get("comments_count", 0)
+
+        tipo_cols = st.columns(len(tipos_map))
+        for idx, (tipo, data) in enumerate(tipos_map.items()):
+            avg = data["likes"] / data["count"] if data["count"] else 0
+            with tipo_cols[idx]:
+                with st.container(border=True):
+                    st.markdown(f"**{iconos_t.get(tipo, '')} {tipo}**")
+                    st.metric("Publicaciones",  data["count"])
+                    st.metric("Likes totales",  f"{data['likes']:,}")
+                    st.metric("Likes promedio", f"{avg:.0f}")
+
+        df_tipos = pd.DataFrame([
+            {"Tipo": t, "Publicaciones": d["count"],
+             "Avg Likes": round(d["likes"] / d["count"], 1) if d["count"] else 0}
+            for t, d in tipos_map.items()])
+        col_pie, col_bar = st.columns(2)
+        with col_pie:
+            fig_p = px.pie(df_tipos, values="Publicaciones", names="Tipo",
+                           title="Distribución por tipo",
+                           color_discrete_sequence=["#c026d3", "#7c3aed", "#db2777", "#9333ea"])
+            fig_p.update_layout(margin=dict(l=0, r=0, t=40, b=0))
+            st.plotly_chart(fig_p, width='stretch')
+        with col_bar:
+            fig_b = px.bar(df_tipos, x="Tipo", y="Avg Likes",
+                           title="Promedio de likes por tipo",
+                           color_discrete_sequence=["#c026d3"])
+            fig_b.update_layout(showlegend=False, margin=dict(l=0, r=0, t=40, b=0))
+            st.plotly_chart(fig_b, width='stretch')
+
+    # Top 10 publicaciones de Instagram
+    st.markdown("---")
+    st.subheader("🏆 Top 10 publicaciones de Instagram")
+    media_data = datos_ig.get("media", {})
+    if media_data.get("data"):
+        plays_lookup = {(p.get("id", "") or p.get("ts", "")): (p.get("plays", 0) or p.get("reach", 0))
+                        for p in imp_ig.get("posts_data", [])}
+        lista_ig = []
+        for post in media_data["data"]:
+            cap = post.get("caption", "(Sin descripción)")
+            mt  = post.get("media_type", "")
+            pt  = post.get("product_type", "")
+            if pt == "clips":            tl = "🎬 Reel"
+            elif mt == "VIDEO":          tl = "▶️ Video"
+            elif mt == "CAROUSEL_ALBUM": tl = "🖼️ Carrusel"
+            else:                        tl = "📷 Imagen"
+            pid   = post.get("id", "")
+            plays = plays_lookup.get(pid, 0) or plays_lookup.get(post.get("timestamp", "")[:10], 0)
+            lista_ig.append({
+                "Fecha": post.get("timestamp", "")[:10], "Tipo": tl,
+                "Publicación": cap[:140] + ("..." if len(cap) > 140 else ""),
+                "❤️ Likes": post.get("like_count", 0),
+                "💬 Comentarios": post.get("comments_count", 0),
+                "▶️ Visualiz.": plays if plays > 0 else 0,
+                "🔗 Link": post.get("permalink", ""),
+            })
+        df_ig = pd.DataFrame(lista_ig).sort_values("❤️ Likes", ascending=False)
+        for _, row in df_ig.head(10).iterrows():
+            with st.container(border=True):
+                cols = st.columns([5, 1, 1, 1])
+                cols[0].markdown(f"📅 `{row['Fecha']}` · {row['Tipo']}  \n{row['Publicación']}")
+                cols[1].metric("❤️", f"{row['❤️ Likes']:,}")
+                cols[2].metric("💬", f"{row['💬 Comentarios']:,}")
+                cols[3].markdown(f"[🔗 Ver]({row['🔗 Link']})" if row["🔗 Link"] else "")
+        with st.expander("📋 Ver todas las publicaciones de Instagram"):
+            st.dataframe(df_ig, width='stretch', hide_index=True)
+    else:
+        st.warning("No se pudieron cargar las publicaciones de Instagram.")
+
+    # ════════════════════════ FACEBOOK (compacto) ═══════════════════════
+    if es_ig_only:
+        return
+
+    st.markdown("---")
+    st.markdown('<div class="grupo-titulo">📘 Facebook</div>', unsafe_allow_html=True)
+    st.caption("Facebook ya no expone alcance de página (Meta lo deprecó), por eso "
+               "esta sección es más acotada: engagement, vistas y el crecimiento de seguidores.")
+    if err_fb:
+        st.error(f"⚠️ Error al cargar Facebook: {err_fb}")
+    info_fb = datos_fb["info"]
+    imp_fb  = datos_fb["impresiones"]
+    _kpis([
+        ("💬 Engagement",       f"{imp_fb.get('engagement', 0):,}",     "Interacciones del mes (reacciones, comentarios, compartidos)"),
+        ("👥 Seguidores",       f"{info_fb.get('followers_count', 0):,}", "Audiencia de Facebook"),
+        ("🖥️ Vistas de página", f"{imp_fb.get('vistas', 0):,}",          "Veces que se vio la página · 30d"),
+    ])
+
+    # Dos gráficos de crecimiento de seguidores.
+    col_acum, col_dia = st.columns(2)
+    with col_acum:
+        st.subheader("📈 Evolución de seguidores")
+        try:
+            hist = _wr.followers_history(nombre, "fb")
+        except Exception:
+            hist = None
+        if hist is not None and not hist.empty:
+            h = (hist.dropna(subset=["followers_count"])
+                     .assign(snapshot_date=lambda x: pd.to_datetime(x["snapshot_date"]))
+                     .sort_values("snapshot_date"))
+            fig = px.area(h, x="snapshot_date", y="followers_count",
+                          color_discrete_sequence=["#2563eb"])
+            fig.update_traces(fillcolor="rgba(37,99,235,0.15)", line_width=2)
+            fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=10, b=0),
+                              xaxis_title="", yaxis_title="seguidores")
+            st.plotly_chart(fig, width='stretch')
+        else:
+            st.info("La evolución acumulada aparece cuando la base junte varios días de seguidores.")
+    with col_dia:
+        st.subheader("👥 Nuevos seguidores por día")
+        fan_data = {}
+        for m in datos_fb["fan_growth"].get("data", []):
+            if "follow" in m.get("name", "") or "fan" in m.get("name", ""):
+                for v in m.get("values", []):
+                    dt = v.get("end_time", "")[:10]
+                    if dt:
+                        fan_data[dt] = fan_data.get(dt, 0) + v.get("value", 0)
+        if fan_data:
+            df = pd.DataFrame([{"Fecha": k, "Nuevos": v} for k, v in sorted(fan_data.items())])
+            fig = px.bar(df, x="Fecha", y="Nuevos", color_discrete_sequence=["#16a34a"])
+            fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=10, b=0))
+            st.plotly_chart(fig, width='stretch')
+        else:
+            st.info("Sin datos de seguidores por día.")
+
+    # Top publicaciones de Facebook (en un expander para mantenerlo compacto).
+    with st.expander("📝 Top publicaciones de Facebook"):
+        posts_fb = datos_fb.get("posts", {})
+        if posts_fb.get("data"):
+            lista_fb = []
+            for post in posts_fb["data"]:
+                msg    = post.get("message", "(Sin texto)")
+                reac   = post.get("reactions") or post.get("likes") or {}
+                likes  = reac.get("summary", {}).get("total_count", 0)
+                com    = post.get("comments", {}).get("summary", {}).get("total_count", 0)
+                shares = post.get("shares", {}).get("count", 0)
+                lista_fb.append({
+                    "Fecha": post.get("created_time", "")[:10],
+                    "Publicación": msg[:120] + ("..." if len(msg) > 120 else ""),
+                    "❤️ Likes": likes, "💬 Comentarios": com, "🔁 Compartidos": shares,
+                })
+            df_fb = pd.DataFrame(lista_fb).sort_values("❤️ Likes", ascending=False)
+            st.dataframe(df_fb, width='stretch', hide_index=True)
+        else:
+            st.info("Sin datos de publicaciones de Facebook.")

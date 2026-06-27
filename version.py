@@ -5,10 +5,20 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.22"
+APP_VERSION = "1.9.23"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.23",
+        "fecha":   "2026-06-24",
+        "titulo":  "Páginas de portal rediseñadas (Instagram primero)",
+        "cambios": [
+            "Cada portal deja de tener pestañas Facebook/Instagram. Ahora Instagram va completo arriba (seguidores, visualizaciones, alcance e interacciones en tarjetas KPI, + alcance diario, rendimiento por tipo de contenido y top publicaciones).",
+            "Facebook queda como una sección compacta abajo: engagement, vistas y seguidores en tarjetas KPI, más dos gráficos de crecimiento de seguidores (evolución acumulada + nuevos por día).",
+            "Los datos de cada portal pasan a tarjetas KPI en vez de números sueltos.",
+        ],
+    },
     {
         "version": "1.9.22",
         "fecha":   "2026-06-24",
