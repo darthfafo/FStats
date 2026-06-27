@@ -148,15 +148,29 @@ def mostrar_portal(nombre):
     if _pv is not None and not _pv.empty and "published_date" in _pv.columns:
         _pv = _pv.assign(_d=pd.to_datetime(_pv["published_date"], errors="coerce"))
         _pv["_views"] = _pv["plays"].where(_pv["plays"] > 0, _pv["reach"])
-        serie = _pv.dropna(subset=["_d"]).groupby(_pv["_d"].dt.date)["_views"].sum()
+        serie = (_pv.dropna(subset=["_d"]).groupby(_pv["_d"].dt.date)["_views"].sum()
+                    .sort_index())
         serie = serie[serie > 0]
+        # Recortar la cola antigua y dispersa: arrancar DESPUÉS del último hueco
+        # grande (>30 días), así el eje queda encuadrado en el período con datos
+        # continuos y no se ve la rampa larga de posts viejos sueltos.
+        fechas = list(serie.index)
+        if len(fechas) > 2:
+            inicio = fechas[0]
+            for j in range(1, len(fechas)):
+                if (pd.Timestamp(fechas[j]) - pd.Timestamp(fechas[j - 1])).days > 30:
+                    inicio = fechas[j]
+            serie = serie[[d >= inicio for d in serie.index]]
         if len(serie) >= 2:
             dfv = pd.DataFrame({"Fecha": pd.to_datetime(list(serie.index)),
                                 "Visualizaciones": list(serie.values)})
             fig = px.line(dfv, x="Fecha", y="Visualizaciones", markers=True,
                           color_discrete_sequence=["#a855f7"])
             fig.update_traces(line_width=2, marker=dict(size=5))
-            lay = dict(showlegend=False, margin=dict(l=0, r=0, t=10, b=0), xaxis_title="")
+            x0 = dfv["Fecha"].min() - pd.Timedelta(days=2)
+            x1 = dfv["Fecha"].max() + pd.Timedelta(days=2)
+            lay = dict(showlegend=False, margin=dict(l=0, r=0, t=10, b=0),
+                       xaxis=dict(title="", range=[x0, x1]))   # rango fijo: carga ya encuadrado
             vmin, vmax = serie.min(), serie.max()
             if vmin > 0 and vmax / vmin > 30:        # mucha varianza → log con rango acotado
                 import math
