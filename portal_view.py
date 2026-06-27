@@ -244,11 +244,16 @@ def mostrar_portal(nombre):
         df_ig = pd.DataFrame(lista_ig).sort_values("❤️ Likes", ascending=False)
         for _, row in df_ig.head(10).iterrows():
             with st.container(border=True):
-                cols = st.columns([5, 1, 1, 1])
-                cols[0].markdown(f"📅 `{row['Fecha']}` · {row['Tipo']}  \n{row['Publicación']}")
-                cols[1].metric("❤️", f"{row['❤️ Likes']:,}")
-                cols[2].metric("💬", f"{row['💬 Comentarios']:,}")
-                cols[3].markdown(f"[🔗 Ver]({row['🔗 Link']})" if row["🔗 Link"] else "")
+                cols = st.columns([4, 1.3, 1.3], vertical_alignment="center")
+                _link = row["🔗 Link"]
+                _tipo = f"[{row['Tipo']}]({_link})" if _link else row["Tipo"]
+                cols[0].markdown(f"📅 `{row['Fecha']}` · {_tipo}  \n{row['Publicación']}")
+                cols[1].markdown(
+                    f'<div style="font-size:1.35rem;font-weight:800;line-height:1.1;'
+                    f'white-space:nowrap">❤️ {row["❤️ Likes"]:,}</div>', unsafe_allow_html=True)
+                cols[2].markdown(
+                    f'<div style="font-size:1.35rem;font-weight:800;line-height:1.1;'
+                    f'white-space:nowrap">💬 {row["💬 Comentarios"]:,}</div>', unsafe_allow_html=True)
         with st.expander("📋 Ver todas las publicaciones de Instagram"):
             st.dataframe(df_ig, width='stretch', hide_index=True)
     else:

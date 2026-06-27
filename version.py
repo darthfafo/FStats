@@ -5,10 +5,18 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.26"
+APP_VERSION = "1.9.27"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.27",
+        "fecha":   "2026-06-24",
+        "titulo":  "Top 10 de Instagram más legible",
+        "cambios": [
+            "En el Top 10 de Instagram los números de likes y comentarios ahora se ven completos (antes se cortaban). Se quitó la columna 'Ver' y el link a la publicación pasó a estar sobre el tipo de contenido, al lado de la fecha.",
+        ],
+    },
     {
         "version": "1.9.26",
         "fecha":   "2026-06-24",
