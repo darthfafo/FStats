@@ -397,8 +397,11 @@ for i, r in enumerate(resumenes):
     # Si el acento es gris (Chubut), el nombre va casi blanco para que se lea.
     _name_c = "#e2e8f0" if _c == "#64748b" else _c
     _css_colores += (
-        f".st-key-pbanner_{i} {{ border-left:6px solid {_c} !important; "
-        f"background:linear-gradient(90deg,{_c}24,rgba(148,163,184,0.04) 30%) !important; }}"
+        # Fondo oscuro propio (isla) con el color de la marca tiñendo desde la
+        # izquierda: se lee bien en tema claro y oscuro, igual que las KPI cards.
+        f".st-key-pbanner_{i} {{ border:1px solid rgba(148,163,184,0.20) !important; "
+        f"border-left:6px solid {_c} !important; "
+        f"background:linear-gradient(90deg,{_c}40,#0f172a 42%) !important; }}"
         f".st-key-pbanner_{i} .pb-name {{ color:{_name_c}; }}"
     )
 st.markdown(f"<style>{_css_banner}{_css_colores}</style>", unsafe_allow_html=True)
@@ -460,7 +463,7 @@ if len(resumenes) > 1:
                      f'justify-content:center;color:#fff;font-size:0.8rem;font-weight:700;'
                      f'white-space:nowrap;overflow:hidden;padding:0 2px">{dentro}</div>')
             leyenda += (f'<span style="display:inline-flex;align-items:center;gap:6px;'
-                        f'margin:0 16px 6px 0;font-size:0.85rem;color:#cbd5e1">'
+                        f'margin:0 16px 6px 0;font-size:0.85rem;color:var(--text-color);opacity:0.85">'
                         f'<span style="width:12px;height:12px;border-radius:3px;'
                         f'background:{col};display:inline-block"></span>'
                         f'{r["nombre"]} · {r["total_imp"]:,} ({p:.1f}%)</span>')

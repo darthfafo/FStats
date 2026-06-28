@@ -56,13 +56,18 @@ def _kpis(items):
 
 # ── Tarjeta de ranking (Top 10): rank + meta + título + KPIs + copy expandible.
 # Compartida entre las páginas de portal y Estadísticas Globales. ──────────────
+# La tarjeta tiene FONDO OSCURO PROPIO (isla oscura), igual que los banners/KPI:
+# así el texto claro se lee bien tanto en tema claro como oscuro de Streamlit.
 TOP_CSS = """
 <style>
+.tp-card { background:linear-gradient(135deg,#0f172a,#1e1b4b);
+           border:1px solid rgba(148,163,184,0.18); border-radius:14px;
+           padding:13px 18px; margin-bottom:10px; }
 .tp-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px; }
-.tp-rank { font-size:1.7rem; font-weight:900; color:#a855f7; min-width:42px; line-height:1; }
+.tp-rank { font-size:1.7rem; font-weight:900; color:#c084fc; min-width:42px; line-height:1; }
 .tp-main { flex:1 1 220px; min-width:170px; }
 .tp-meta { color:#cbd5e1; font-size:0.82rem; margin-bottom:3px; }
-.tp-meta a { color:#a855f7; text-decoration:none; font-weight:600; }
+.tp-meta a { color:#c084fc; text-decoration:none; font-weight:600; }
 .tp-title { color:#f1f5f9; font-size:0.98rem; font-weight:600; line-height:1.3; }
 .tp-stat { text-align:center; min-width:62px; }
 .tp-stat b { display:block; color:#fff; font-size:1.15rem; font-weight:800; line-height:1.1; white-space:nowrap; }
@@ -79,15 +84,14 @@ def tarjeta_ranking(rank, meta_html, titulo, stats, copy_full=None):
     corto  = html.escape(titulo[:LIM].rstrip()) + ("…" if len(titulo) > LIM else "")
     stats_html = "".join(
         f'<div class="tp-stat">{e}<b>{v}</b><span>{l}</span></div>' for e, v, l in stats)
-    with st.container(border=True):
-        st.markdown(
-            f'<div class="tp-row"><div class="tp-rank">#{rank}</div>'
-            f'<div class="tp-main"><div class="tp-meta">{meta_html}</div>'
-            f'<div class="tp-title">{corto}</div></div>{stats_html}</div>',
-            unsafe_allow_html=True)
-        if copy_full and len(copy_full) > LIM:
-            with st.expander("📖 Leer descripción completa"):
-                st.write(copy_full)
+    st.markdown(
+        f'<div class="tp-card"><div class="tp-row"><div class="tp-rank">#{rank}</div>'
+        f'<div class="tp-main"><div class="tp-meta">{meta_html}</div>'
+        f'<div class="tp-title">{corto}</div></div>{stats_html}</div></div>',
+        unsafe_allow_html=True)
+    if copy_full and len(copy_full) > LIM:
+        with st.expander("📖 Leer descripción completa"):
+            st.write(copy_full)
 
 
 def mostrar_portal(nombre):
@@ -262,6 +266,7 @@ def mostrar_portal(nombre):
     # Top 10 publicaciones de Instagram — tarjetas tipo ranking (hero + KPI), responsive.
     st.markdown("---")
     st.subheader("🏆 Top 10 publicaciones de Instagram")
+    st.caption("Ordenadas por **visualizaciones** (difusión real), no por likes.")
     media_data = datos_ig.get("media", {})
     if media_data.get("data"):
         # Visualizaciones por post: del warehouse (cubre todos los posts ingestados),
@@ -294,7 +299,10 @@ def mostrar_portal(nombre):
                 "views": int(views or 0),
                 "link":  post.get("permalink", ""),
             })
-        lista_ig.sort(key=lambda x: x["likes"], reverse=True)
+        # Ordenamos por visualizaciones (difusión real) y, a igualdad, por likes:
+        # así los reels más virales (p.ej. el del terremoto de La Calle) sí entran
+        # al top, en vez de quedar afuera por tener menos likes que posts chicos.
+        lista_ig.sort(key=lambda x: (x["views"], x["likes"]), reverse=True)
 
         st.markdown(TOP_CSS, unsafe_allow_html=True)
         for i, p in enumerate(lista_ig[:10], 1):

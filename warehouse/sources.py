@@ -177,10 +177,16 @@ class WarehouseInstagramCollector:
         }
 
     def get_all_media(self, max_posts=500):
+        # Ordenamos por visualizaciones (plays o reach) DESC antes del LIMIT: si un
+        # portal tiene más de max_posts publicaciones, sin ORDER BY el LIMIT dejaba
+        # afuera posts arbitrarios —incluido el reel más visto (p.ej. el del
+        # terremoto de La Calle)— y así no entraba al Top 10.
         rows = _q(
             """SELECT post_id, caption, media_type, product_type,
                       published_date, like_count, comments_count, permalink
-               FROM ig_posts WHERE portal_id = ? LIMIT ?""",
+               FROM ig_posts WHERE portal_id = ?
+               ORDER BY GREATEST(COALESCE(plays, 0), COALESCE(reach, 0)) DESC
+               LIMIT ?""",
             [self.portal_id, max_posts])
         data = []
         for pid, cap, mtype, ptype, pub, likes, com, perm in rows:

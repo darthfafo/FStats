@@ -5,10 +5,19 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.30"
+APP_VERSION = "1.9.31"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.31",
+        "fecha":   "2026-06-27",
+        "titulo":  "Legibilidad en tema claro + Top 10 con el reel más visto",
+        "cambios": [
+            "Los Top 10, la tabla comparativa y los banners de portal ahora tienen fondo oscuro propio (isla), así el texto se lee bien tanto en tema claro como oscuro de Streamlit (antes en tema claro quedaban casi invisibles).",
+            "El Top 10 de Instagram de cada portal se ordena por visualizaciones (difusión real) y ya incluye los reels más virales: corregido un límite que dejaba afuera publicaciones —como el reel del terremoto de La Calle, el más visto del portal— que por eso no aparecían en el ranking.",
+        ],
+    },
     {
         "version": "1.9.30",
         "fecha":   "2026-06-27",

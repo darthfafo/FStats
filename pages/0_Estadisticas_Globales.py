@@ -391,7 +391,10 @@ for d in datos_portales:
     )
 st.markdown(f"""
 <style>
-.tc-wrap {{ overflow-x:auto; margin-top:4px; }}
+.tc-wrap {{ overflow-x:auto; margin-top:4px;
+            background:linear-gradient(135deg,#0f172a,#1e1b4b);
+            border:1px solid rgba(148,163,184,0.18); border-radius:14px;
+            padding:4px 16px 8px; }}
 .tc {{ width:100%; border-collapse:collapse; font-size:0.92rem; }}
 .tc th {{ color:#f1f5f9; font-weight:700; text-align:right; padding:9px 14px;
           border-bottom:2px solid rgba(148,163,184,0.35); white-space:nowrap; }}
