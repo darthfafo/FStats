@@ -26,7 +26,7 @@ def pendiente(v):
 def cargar_portal(nombre, page_id, ig_id, token, ig_only=False, live=False):
     r = {"nombre": nombre, "fb_seg":0,"fb_imp":0,"fb_eng":0,"fb_vistas":0,
          "ig_seg":0,"ig_imp":0,"ig_reach":0,"ig_engaged":0,
-         "fb_daily":{},"ig_daily":{},"posts_ig":[],"posts_fb":[],"all_media_ig":[]}
+         "fb_daily":{},"fb_video_daily":{},"ig_daily":{},"posts_ig":[],"posts_fb":[],"all_media_ig":[]}
     if not ig_only and not pendiente(page_id) and not pendiente(token):
         try:
             fb = fb_source(nombre, page_id, token, live)
@@ -38,6 +38,7 @@ def cargar_portal(nombre, page_id, ig_id, token, ig_only=False, live=False):
             r["fb_eng"]   = imp.get("engagement", 0)
             r["fb_vistas"]= imp.get("vistas", 0)
             r["fb_daily"] = imp.get("daily", {})
+            r["fb_video_daily"] = imp.get("daily_video_views", {})
             posts = fb.get_recent_posts(limit=30)
             r["posts_fb"] = posts.get("data", [])
         except Exception as e:
@@ -87,7 +88,7 @@ with st.spinner("Cargando datos de todos los portales..."):
             datos_portales.append({"nombre": p["nombre"], "pendiente": True,
                                    "fb_seg":0,"fb_imp":0,"fb_eng":0,"fb_vistas":0,
                                    "ig_seg":0,"ig_imp":0,"ig_reach":0,"ig_engaged":0,
-                                   "fb_daily":{},"ig_daily":{},"posts_ig":[],"posts_fb":[],"all_media_ig":[],
+                                   "fb_daily":{},"fb_video_daily":{},"ig_daily":{},"posts_ig":[],"posts_fb":[],"all_media_ig":[],
                                    "total_imp":0,"total_seg":0,"tasa_eng":0})
         else:
             d = cargar_portal(p["nombre"], p.get("facebook_page_id"),
@@ -367,6 +368,71 @@ if activos:
 else:
     st.info("Todavía no hay portales activos con datos de alcance para graficar.")
 
+# ── Reproducciones de video de Facebook — todos los portales ──────────
+# Gemelo del gráfico de alcance, pero para el CONSUMO de contenido en FB
+# (page_video_views): es la métrica grande que Meta dejó viva y que antes no
+# contabilizábamos. Usa el mismo selector vivo/histórico de arriba (modo_trend).
+if activos:
+    st.markdown("---")
+    st.markdown('<div class="grupo-titulo">📘 Reproducciones de video — Facebook</div>',
+                unsafe_allow_html=True)
+    st.subheader("▶️ Reproducciones de video de Facebook por día — todos los portales")
+
+    fig_fb = go.Figure()
+    hay_fb = False
+    ymax_fb = 0
+    if modo_trend == _MODO_VIVO:
+        from datetime import datetime as _dt2, timedelta as _td2
+        corte_30_fb = (_dt2.now() - _td2(days=30)).strftime("%Y-%m-%d")
+        for d in activos:
+            items = [(k, v) for k, v in sorted(d.get("fb_video_daily", {}).items())
+                     if k >= corte_30_fb and v > 0]
+            if items:
+                fechas = [k for k, v in items]; vals = [v for k, v in items]
+                ymax_fb = max(ymax_fb, max(vals))
+                fig_fb.add_trace(go.Scatter(
+                    x=fechas, y=vals, mode="lines+markers", name=d["nombre"] + " (FB)",
+                    connectgaps=False, line=dict(color=_colores_trend[d["nombre"]], width=2),
+                    marker=dict(size=4, color=_colores_trend[d["nombre"]], opacity=0.7)))
+                hay_fb = True
+    else:
+        try:
+            import warehouse.reader as wreader_fb
+            for d in activos:
+                df = wreader_fb.daily_metric(d["nombre"], "fb", "page_video_views")
+                if df is not None and not df.empty:
+                    ymax_fb = max(ymax_fb, int(df["metric_value"].max()))
+                    fig_fb.add_trace(go.Scatter(
+                        x=df["metric_date"], y=df["metric_value"],
+                        mode="lines+markers", name=d["nombre"] + " (FB)",
+                        connectgaps=False, line=dict(color=_colores_trend[d["nombre"]], width=2),
+                        marker=dict(size=4, color=_colores_trend[d["nombre"]], opacity=0.7)))
+                    hay_fb = True
+        except Exception:
+            hay_fb = None
+
+    if hay_fb:
+        import math as _math_fb
+        techo = _math_fb.log10(ymax_fb) + 0.15 if ymax_fb > 0 else 6.5
+        fig_fb.update_layout(
+            showlegend=True,
+            legend=dict(orientation="h", yanchor="top", y=-0.12, xanchor="left",
+                        x=0, font=dict(size=10.5), bgcolor="rgba(0,0,0,0)", title=None),
+            margin=dict(l=0, r=0, t=10, b=110),
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            xaxis=dict(gridcolor="rgba(255,255,255,0.08)", showgrid=True),
+            yaxis=dict(type="log", title="Reproducciones (escala log.)",
+                       range=[max(0, techo - 4.5), techo],
+                       gridcolor="rgba(255,255,255,0.08)", tickformat=".2s"),
+            hovermode="x unified")
+        st.plotly_chart(fig_fb, width='stretch')
+        st.caption("Cada línea = **reproducciones de reels y videos** de Facebook por "
+                   "día y por portal (page_video_views). Es el consumo de contenido real "
+                   "de FB; Meta ya no expone el alcance de página.")
+    elif hay_fb is False:
+        st.info("Sin reproducciones de video de Facebook para esta fuente todavía "
+                "(corré la ingesta para cargar el histórico).")
+
 st.markdown("---")
 
 # ── Tabla comparativa ────────────────────────────────────────────────
@@ -382,6 +448,7 @@ for d in datos_portales:
         "<tr>"
         f"<td class='tc-portal'>{d['nombre']}</td>"
         f"<td>{d['ig_imp']:,}</td>"
+        f"<td>{d['fb_imp']:,}</td>"
         f"<td>{d['total_imp']:,}</td>"
         f"<td>{d['total_seg']:,}</td>"
         f"<td>{d['fb_eng']:,}</td>"
@@ -406,7 +473,7 @@ st.markdown(f"""
 .tc tbody tr:hover td {{ background:rgba(148,163,184,0.07); }}
 </style>
 <div class="tc-wrap"><table class="tc"><thead><tr>
-<th>Portal</th><th>📸 IG visualiz.</th><th>🎯 Total visualiz.</th>
+<th>Portal</th><th>📸 IG visualiz.</th><th>▶️ Reproducc. FB</th><th>🎯 Total visualiz.</th>
 <th>👥 Seguidores</th><th>💬 Engagement FB</th><th>📊 Tasa eng.</th>
 <th>🎯 Alcance IG</th><th>💬 Interacc. IG</th>
 </tr></thead><tbody>{_filas_html}</tbody></table></div>

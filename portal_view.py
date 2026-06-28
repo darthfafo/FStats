@@ -130,7 +130,10 @@ def mostrar_portal(nombre):
     # vistas de perfil: así el total no se pierde los millones de views de reels.
     imp_fb_total = datos_fb["impresiones"].get("video_views", 0) if datos_fb else 0
     gran_total   = imp_ig_total + imp_fb_total
-    fuentes      = "Instagram + Facebook" if not es_ig_only else "Instagram"
+    # Desglose por plataforma, para visibilizar el aporte de cada una (FB ahora
+    # suma sus reproducciones de video, antes invisibles).
+    fuentes      = (f"📸 {imp_ig_total:,} de Instagram · 📘 {imp_fb_total:,} de Facebook"
+                    if not es_ig_only else "📸 Solo Instagram")
 
     seg_ig    = datos_ig["info"].get("followers_count", 0)
     seg_fb    = datos_fb["info"].get("followers_count", 0) if datos_fb else 0

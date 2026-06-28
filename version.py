@@ -5,10 +5,20 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.34"
+APP_VERSION = "1.9.35"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.35",
+        "fecha":   "2026-06-28",
+        "titulo":  "Reproducciones de Facebook con más protagonismo en Globales y portales",
+        "cambios": [
+            "Estadísticas Globales: nuevo gráfico 'Reproducciones de video de Facebook por día — todos los portales' (gemelo al de alcance, mismo selector vivo/histórico) y nueva columna '▶️ Reproducc. FB' en la tabla comparativa.",
+            "El alcance de la red sigue siendo de Instagram (Meta deprecó el alcance de FB y las reproducciones son otra unidad, no se mezclan en el mismo gráfico).",
+            "Hero de cada portal: el subtítulo ahora desglosa el total en '📸 X de Instagram · 📘 Y de Facebook', como en el inicio.",
+        ],
+    },
     {
         "version": "1.9.34",
         "fecha":   "2026-06-28",
