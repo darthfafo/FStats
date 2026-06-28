@@ -1,0 +1,16 @@
+# Dependencias EXTRA del Analizador de viralidad para uso LOCAL (procesamiento de
+# video/audio + transcripción). NO van en requirements.txt porque en Streamlit
+# Cloud causaban "Segmentation fault" (wheels nativas pesadas, choque de ABI con
+# numpy) y, de todos modos, no pueden correr sin ffmpeg / Ollama en el sistema.
+#
+# Instalación local (después de requirements.txt):
+#   pip install -r requirements.txt -r requirements-analyzer.txt
+#
+# Mantener numpy < 2 (lo fija requirements.txt) para no romper el ABI de opencv,
+# librosa y ctranslate2 (faster-whisper).
+opencv-python-headless>=4.9.0
+librosa>=0.10.0
+soundfile>=0.12.0
+# faster-whisper trae ctranslate2 (binario grande, sensible a la CPU; suele ser
+# el principal causante de segfaults en entornos restringidos).
+faster-whisper>=1.0.0

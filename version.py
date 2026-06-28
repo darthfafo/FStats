@@ -5,10 +5,19 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.31"
+APP_VERSION = "1.9.32"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.32",
+        "fecha":   "2026-06-28",
+        "titulo":  "Arreglo del crash en Streamlit Cloud (Segmentation fault)",
+        "cambios": [
+            "Fijado numpy < 2: con numpy 2.x el ABI rompía contra duckdb 1.5.3 (que se usa apenas arranca el panel) y Streamlit Cloud crasheaba con Segmentation fault.",
+            "Las dependencias multimedia pesadas del analizador (opencv, librosa, soundfile, faster-whisper) se movieron a requirements-analyzer.txt para uso local; no se instalan en la nube, donde no corren y causaban el crash.",
+        ],
+    },
     {
         "version": "1.9.31",
         "fecha":   "2026-06-27",
