@@ -283,6 +283,8 @@ with st.spinner("Cargando datos de todos los portales..."):
 
 # Totales globales
 gran_total_imp   = sum(r["total_imp"]   for r in resumenes)
+gran_total_ig    = sum(r.get("ig_imp", 0) for r in resumenes)   # visualizaciones de IG
+gran_total_fb    = sum(r.get("fb_imp", 0) for r in resumenes)   # reproducciones de video de FB
 gran_total_seg   = sum(r["total_seg"]   for r in resumenes)
 gran_total_eng   = sum(r.get("fb_eng",0) + r.get("ig_engaged",0) for r in resumenes)
 gran_total_reach = sum(r.get("ig_reach", 0) for r in resumenes)  # personas únicas (reach real de IG)
@@ -319,7 +321,7 @@ st.markdown(f"""
 <div class="hero">
     <div class="label">🎯 Total visualizaciones — Últimos 30 días — Todas las fuentes</div>
     <div class="total">{gran_total_imp:,}</div>
-    <div class="sub">Visualizaciones de Instagram + vistas de Facebook · {len(PORTALES_ACTIVOS)} portal(es)</div>
+    <div class="sub">📸 {gran_total_ig:,} de Instagram · 📘 {gran_total_fb:,} de Facebook · {len(PORTALES_ACTIVOS)} portal(es)</div>
 </div>
 """, unsafe_allow_html=True)
 
