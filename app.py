@@ -220,7 +220,9 @@ def cargar_resumen(nombre, page_id, ig_id, access_token, live=False):
         info      = fb.get_page_info()
         res["fb_seg"] = info.get("followers_count", 0)
         imp_fb    = fb.get_posts_impressions()
-        res["fb_imp"]    = imp_fb["total_imp"]
+        # Visualizaciones de FB = reproducciones de video (reels/videos), no las
+        # vistas de perfil (page_views_total), que son un número ínfimo.
+        res["fb_imp"]    = imp_fb.get("video_views", 0)
         res["fb_reach"]  = imp_fb["total_reach"]
         res["fb_eng"]    = imp_fb.get("engagement", 0)
         res["fb_vistas"] = imp_fb.get("vistas", 0)

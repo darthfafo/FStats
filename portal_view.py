@@ -126,7 +126,9 @@ def mostrar_portal(nombre):
 
     imp_ig       = datos_ig["impresiones"]
     imp_ig_total = imp_ig.get("total_imp", 0)
-    imp_fb_total = datos_fb["impresiones"].get("total_imp", 0) if datos_fb else 0
+    # FB suma sus REPRODUCCIONES de video (consumo de contenido real), no las
+    # vistas de perfil: así el total no se pierde los millones de views de reels.
+    imp_fb_total = datos_fb["impresiones"].get("video_views", 0) if datos_fb else 0
     gran_total   = imp_ig_total + imp_fb_total
     fuentes      = "Instagram + Facebook" if not es_ig_only else "Instagram"
 
@@ -331,34 +333,36 @@ def mostrar_portal(nombre):
 
     st.markdown("---")
     st.markdown('<div class="grupo-titulo">📘 Facebook</div>', unsafe_allow_html=True)
-    st.caption("Facebook ya no expone alcance de página (Meta lo deprecó), por eso "
-               "esta sección es más acotada: engagement, vistas y el crecimiento de seguidores.")
+    st.caption("Facebook ya no expone alcance de página (Meta lo deprecó). Lideramos "
+               "con las reproducciones de video (reels + videos), que es el consumo "
+               "de contenido real, más el engagement y el crecimiento de seguidores.")
     if err_fb:
         st.error(f"⚠️ Error al cargar Facebook: {err_fb}")
     info_fb = datos_fb["info"]
     imp_fb  = datos_fb["impresiones"]
+    _vv = imp_fb.get('video_views', 0)
     _kpis([
-        ("💬 Engagement",       f"{imp_fb.get('engagement', 0):,}",     "Interacciones del mes (reacciones, comentarios, compartidos)"),
-        ("👥 Seguidores",       f"{info_fb.get('followers_count', 0):,}", "Audiencia de Facebook"),
-        ("🖥️ Vistas de página", f"{imp_fb.get('vistas', 0):,}",          "Veces que se vio la página · 30d"),
+        ("▶️ Reproducciones",  f"{_vv:,}" if _vv else "—",              "Reproducciones de reels y videos · 30d"),
+        ("💬 Engagement",      f"{imp_fb.get('engagement', 0):,}",      "Reacciones, comentarios y compartidos del mes"),
+        ("👥 Seguidores",      f"{info_fb.get('followers_count', 0):,}", "Audiencia de Facebook"),
     ])
 
-    # Dos gráficos: actividad diaria de FB (engagement) + crecimiento de seguidores.
+    # Dos gráficos: reproducciones de video por día + crecimiento de seguidores.
     col_eng, col_dia = st.columns(2)
     with col_eng:
-        st.subheader("📈 Engagement diario")
+        st.subheader("▶️ Reproducciones de video por día")
         try:
-            de = _wr.daily_metric(nombre, "fb", "page_post_engagements")
+            de = _wr.daily_metric(nombre, "fb", "page_video_views")
         except Exception:
             de = None
         if de is not None and not de.empty:
             fig = px.bar(de, x="metric_date", y="metric_value",
                          color_discrete_sequence=["#2563eb"])
             fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=10, b=0),
-                              xaxis_title="", yaxis_title="interacciones")
+                              xaxis_title="", yaxis_title="reproducciones")
             st.plotly_chart(fig, width='stretch')
         else:
-            st.info("Sin engagement diario en la base todavía.")
+            st.info("Sin reproducciones de video en la base todavía (corré la ingesta).")
     with col_dia:
         st.subheader("👥 Nuevos seguidores por día")
         fan_data = {}

@@ -77,8 +77,18 @@ class WarehouseFacebookCollector:
                ORDER BY metric_date DESC LIMIT 1""", [self.portal_id])
         vistas = int(vis[0][0]) if vis else 0
 
+        # Reproducciones de video (reels/videos): suma del diario, igual que la API.
+        vv_rows = _q(
+            """SELECT metric_date, metric_value FROM fb_page_insights
+               WHERE portal_id = ? AND metric_name = 'page_video_views'
+               ORDER BY metric_date""", [self.portal_id])
+        daily_video = {_d(r[0]): int(r[1]) for r in vv_rows}
+        video_views = sum(daily_video.values())
+
         return {"total_imp": alcance, "total_reach": alcance, "daily": daily,
-                "engagement": engagement, "vistas": vistas, "posts_error": ""}
+                "engagement": engagement, "vistas": vistas,
+                "video_views": video_views, "daily_video_views": daily_video,
+                "posts_error": ""}
 
     def get_recent_posts(self, limit=30):
         rows = _q(

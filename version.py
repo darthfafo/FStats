@@ -5,10 +5,20 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.32"
+APP_VERSION = "1.9.33"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.33",
+        "fecha":   "2026-06-28",
+        "titulo":  "Facebook: reproducciones de video (millones) en vez de vistas de perfil",
+        "cambios": [
+            "Facebook ahora lidera con las reproducciones de reels/videos (page_video_views), que son millones, en lugar de las vistas de PERFIL (page_views_total), que eran apenas miles. Se capturaba mal: estábamos perdiendo de contabilizar todo el consumo de contenido de FB.",
+            "Esas reproducciones también suman al total de visualizaciones del portal, los banners del inicio y la tabla global. Nota: Meta ya no expone por API el número exacto de 'Visualizaciones' de su app (incluye impresiones no-video deprecadas); usamos las reproducciones de video, que son la métrica grande disponible.",
+            "REQUIERE correr la ingesta para que la nube cargue la nueva métrica.",
+        ],
+    },
     {
         "version": "1.9.32",
         "fecha":   "2026-06-28",

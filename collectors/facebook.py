@@ -179,12 +179,14 @@ class FacebookCollector:
         until = int(datetime.now().timestamp())
 
         result = {
-            "alcance":          0,   # personas únicas alcanzadas (reach)
-            "engagement":       0,   # page_post_engagements
-            "vistas":           0,   # page_views_total
-            "daily_alcance":    {},
-            "daily_engagement": {},
-            "daily_vistas":     {},
+            "alcance":            0,   # personas únicas alcanzadas (reach)
+            "engagement":         0,   # page_post_engagements
+            "vistas":             0,   # page_views_total (vistas de PERFIL, chico)
+            "video_views":        0,   # page_video_views (reproducciones de contenido)
+            "daily_alcance":      {},
+            "daily_engagement":   {},
+            "daily_vistas":       {},
+            "daily_video_views":  {},
         }
 
         def _serie(metric):
@@ -216,10 +218,14 @@ class FacebookCollector:
                 print("[FB] alcance: page_impressions_unique deprecada por Meta; "
                       "uso page_views_total como proxy.")
 
-        # ── Engagement y vistas (siguen vigentes) ──────────────────────
+        # ── Engagement, vistas de perfil y REPRODUCCIONES de video (vigentes) ──
+        # page_video_views = reproducciones de reels/videos: es la métrica de
+        # consumo de contenido grande (la app de Meta la muestra como parte de
+        # "Visualizaciones"), a diferencia de page_views_total (vistas de PERFIL).
         for metric, total_key, daily_key in (
-                ("page_post_engagements", "engagement", "daily_engagement"),
-                ("page_views_total",      "vistas",     "daily_vistas")):
+                ("page_post_engagements", "engagement",  "daily_engagement"),
+                ("page_views_total",      "vistas",      "daily_vistas"),
+                ("page_video_views",      "video_views", "daily_video_views")):
             if token_muerto:
                 break
             try:
@@ -249,12 +255,14 @@ class FacebookCollector:
         """
         insights = self.get_page_insights()
         return {
-            "total_imp":   insights["alcance"],
-            "total_reach": insights["alcance"],
-            "daily":       insights["daily_alcance"],
-            "engagement":  insights["engagement"],
-            "vistas":      insights["vistas"],
-            "posts_error": "",
+            "total_imp":         insights["alcance"],
+            "total_reach":       insights["alcance"],
+            "daily":             insights["daily_alcance"],
+            "engagement":        insights["engagement"],
+            "vistas":            insights["vistas"],
+            "video_views":       insights["video_views"],
+            "daily_video_views": insights["daily_video_views"],
+            "posts_error":       "",
         }
 
     def get_fan_growth(self):

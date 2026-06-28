@@ -33,7 +33,8 @@ def cargar_portal(nombre, page_id, ig_id, token, ig_only=False, live=False):
             info = fb.get_page_info()
             r["fb_seg"] = info.get("followers_count", 0)
             imp = fb.get_posts_impressions()
-            r["fb_imp"]   = imp.get("total_imp", 0)
+            # Visualizaciones de FB = reproducciones de video (no vistas de perfil).
+            r["fb_imp"]   = imp.get("video_views", 0)
             r["fb_eng"]   = imp.get("engagement", 0)
             r["fb_vistas"]= imp.get("vistas", 0)
             r["fb_daily"] = imp.get("daily", {})

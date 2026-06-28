@@ -67,11 +67,12 @@ def _ingest_fan_growth(con, fb, portal_id):
 def _ingest_page_insights(con, fb, portal_id, page_id):
     insights = fb.get_page_insights()
 
-    # El collector solo expone detalle diario para alcance y engagement
+    # Detalle diario para alcance, engagement y reproducciones de video
     # (page_views_total llega solo como total, se guarda más abajo).
     daily_metric_names = {
-        "alcance":    "page_impressions_unique",
-        "engagement": "page_post_engagements",
+        "alcance":     "page_impressions_unique",
+        "engagement":  "page_post_engagements",
+        "video_views": "page_video_views",
     }
 
     for key, metric_name in daily_metric_names.items():
