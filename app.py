@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 from datetime import datetime
 from config import PORTALES, fb_source, ig_source, sidebar_nav
 import importlib, pdf_report as _pdf_mod
@@ -441,43 +442,40 @@ for i, resumen in enumerate(resumenes):
                          use_container_width=True, type="primary"):
                 st.switch_page(resumen["pagina"])
 
-# ── Participación de cada portal — barra minimalista de porciones ─────
+# ── Rinde por seguidor: visualizaciones por seguidor de cada portal ──────
+# Re-nivela el dominio de los grandes (La Calle se come las views absolutas):
+# mide cuánto circula el contenido de cada portal RELATIVO a su audiencia, así
+# se ve qué portal rinde de verdad (uno chico puede rendir más por seguidor).
 if len(resumenes) > 1:
     st.markdown("---")
-    st.subheader("📊 Participación de cada portal en las visualizaciones")
+    st.subheader("🚀 Qué portal rinde más por seguidor")
     st.caption(
-        "Cuánto aporta cada portal al total de visualizaciones de la red. "
-        "El ancho de cada porción es proporcional a su aporte."
+        "Visualizaciones por cada seguidor: cuánto circula el contenido relativo "
+        "al tamaño de la audiencia. Re-nivela a los grandes — un portal chico puede "
+        "rendir más por seguidor que uno grande."
     )
 
-    partes = sorted([r for r in resumenes if r["total_imp"] > 0],
-                    key=lambda r: r["total_imp"], reverse=True)
-    total_part = sum(r["total_imp"] for r in partes)
-    if partes and total_part:
-        _PAL = ["#0EA5E9", "#a855f7", "#EA580C", "#22C55E", "#f472b6", "#fbbf24"]
-        segs, leyenda = "", ""
-        for i, r in enumerate(partes):
-            p   = r["total_imp"] / total_part * 100
-            col = _PAL[i % len(_PAL)]
-            # etiqueta adentro solo si la porción es lo bastante ancha
-            dentro = (f'{r["nombre"]} · {p:.0f}%' if p >= 12
-                      else (f'{p:.0f}%' if p >= 4 else ""))
-            segs += (f'<div title="{r["nombre"]}: {r["total_imp"]:,} ({p:.1f}%)" '
-                     f'style="width:{p}%;background:{col};display:flex;align-items:center;'
-                     f'justify-content:center;color:#fff;font-size:0.8rem;font-weight:700;'
-                     f'white-space:nowrap;overflow:hidden;padding:0 2px">{dentro}</div>')
-            leyenda += (f'<span style="display:inline-flex;align-items:center;gap:6px;'
-                        f'margin:0 16px 6px 0;font-size:0.85rem;color:var(--text-color);opacity:0.85">'
-                        f'<span style="width:12px;height:12px;border-radius:3px;'
-                        f'background:{col};display:inline-block"></span>'
-                        f'{r["nombre"]} · {r["total_imp"]:,} ({p:.1f}%)</span>')
-        st.markdown(
-            f'<div style="display:flex;height:52px;border-radius:10px;overflow:hidden;'
-            f'gap:2px;margin-top:4px">{segs}</div>'
-            f'<div style="margin-top:12px;line-height:1.9">{leyenda}</div>',
-            unsafe_allow_html=True)
+    ef = sorted([r for r in resumenes if r["total_seg"] > 0 and r["total_imp"] > 0],
+                key=lambda r: r["total_imp"] / r["total_seg"], reverse=True)
+    if ef:
+        nombres = [r["nombre"] for r in ef]
+        valores = [r["total_imp"] / r["total_seg"] for r in ef]
+        colores = [COLOR_PORTAL.get(n, "#0EA5E9") for n in nombres]
+        fig_ef = go.Figure(go.Bar(
+            x=valores, y=nombres, orientation="h", marker_color=colores,
+            text=[f"{v:,.0f}" for v in valores], textposition="outside",
+            cliponaxis=False,
+            customdata=[(r["total_imp"], r["total_seg"]) for r in ef],
+            hovertemplate="<b>%{y}</b><br>%{x:,.0f} views por seguidor<br>"
+                          "%{customdata[0]:,} views · %{customdata[1]:,} seguidores<extra></extra>"))
+        fig_ef.update_layout(
+            margin=dict(l=0, r=0, t=10, b=10), height=max(220, 56 * len(ef)),
+            yaxis=dict(autorange="reversed", title=""),
+            xaxis=dict(title="visualizaciones por seguidor"),
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
+        st.plotly_chart(fig_ef, width='stretch')
     else:
-        st.info("Todavía no hay visualizaciones cargadas para mostrar la participación.")
+        st.info("Todavía no hay datos suficientes (visualizaciones y seguidores) para el ranking.")
 
 # El informe PDF se genera ahora desde la página de Estadísticas Globales, así la
 # barra lateral queda igual en todas las páginas (solo la navegación).

@@ -5,10 +5,18 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.50"
+APP_VERSION = "1.9.51"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.51",
+        "fecha":   "2026-06-29",
+        "titulo":  "Inicio: 'Rinde por seguidor' en vez de la barra de participación",
+        "cambios": [
+            "El gráfico de participación en las visualizaciones (que solo repetía que La Calle hace el 70%) se reemplazó por un ranking de visualizaciones por seguidor: mide cuánto circula el contenido de cada portal relativo a su audiencia y re-nivela el peso de los grandes, mostrando qué portal rinde de verdad.",
+        ],
+    },
     {
         "version": "1.9.50",
         "fecha":   "2026-06-29",
