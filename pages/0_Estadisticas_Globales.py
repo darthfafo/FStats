@@ -181,6 +181,32 @@ total_eng   = sum(d["fb_eng"]    for d in datos_portales)
 total_fb_vv = sum(d["fb_imp"]    for d in datos_portales)   # reproducciones de video FB
 total_reach = sum(d["ig_reach"]  for d in datos_portales)
 tasa_global = round(total_eng / total_seg * 100, 2) if total_seg else 0
+
+# Interacciones de la red (reacciones / comentarios / envíos), sumando IG + FB de
+# las publicaciones del último mes. Se calcula acá (antes de los KPIs) y se reusa
+# en la sección de detalle más abajo.
+from datetime import timedelta as _td_int
+_lim_int = (datetime.now() - _td_int(days=30)).strftime("%Y-%m-%d")
+_filas_int, _tot_reac, _tot_com, _tot_env = [], 0, 0, 0
+for d in datos_portales:
+    if d.get("pendiente"):
+        continue
+    reac = com = env = 0
+    for p in d.get("posts_ig", []):
+        if p.get("ts", "") >= _lim_int:
+            reac += p.get("likes", 0) or 0
+            com  += p.get("comments", 0) or 0
+            env  += p.get("shares", 0) or 0
+    for post in d.get("posts_fb", []):
+        if post.get("created_time", "")[:10] >= _lim_int:
+            _r = post.get("reactions") or post.get("likes") or {}
+            reac += _r.get("summary", {}).get("total_count", 0)
+            com  += post.get("comments", {}).get("summary", {}).get("total_count", 0)
+            env  += post.get("shares", {}).get("count", 0)
+    if reac or com or env:
+        _filas_int.append((d["nombre"], reac, com, env))
+        _tot_reac += reac; _tot_com += com; _tot_env += env
+total_interacciones = _tot_reac + _tot_com + _tot_env
 portales_activos = len(activos)
 
 # Variación de PERÍODO (verde/roja): últimos 30 días vs los 30 anteriores,
@@ -209,6 +235,8 @@ st.markdown(f"""
     <div class="k-value">{total_fb_vv:,}</div>{_kpi_delta(d_vv, "Reproducciones de video · 30d")}</div>
   <div class="kpi-card"><div class="k-label">🎯 Alcance IG</div>
     <div class="k-value">{total_reach:,}</div>{_kpi_delta(d_rch, "Personas únicas · 30d")}</div>
+  <div class="kpi-card"><div class="k-label">💬 Interacciones</div>
+    <div class="k-value">{total_interacciones:,}</div><div class="k-sub">Reacciones + comentarios + envíos · IG + FB · 30d</div></div>
   <div class="kpi-card"><div class="k-label">📊 Tasa engagement</div>
     <div class="k-value">{tasa_global:.1f}%</div><div class="k-sub">Engagement ÷ seguidores</div></div>
 </div>
@@ -496,28 +524,8 @@ st.caption("Interacciones de las publicaciones del último mes, sumando ambas "
            "plataformas. Reacciones = likes (IG) + reacciones (FB); "
            "envíos = compartidos por DM (IG) + compartidos (FB).")
 
-from datetime import timedelta as _td_int
-_lim_int = (datetime.now() - _td_int(days=30)).strftime("%Y-%m-%d")
-_filas_int, _tot_reac, _tot_com, _tot_env = [], 0, 0, 0
-for d in datos_portales:
-    if d.get("pendiente"):
-        continue
-    reac = com = env = 0
-    for p in d.get("posts_ig", []):
-        if p.get("ts", "") >= _lim_int:
-            reac += p.get("likes", 0) or 0
-            com  += p.get("comments", 0) or 0
-            env  += p.get("shares", 0) or 0
-    for post in d.get("posts_fb", []):
-        if post.get("created_time", "")[:10] >= _lim_int:
-            _r = post.get("reactions") or post.get("likes") or {}
-            reac += _r.get("summary", {}).get("total_count", 0)
-            com  += post.get("comments", {}).get("summary", {}).get("total_count", 0)
-            env  += post.get("shares", {}).get("count", 0)
-    if reac or com or env:
-        _filas_int.append((d["nombre"], reac, com, env))
-        _tot_reac += reac; _tot_com += com; _tot_env += env
-
+# _filas_int y los totales (_tot_reac/_tot_com/_tot_env) ya se calcularon arriba,
+# junto a los KPIs, para no recorrer los posts dos veces.
 if _filas_int:
     st.markdown(f"""
     <div class="kpi-grid">
