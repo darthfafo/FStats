@@ -812,7 +812,7 @@ if activos:
     # ── Top 10 IG último mes (por difusión: reproducciones/alcance) ──
     if todos_posts_ig:
         st.markdown("---")
-        st.subheader("📸 Top 10 publicaciones Instagram — último mes")
+        st.subheader("📸 Top 20 publicaciones Instagram — último mes")
         st.caption("Ordenadas por **difusión real**: reproducciones (reels) o "
                    "alcance (otros formatos), no por likes.")
         from datetime import timedelta
@@ -824,7 +824,7 @@ if activos:
         cand_ig = [p for p in todos_posts_ig if p.get("ts", "") >= limite_ig]
         if not cand_ig:
             cand_ig = todos_posts_ig
-        top10_ig = sorted(cand_ig, key=_difusion, reverse=True)[:10]
+        top10_ig = sorted(cand_ig, key=_difusion, reverse=True)[:20]
 
         if top10_ig and _difusion(top10_ig[0]) > 0:
             _TL = {"reel": "🎬 Reel", "video": "▶️ Video", "carousel_album": "🖼️ Carrusel"}
@@ -838,13 +838,13 @@ if activos:
                 "likes":  post.get("likes", 0),
                 "com":    post.get("comments", 0),
                 "shares": post.get("shares", 0),
-            } for post in top10_ig], "ig", n=10)
+            } for post in top10_ig], "ig", n=20)
         else:
             st.info("Sin métricas de difusión cargadas todavía (corré la ingesta para verlas).")
 
     # ── Top 10 FB último mes ─────────────────────────────────────
     st.markdown("---")
-    st.subheader("📘 Top 10 publicaciones Facebook — último mes")
+    st.subheader("📘 Top 20 publicaciones Facebook — último mes")
     st.caption("Ordenadas por **reproducciones de video**.")
     from datetime import timedelta
     limite_30 = datetime.now() - timedelta(days=30)
@@ -872,7 +872,7 @@ if activos:
                 pass
 
     if todos_posts_fb:
-        top10_fb = sorted(todos_posts_fb, key=lambda x: (x["views"], x["likes"]), reverse=True)[:10]
+        top10_fb = sorted(todos_posts_fb, key=lambda x: (x["views"], x["likes"]), reverse=True)[:20]
         mostrar_top([{
             "ts":     post["fecha"],
             "titulo": post["mensaje"],
@@ -881,7 +881,7 @@ if activos:
             "likes":  post["likes"],
             "com":    post["comentarios"],
             "shares": post["compartidos"],
-        } for post in top10_fb], "fb", n=10)
+        } for post in top10_fb], "fb", n=20)
     else:
         st.info("Sin datos de publicaciones de Facebook en los último mes.")
 
