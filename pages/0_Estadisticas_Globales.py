@@ -224,17 +224,21 @@ st.caption(
 with st.expander("📖 Qué mide cada indicador y por qué importa"):
     st.markdown(
         "- **🎯 Visualizaciones (mes):** cuánto se *vio* tu contenido en toda la red "
-        "(reproducciones de IG + alcance de FB). Es el termómetro de difusión total.\n"
+        "(reproducciones de IG + reproducciones de video de FB). Es el termómetro de "
+        "difusión total.\n"
         "- **👥 Seguidores totales:** el tamaño de tu audiencia propia (FB + IG). La "
         "flecha muestra si la red ganó o perdió seguidores en el último día.\n"
-        "- **💬 Engagement FB:** cuánta gente *interactúa* (reacciones, comentarios, "
-        "compartidos). Mide qué tan involucrada está la audiencia, no solo cuántos son.\n"
+        "- **▶️ Reproducciones FB:** cuántas veces se reprodujeron los reels y videos de "
+        "Facebook en el mes. Es el consumo de contenido real de FB (Meta dejó de exponer "
+        "el alcance de página).\n"
         "- **🎯 Alcance IG:** a cuántas **personas únicas** llegaste en Instagram. A "
         "diferencia de las visualizaciones, cuenta personas, no reproducciones.\n"
-        "- **📊 Tasa de engagement:** engagement ÷ seguidores. Pone el engagement en "
-        "contexto del tamaño: un portal chico puede tener mejor tasa que uno grande.\n\n"
-        "Esta vista reúne todo en un solo lugar para **comparar portales**, **ver la "
-        "evolución** y **detectar a tiempo** qué crece y qué cae."
+        "- **📊 Tasa de engagement:** engagement de Facebook (reacciones + comentarios + "
+        "compartidos) ÷ seguidores. Pone las interacciones en contexto del tamaño: un "
+        "portal chico puede tener mejor tasa que uno grande.\n\n"
+        "Más abajo, la sección **💬 Interacciones de la red** desglosa las reacciones, "
+        "comentarios y envíos sumando ambas plataformas. Esta vista reúne todo para "
+        "**comparar portales**, **ver la evolución** y **detectar a tiempo** qué crece y qué cae."
     )
 
 st.markdown("---")
@@ -591,17 +595,22 @@ if activos:
         plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
     st.plotly_chart(fig_share, width='stretch')
 
-    # Detalle por portal.
-    filas_det = []
+    # Detalle por portal (tabla HTML isla-oscura, igual que la comparativa).
+    _det_rows = ""
     for f in cf:
         a = alc.get(f["nombre"]) if hay_cob else None
-        filas_det.append({
-            "Portal":             f["nombre"],
-            "👥 Seguidores":      f["seguidores"],
-            "📊 % de seguidores": f"{f['share_seguidores']*100:.0f}%",
-            "🌐 No-seg/día*":     f"{int(a['non_follower']):,}" if a else "—",
-        })
-    st.dataframe(pd.DataFrame(filas_det), width='stretch', hide_index=True)
+        _nf = f"{int(a['non_follower']):,}" if a else "—"
+        _det_rows += (
+            f"<tr><td class='tc-portal'>{f['nombre']}</td>"
+            f"<td>{f['seguidores']:,}</td>"
+            f"<td>{f['share_seguidores']*100:.0f}%</td>"
+            f"<td>{_nf}</td></tr>")
+    st.markdown(
+        '<div class="tc-wrap"><table class="tc"><thead><tr>'
+        '<th>Portal</th><th>👥 Seguidores</th><th>📊 % de seguidores</th>'
+        '<th>🌐 No-seg/día*</th>'
+        f'</tr></thead><tbody>{_det_rows}</tbody></table></div>',
+        unsafe_allow_html=True)
 
     st.caption(
         "📊 **% de seguidores** = cuánto pesa cada portal en la base total.  \n"
@@ -782,18 +791,23 @@ if activos:
                             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
         st.plotly_chart(fig_r, width='stretch')
 
-        df_det_r = pd.DataFrame([
-            {
-                "Portal":            n,
-                "🎬 Reels":          v["n"],
-                "▶️ Reproduc./reel": f"{int(v['avg_plays']):,}",
-                "🎯 Alcance/reel":   f"{int(v['avg_reach']):,}",
-                "🏆 Mejor reel":     f"{(v['best'].get('plays', 0) or v['best'].get('reach', 0)):,} · "
-                                     f"{(v['best'].get('caption', '') or '')[:40]}",
-            }
-            for n, v in orden_r
-        ])
-        st.dataframe(df_det_r, width='stretch', hide_index=True)
+        import html as _html_r
+        _reel_rows = ""
+        for n, v in orden_r:
+            _mejor_val = (v['best'].get('plays', 0) or v['best'].get('reach', 0))
+            _mejor_cap = _html_r.escape((v['best'].get('caption', '') or '')[:40])
+            _reel_rows += (
+                f"<tr><td class='tc-portal'>{n}</td>"
+                f"<td>{v['n']:,}</td>"
+                f"<td>{int(v['avg_plays']):,}</td>"
+                f"<td>{int(v['avg_reach']):,}</td>"
+                f"<td style='text-align:left'>{_mejor_val:,} · {_mejor_cap}</td></tr>")
+        st.markdown(
+            '<div class="tc-wrap"><table class="tc"><thead><tr>'
+            "<th>Portal</th><th>🎬 Reels</th><th>▶️ Reproduc./reel</th>"
+            "<th>🎯 Alcance/reel</th><th style='text-align:left'>🏆 Mejor reel</th>"
+            f'</tr></thead><tbody>{_reel_rows}</tbody></table></div>',
+            unsafe_allow_html=True)
     else:
         st.info("Todavía no hay reels con métricas cargadas para comparar.")
 

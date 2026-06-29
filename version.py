@@ -5,10 +5,19 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.38"
+APP_VERSION = "1.9.39"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.39",
+        "fecha":   "2026-06-28",
+        "titulo":  "Tablas con estilo isla-oscura unificado + explicación de KPIs al día",
+        "cambios": [
+            "Las tablas de Audiencia (seguidores) y de Rendimiento de reels en Globales, y la de 'Ver todas las publicaciones' en los portales, pasaron de st.dataframe (encabezados grises) a tablas HTML con fondo oscuro propio y texto claro, legibles en tema claro y oscuro como el resto.",
+            "Actualizada la explicación de los KPIs: refleja que el indicador de Facebook ahora son las reproducciones de video (no el engagement) y menciona la sección de interacciones de la red.",
+        ],
+    },
     {
         "version": "1.9.38",
         "fecha":   "2026-06-28",

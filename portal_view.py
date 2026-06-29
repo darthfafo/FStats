@@ -75,6 +75,26 @@ TOP_CSS = """
 </style>
 """
 
+# Tabla isla-oscura reutilizable (mismo look que la comparativa de Globales):
+# fondo oscuro propio + texto claro, legible en tema claro y oscuro.
+TABLA_CSS = """
+<style>
+.tc-wrap { overflow-x:auto; margin-top:4px;
+           background:linear-gradient(135deg,#0f172a,#1e1b4b);
+           border:1px solid rgba(148,163,184,0.18); border-radius:14px;
+           padding:4px 16px 8px; }
+.tc { width:100%; border-collapse:collapse; font-size:0.92rem; }
+.tc th { color:#f1f5f9; font-weight:700; text-align:right; padding:9px 14px;
+         border-bottom:2px solid rgba(148,163,184,0.35); white-space:nowrap; }
+.tc th:first-child { text-align:left; }
+.tc td { color:#e2e8f0; text-align:right; padding:8px 14px;
+         border-bottom:1px solid rgba(148,163,184,0.12); white-space:nowrap; }
+.tc td.tc-portal { text-align:left; font-weight:700; color:#fff; }
+.tc td.tc-text  { text-align:left; white-space:normal; min-width:240px; }
+.tc tbody tr:hover td { background:rgba(148,163,184,0.07); }
+</style>
+"""
+
 
 def tarjeta_ranking(rank, meta_html, titulo, stats, copy_full=None):
     """Una tarjeta de ranking. stats: lista de (emoji, valor_str, etiqueta).
@@ -369,12 +389,21 @@ def mostrar_portal(nombre):
         mostrar_top(lista_ig, "ig", n=10)
 
         with st.expander("📋 Ver todas las publicaciones de Instagram"):
-            df_all = pd.DataFrame([
-                {"Fecha": p["ts"], "Tipo": p["tipo"], "❤️ Likes": p["likes"],
-                 "💬 Coment.": p["com"], "▶️ Visualiz.": p["views"],
-                 "📤 Envíos": p["shares"], "Publicación": p["titulo"][:120]}
-                for p in lista_ig])
-            st.dataframe(df_all, width='stretch', hide_index=True)
+            st.markdown(TABLA_CSS, unsafe_allow_html=True)
+            _rows = "".join(
+                f"<tr><td class='tc-portal'>{p['ts']}</td>"
+                f"<td class='tc-text'>{p['tipo']}</td>"
+                f"<td>{p['likes']:,}</td><td>{p['com']:,}</td>"
+                f"<td>{p['views']:,}</td><td>{p['shares']:,}</td>"
+                f"<td class='tc-text'>{html.escape(p['titulo'][:120])}</td></tr>"
+                for p in lista_ig)
+            st.markdown(
+                '<div class="tc-wrap"><table class="tc"><thead><tr>'
+                "<th>Fecha</th><th style='text-align:left'>Tipo</th><th>❤️ Likes</th>"
+                "<th>💬 Coment.</th><th>▶️ Visualiz.</th><th>📤 Envíos</th>"
+                "<th style='text-align:left'>Publicación</th>"
+                f'</tr></thead><tbody>{_rows}</tbody></table></div>',
+                unsafe_allow_html=True)
     else:
         st.warning("No se pudieron cargar las publicaciones de Instagram.")
 
