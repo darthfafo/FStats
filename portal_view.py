@@ -246,20 +246,33 @@ def mostrar_portal(nombre):
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Resumen del portal: mismos KPIs que acompañan el hero del inicio
-    # (Alcance, Crecimiento, Engagement, Seguidores), combinando FB + IG. ───
+    # ── Resumen del portal: KPIs combinados FB + IG (los mismos que acompañan
+    # el hero del inicio). Empieza por Seguidores para alinear con las grillas
+    # de cada plataforma. Sin Alcance: FB ya no lo expone, sería solo de IG.
     _crec     = _crecimiento_seguidores(nombre)
     _crec_str = f"{_crec:+,}" if _crec is not None else "—"
     _eng_fb   = datos_fb["impresiones"].get("engagement", 0) if datos_fb else 0
     _eng_tot  = imp_ig.get("engaged", 0) + _eng_fb
     _kpis([
-        ("🎯 Alcance",     f"{imp_ig.get('total_reach', 0):,}", "Personas únicas · Instagram · 30d"),
-        ("📈 Crecimiento", _crec_str,                           "Seguidores netos · ~30d (FB + IG)"),
-        ("💬 Engagement",  f"{_eng_tot:,}",                     "Interacciones del mes (FB + IG)"),
-        ("👥 Seguidores",  f"{seg_total:,}",                    "Audiencia total (FB + IG)"),
+        ("👥 Seguidores",  f"{seg_total:,}",   "Audiencia total (FB + IG)"),
+        ("📈 Crecimiento", _crec_str,          "Seguidores netos · ~30d (FB + IG)"),
+        ("💬 Engagement",  f"{_eng_tot:,}",    "Interacciones del mes (FB + IG)"),
     ])
 
-    # ════════════════════════ INSTAGRAM (completo) ══════════════════════
+    # ── Switch de plataforma: se elige cuál ver (FB ya no va al final) ──────
+    if es_ig_only:
+        _seccion_instagram(nombre, datos_ig, imp_ig, imp_ig_total, err_ig)
+    else:
+        _plat = st.radio("Plataforma", ["📸 Instagram", "📘 Facebook"],
+                         horizontal=True, label_visibility="collapsed",
+                         key=f"plat_{nombre}")
+        if _plat == "📘 Facebook":
+            _seccion_facebook(nombre, datos_fb, err_fb)
+        else:
+            _seccion_instagram(nombre, datos_ig, imp_ig, imp_ig_total, err_ig)
+
+
+def _seccion_instagram(nombre, datos_ig, imp_ig, imp_ig_total, err_ig):
     st.markdown('<div class="grupo-titulo">📸 Instagram</div>', unsafe_allow_html=True)
     if err_ig:
         st.error(f"⚠️ Error al cargar Instagram: {err_ig}")
@@ -443,11 +456,8 @@ def mostrar_portal(nombre):
     else:
         st.warning("No se pudieron cargar las publicaciones de Instagram.")
 
-    # ════════════════════════ FACEBOOK (compacto) ═══════════════════════
-    if es_ig_only:
-        return
 
-    st.markdown("---")
+def _seccion_facebook(nombre, datos_fb, err_fb):
     st.markdown('<div class="grupo-titulo">📘 Facebook</div>', unsafe_allow_html=True)
     st.caption("Facebook ya no expone alcance de página (Meta lo deprecó). Lideramos "
                "con las reproducciones de video (reels + videos), que es el consumo "
@@ -458,9 +468,9 @@ def mostrar_portal(nombre):
     imp_fb  = datos_fb["impresiones"]
     _vv = imp_fb.get('video_views', 0)
     _kpis([
+        ("👥 Seguidores",      f"{info_fb.get('followers_count', 0):,}", "Audiencia de Facebook"),
         ("▶️ Reproducciones",  f"{_vv:,}" if _vv else "—",              "Reproducciones de reels y videos · 30d"),
         ("💬 Engagement",      f"{imp_fb.get('engagement', 0):,}",      "Reacciones, comentarios y compartidos del mes"),
-        ("👥 Seguidores",      f"{info_fb.get('followers_count', 0):,}", "Audiencia de Facebook"),
     ])
 
     # Dos gráficos: reproducciones de video por día + crecimiento de seguidores.
