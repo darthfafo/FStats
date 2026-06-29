@@ -88,15 +88,15 @@ hr { margin: 0.7rem 0 !important; }
     font-size: clamp(15px, 2.4vw, 19px); font-weight: 800; color: #38bdf8;
     letter-spacing: 0.5px; margin: 2px 0 2px; text-transform: uppercase;
 }
-.grupo-sub { color: var(--text-color); opacity: 0.8; font-size: 12.5px; margin: 0 0 4px; }
+.grupo-sub { color: var(--text-color); font-size: 12.5px; margin: 0 0 4px; }
 
 /* Texto secundario (st.caption) LEGIBLE en tema claro y oscuro: usa el color de
-   texto del tema en vez del gris muy tenue por defecto (que no se leía en ninguno). */
+   texto del tema, SIN atenuar (el gris tenue por defecto no se leía). */
 [data-testid="stCaptionContainer"],
 [data-testid="stCaptionContainer"] p,
 [data-testid="stCaptionContainer"] * {
     color: var(--text-color) !important;
-    opacity: 0.9;
+    opacity: 1;
 }
 </style>
 """

@@ -244,13 +244,11 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 st.caption(
-    "Los números grandes son el **acumulado del último mes** (en seguidores, la foto "
-    "de hoy). La **flecha verde/roja** compara ese período con el **período anterior "
-    "equivalente** (hasta 30 días) — verde mejora, roja empeora. Mientras la base "
-    "acumula historia, la ventana se va ampliando hasta los 30 días completos."
+    "Acumulado del último mes. La flecha marca la variación contra el mes anterior: "
+    "🟢 subió · 🔴 bajó."
 )
 
-with st.expander("📖 Qué mide cada indicador y por qué importa"):
+with st.expander("📖 Qué mide cada indicador"):
     st.markdown(
         "- **🎯 Visualizaciones (mes):** cuánto se *vio* tu contenido en toda la red "
         "(reproducciones de IG + reproducciones de video de FB). Es el termómetro de "

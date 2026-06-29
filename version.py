@@ -5,10 +5,19 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.44"
+APP_VERSION = "1.9.45"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.45",
+        "fecha":   "2026-06-28",
+        "titulo":  "Textos secundarios legibles y descripción de KPIs más corta",
+        "cambios": [
+            "Los textos secundarios (captions) dejan de verse en gris atenuado: ahora usan el color de texto pleno del tema, legibles en claro y oscuro.",
+            "El texto debajo de los KPIs de Globales se acortó a una línea profesional (acumulado del mes + qué indica la flecha); el detalle de qué mide cada dato queda en el desplegable.",
+        ],
+    },
     {
         "version": "1.9.44",
         "fecha":   "2026-06-28",
