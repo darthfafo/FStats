@@ -5,10 +5,19 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.37"
+APP_VERSION = "1.9.38"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.38",
+        "fecha":   "2026-06-28",
+        "titulo":  "Estadísticas Globales: interacciones de la red (reacciones, comentarios, envíos)",
+        "cambios": [
+            "Nueva sección que suma las interacciones de las publicaciones del último mes combinando ambas plataformas: reacciones (likes IG + reacciones FB), comentarios (IG + FB) y envíos (compartidos por DM en IG + compartidos en FB).",
+            "Muestra el total de la red en KPIs y el desglose por portal en una tabla, con fila de total. Los envíos de IG aparecen al correr la ingesta con la métrica nueva.",
+        ],
+    },
     {
         "version": "1.9.37",
         "fecha":   "2026-06-28",

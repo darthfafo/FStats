@@ -482,6 +482,69 @@ st.markdown(f"""
 
 st.markdown("---")
 
+# ── Interacciones de la red (reacciones / comentarios / envíos) ───────
+# Suma de las interacciones de las publicaciones del último mes, combinando
+# AMBAS plataformas: reacciones = likes IG + reacciones FB; comentarios de las
+# dos; envíos = envíos por DM (IG) + compartidos (FB).
+st.markdown('<div class="grupo-titulo">💬 Interacciones de la red</div>', unsafe_allow_html=True)
+st.subheader("💬 Reacciones, comentarios y envíos — Instagram + Facebook")
+st.caption("Interacciones de las publicaciones del último mes, sumando ambas "
+           "plataformas. Reacciones = likes (IG) + reacciones (FB); "
+           "envíos = compartidos por DM (IG) + compartidos (FB).")
+
+from datetime import timedelta as _td_int
+_lim_int = (datetime.now() - _td_int(days=30)).strftime("%Y-%m-%d")
+_filas_int, _tot_reac, _tot_com, _tot_env = [], 0, 0, 0
+for d in datos_portales:
+    if d.get("pendiente"):
+        continue
+    reac = com = env = 0
+    for p in d.get("posts_ig", []):
+        if p.get("ts", "") >= _lim_int:
+            reac += p.get("likes", 0) or 0
+            com  += p.get("comments", 0) or 0
+            env  += p.get("shares", 0) or 0
+    for post in d.get("posts_fb", []):
+        if post.get("created_time", "")[:10] >= _lim_int:
+            _r = post.get("reactions") or post.get("likes") or {}
+            reac += _r.get("summary", {}).get("total_count", 0)
+            com  += post.get("comments", {}).get("summary", {}).get("total_count", 0)
+            env  += post.get("shares", {}).get("count", 0)
+    if reac or com or env:
+        _filas_int.append((d["nombre"], reac, com, env))
+        _tot_reac += reac; _tot_com += com; _tot_env += env
+
+if _filas_int:
+    st.markdown(f"""
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="k-label">❤️ Reacciones</div>
+        <div class="k-value">{_tot_reac:,}</div><div class="k-sub">Likes (IG) + reacciones (FB) · último mes</div></div>
+      <div class="kpi-card"><div class="k-label">💬 Comentarios</div>
+        <div class="k-value">{_tot_com:,}</div><div class="k-sub">IG + FB · último mes</div></div>
+      <div class="kpi-card"><div class="k-label">📤 Envíos y compartidos</div>
+        <div class="k-value">{_tot_env:,}</div><div class="k-sub">Envíos por DM (IG) + compartidos (FB) · último mes</div></div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    _filas_int.sort(key=lambda x: (x[1] + x[2] + x[3]), reverse=True)
+    _rows_html = "".join(
+        f"<tr><td class='tc-portal'>{n}</td><td>{r:,}</td><td>{c:,}</td><td>{e:,}</td></tr>"
+        for n, r, c, e in _filas_int)
+    _rows_html += (
+        f"<tr><td class='tc-portal'>🌐 Total de la red</td>"
+        f"<td><b>{_tot_reac:,}</b></td><td><b>{_tot_com:,}</b></td><td><b>{_tot_env:,}</b></td></tr>")
+    st.markdown(
+        '<div class="tc-wrap"><table class="tc"><thead><tr>'
+        '<th>Portal</th><th>❤️ Reacciones</th><th>💬 Comentarios</th><th>📤 Envíos</th>'
+        f'</tr></thead><tbody>{_rows_html}</tbody></table></div>',
+        unsafe_allow_html=True)
+    st.caption("Los **envíos** de Instagram aparecen cuando corras la ingesta con "
+               "la métrica nueva; hasta entonces solo suman los compartidos de Facebook.")
+else:
+    st.info("Sin interacciones cargadas todavía.")
+
+st.markdown("---")
+
 # ── Seguidores y su aporte a la audiencia ────────────────────────────
 st.markdown('<div class="grupo-titulo">👥 Audiencia</div>', unsafe_allow_html=True)
 st.subheader("👥 Seguidores y su aporte a la audiencia")
