@@ -54,6 +54,27 @@ def _kpis(items):
     st.markdown(f'<div class="kpi-grid">{cards}</div>', unsafe_allow_html=True)
 
 
+def _crecimiento_seguidores(nombre, dias=30):
+    """Seguidores netos ganados (FB + IG) del portal en ~dias, leído del histórico
+    de la base. None si todavía no hay dos fotos para comparar."""
+    total, hubo = 0, False
+    for plat in ("fb", "ig"):
+        try:
+            h = _wr.followers_history(nombre, plat)
+        except Exception:
+            continue
+        if h is None or h.empty:
+            continue
+        vals = (h.dropna(subset=["followers_count"]).sort_values("snapshot_date")
+                  ["followers_count"].astype(int).tolist())
+        if len(vals) < 2:
+            continue
+        w = min(dias, len(vals) - 1)
+        total += vals[-1] - vals[-1 - w]
+        hubo = True
+    return total if hubo else None
+
+
 # ── Tarjeta de ranking (Top 10): rank + meta + título + KPIs + copy expandible.
 # Compartida entre las páginas de portal y Estadísticas Globales. ──────────────
 # La tarjeta tiene FONDO OSCURO PROPIO (isla oscura), igual que los banners/KPI:
@@ -224,6 +245,19 @@ def mostrar_portal(nombre):
             👥 {seg_total:,} <span style="color:#cbd5e1;font-weight:500;font-size:13px">seguidores totales</span></div>
     </div>
     """, unsafe_allow_html=True)
+
+    # ── Resumen del portal: mismos KPIs que acompañan el hero del inicio
+    # (Alcance, Crecimiento, Engagement, Seguidores), combinando FB + IG. ───
+    _crec     = _crecimiento_seguidores(nombre)
+    _crec_str = f"{_crec:+,}" if _crec is not None else "—"
+    _eng_fb   = datos_fb["impresiones"].get("engagement", 0) if datos_fb else 0
+    _eng_tot  = imp_ig.get("engaged", 0) + _eng_fb
+    _kpis([
+        ("🎯 Alcance",     f"{imp_ig.get('total_reach', 0):,}", "Personas únicas · Instagram · 30d"),
+        ("📈 Crecimiento", _crec_str,                           "Seguidores netos · ~30d (FB + IG)"),
+        ("💬 Engagement",  f"{_eng_tot:,}",                     "Interacciones del mes (FB + IG)"),
+        ("👥 Seguidores",  f"{seg_total:,}",                    "Audiencia total (FB + IG)"),
+    ])
 
     # ════════════════════════ INSTAGRAM (completo) ══════════════════════
     st.markdown('<div class="grupo-titulo">📸 Instagram</div>', unsafe_allow_html=True)
