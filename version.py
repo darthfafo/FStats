@@ -5,10 +5,20 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.49"
+APP_VERSION = "1.9.50"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.50",
+        "fecha":   "2026-06-29",
+        "titulo":  "Portales: charts diarios con contexto y tops con tooltip",
+        "cambios": [
+            "Se sacó el texto introductorio de la sección de Facebook.",
+            "Los dos gráficos diarios de cada plataforma (alcance/reproducciones + nuevos seguidores) ahora van bajo un título que los vincula y con una explicación de por qué se relacionan, antes de mostrarlos.",
+            "Las aclaraciones de los tops dejaron de ocupar una línea: pasaron a un ícono de info (tooltip) al lado del título.",
+        ],
+    },
     {
         "version": "1.9.49",
         "fecha":   "2026-06-29",

@@ -294,6 +294,11 @@ def _seccion_instagram(nombre, datos_ig, imp_ig, imp_ig_total, err_ig):
         ("💬 Interacciones",  f"{imp_ig.get('engaged', 0):,}",          "Likes, comentarios y guardados · 30d"),
     ])
 
+    st.markdown("---")
+    st.subheader("📅 Día a día: alcance y nuevos seguidores")
+    st.caption("A cuántas personas llegás cada día y cuántos seguidores nuevos sumás. "
+               "Van de la mano: los días de mayor alcance suelen ser los que más hacen "
+               "crecer la cuenta.")
     col_izq, col_der = st.columns(2)
     with col_izq:
         st.subheader("📈 Alcance diario")
@@ -447,16 +452,16 @@ def _seccion_instagram(nombre, datos_ig, imp_ig, imp_ig_total, err_ig):
         _lim_mes = (_dtmes.now() - _tdmes(days=30)).strftime("%Y-%m-%d")
         _ig_mes  = [p for p in lista_ig if p["ts"] >= _lim_mes][:15]
 
-        st.subheader("🏆 Top 15 de Instagram — último mes")
-        st.caption("Las más vistas de los últimos 30 días.")
+        st.subheader("🏆 Top 15 de Instagram — último mes",
+                     help="Las publicaciones más vistas de los últimos 30 días.")
         if _ig_mes:
             mostrar_top(_ig_mes, "ig", n=15)
         else:
             st.info("Sin publicaciones de Instagram en el último mes.")
 
         st.markdown("---")
-        st.subheader("🏆 Top 15 de Instagram — histórico")
-        st.caption("Las más vistas de todo el período cargado.")
+        st.subheader("🏆 Top 15 de Instagram — histórico",
+                     help="Las publicaciones más vistas de todo el período cargado en la base.")
         mostrar_top(lista_ig[:15], "ig", n=15)
 
         with st.expander("📋 Ver todas las publicaciones de Instagram"):
@@ -481,9 +486,6 @@ def _seccion_instagram(nombre, datos_ig, imp_ig, imp_ig_total, err_ig):
 
 def _seccion_facebook(nombre, datos_fb, err_fb):
     st.markdown('<div class="grupo-titulo">📘 Facebook</div>', unsafe_allow_html=True)
-    st.caption("Facebook ya no expone alcance de página (Meta lo deprecó). Lideramos "
-               "con las reproducciones de video (reels + videos), que es el consumo "
-               "de contenido real, más el engagement y el crecimiento de seguidores.")
     if err_fb:
         st.error(f"⚠️ Error al cargar Facebook: {err_fb}")
     info_fb = datos_fb["info"]
@@ -495,7 +497,11 @@ def _seccion_facebook(nombre, datos_fb, err_fb):
         ("💬 Engagement",      f"{imp_fb.get('engagement', 0):,}",      "Reacciones, comentarios y compartidos del mes"),
     ])
 
-    # Dos gráficos: reproducciones de video por día + crecimiento de seguidores.
+    st.markdown("---")
+    st.subheader("📅 Día a día: reproducciones y nuevos seguidores")
+    st.caption("Cuánto se reproduce el contenido cada día y cuántos seguidores nuevos "
+               "sumás. Van de la mano: los días que más circula el contenido suelen ser "
+               "los que más hacen crecer la página.")
     col_eng, col_dia = st.columns(2)
     with col_eng:
         st.subheader("▶️ Reproducciones de video por día")
@@ -551,16 +557,16 @@ def _seccion_facebook(nombre, datos_fb, err_fb):
         _lim_mf = (_dtmf.now() - _tdmf(days=30)).strftime("%Y-%m-%d")
         _fb_mes = [p for p in lista_fb if p["ts"] >= _lim_mf][:15]
 
-        st.subheader("🏆 Top 15 de Facebook — último mes")
-        st.caption("Las más reproducidas de los últimos 30 días.")
+        st.subheader("🏆 Top 15 de Facebook — último mes",
+                     help="Las publicaciones más reproducidas de los últimos 30 días.")
         if _fb_mes:
             mostrar_top(_fb_mes, "fb", n=15)
         else:
             st.info("Sin publicaciones de Facebook en el último mes.")
 
         st.markdown("---")
-        st.subheader("🏆 Top 15 de Facebook — histórico")
-        st.caption("Las más reproducidas de todo el período cargado.")
+        st.subheader("🏆 Top 15 de Facebook — histórico",
+                     help="Las publicaciones más reproducidas de todo el período cargado en la base.")
         mostrar_top(lista_fb[:15], "fb", n=15)
     else:
         st.info("Sin datos de publicaciones de Facebook.")
