@@ -118,6 +118,49 @@ class FacebookCollector:
         print(f"[FB] ✓ Batch reactions enriched {enriched}/{len(posts)} posts")
 
     def get_recent_posts(self, limit=30):
+        """Posts recientes con reactions + reproducciones de video por post."""
+        result = self._fetch_posts(limit=limit)
+        try:
+            self._enrich_with_video_views(result.get("data", []))
+        except Exception as e:
+            print(f"[FB] ✗ video_views enrichment: {e}")
+        return result
+
+    def _enrich_with_video_views(self, posts):
+        """Agrega 'video_views' (post_video_views = reproducciones de video del
+        post) a cada post vía Batch API, en lotes de 50."""
+        import json as _json
+        for start in range(0, len(posts), 50):
+            chunk = posts[start:start + 50]
+            try:
+                batch = [
+                    {"method": "GET",
+                     "relative_url": f"{p['id']}/insights?metric=post_video_views"}
+                    for p in chunk
+                ]
+                r = requests.post(
+                    self.base_url,
+                    params={"access_token": self.access_token},
+                    json={"batch": batch})
+                if not r.ok:
+                    continue
+                for i, resp in enumerate(r.json() or []):
+                    if i >= len(chunk):
+                        break
+                    if resp and resp.get("code") == 200:
+                        try:
+                            data = _json.loads(resp.get("body", "{}"))
+                            d = data.get("data", [])
+                            vals = d[0].get("values", []) if d else []
+                            chunk[i]["video_views"] = vals[0].get("value", 0) if vals else 0
+                        except Exception:
+                            pass
+            except Exception as e:
+                print(f"[FB] ✗ Batch video_views error (lote {start}): {e}")
+        enriched = sum(1 for p in posts if p.get("video_views"))
+        print(f"[FB] ✓ Batch video_views enriched {enriched}/{len(posts)} posts")
+
+    def _fetch_posts(self, limit=30):
         """
         Obtiene posts recientes con reactions.
         Para páginas NPE donde el endpoint bulk falla, usa Batch API

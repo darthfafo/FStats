@@ -358,14 +358,17 @@ class InstagramCollector:
         """
         Intenta obtener métricas de un post individual.
         Detecta Reels por media_product_type="REELS" (media_type siempre es "VIDEO").
-        Devuelve (imp, reach) o (0, 0). imp = views (reproducciones) en Reels.
+        Devuelve (imp, reach, shares) o (0, 0, 0). imp = views en Reels;
+        shares = ENVÍOS (compartidos por DM), métrica fuerte en reels.
         """
         es_reel = (str(media_type).upper() in ("REEL", "REELS")) or \
                   (str(product_type).upper() in ("CLIPS", "REELS"))
 
         if es_reel:
             # 'plays' fue deprecado en Reels (abr 2025) → la métrica es 'views'.
+            # 'shares' = envíos (compartidos por DM), disponible en reels/videos.
             intentos = [
+                "views,reach,shares",
                 "views,reach",
                 "ig_reels_aggregated_all_plays_count,reach",
                 "plays,reach",
@@ -376,6 +379,7 @@ class InstagramCollector:
             tipo_label = "REEL"
         elif str(media_type).upper() == "VIDEO":
             intentos = [
+                "views,reach,shares",
                 "views,reach",
                 "reach,total_interactions",
                 "reach",
@@ -385,6 +389,7 @@ class InstagramCollector:
         else:
             # IMAGE, CAROUSEL_ALBUM
             intentos = [
+                "reach,saved,shares",
                 "reach,saved",
                 "reach,total_interactions",
                 "reach",
@@ -395,7 +400,7 @@ class InstagramCollector:
         for metrics in intentos:
             try:
                 resp = self._get(f"{post_id}/insights", {"metric": metrics})
-                imp = reach = 0
+                imp = reach = shares = 0
                 for m in resp.get("data", []):
                     vals = m.get("values", [])
                     if vals:
@@ -409,12 +414,14 @@ class InstagramCollector:
                         imp = val
                     elif name == "reach":
                         reach = val
-                print(f"[IG] ✓ {tipo_label} OK con {metrics} → imp={imp}, reach={reach}")
-                return imp, reach
+                    elif name == "shares":
+                        shares = val
+                print(f"[IG] ✓ {tipo_label} OK con {metrics} → imp={imp}, reach={reach}, shares={shares}")
+                return imp, reach, shares
             except Exception as e:
                 print(f"[IG] ✗ {tipo_label} / {metrics}: {e}")
 
-        return 0, 0
+        return 0, 0, 0
 
     def get_media_impressions(self, limit=25, days=30):
         """
@@ -441,7 +448,7 @@ class InstagramCollector:
                 fecha = datetime.strptime(ts, "%Y-%m-%d")
                 if fecha < limite:
                     continue
-                imp, reach = self._get_media_metric(post["id"], media_type, product_type)
+                imp, reach, shares = self._get_media_metric(post["id"], media_type, product_type)
                 val = imp if is_reel else reach
                 if val > 0:
                     daily[ts] = daily.get(ts, 0) + val
@@ -451,6 +458,7 @@ class InstagramCollector:
                     "tipo":      "reel" if is_reel else media_type.lower(),
                     "plays":     imp,
                     "reach":     reach,
+                    "shares":    shares,
                     "likes":     post.get("like_count", 0),
                     "comments":  post.get("comments_count", 0),
                     "permalink": post.get("permalink", ""),

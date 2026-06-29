@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS raw_fb_posts (
     reactions_count INTEGER DEFAULT 0,
     comments_count  INTEGER DEFAULT 0,
     shares_count    INTEGER DEFAULT 0,
+    video_views     INTEGER DEFAULT 0,
     ingested_at     TIMESTAMP DEFAULT now()
 );
 
@@ -89,6 +90,7 @@ CREATE TABLE IF NOT EXISTS raw_ig_posts (
     is_reel        BOOLEAN,
     plays          INTEGER DEFAULT 0,
     reach          INTEGER DEFAULT 0,
+    shares         INTEGER DEFAULT 0,
     ingested_at    TIMESTAMP DEFAULT now()
 );
 
@@ -142,6 +144,8 @@ CREATE TABLE IF NOT EXISTS raw_ig_demographics (
 _MIGRATIONS_SQL = """
 ALTER TABLE raw_ig_posts ADD COLUMN IF NOT EXISTS plays INTEGER DEFAULT 0;
 ALTER TABLE raw_ig_posts ADD COLUMN IF NOT EXISTS reach INTEGER DEFAULT 0;
+ALTER TABLE raw_ig_posts ADD COLUMN IF NOT EXISTS shares INTEGER DEFAULT 0;
+ALTER TABLE raw_fb_posts ADD COLUMN IF NOT EXISTS video_views INTEGER DEFAULT 0;
 """
 
 # ---------------------------------------------------------------------------
@@ -175,7 +179,7 @@ FROM (
 
 CREATE OR REPLACE VIEW fb_posts AS
 SELECT portal_id, post_id, created_date, message,
-       reactions_count, comments_count, shares_count
+       reactions_count, comments_count, shares_count, video_views
 FROM (
     SELECT *, row_number() OVER (
         PARTITION BY portal_id, post_id
@@ -187,7 +191,7 @@ FROM (
 CREATE OR REPLACE VIEW ig_posts AS
 SELECT portal_id, post_id, caption, media_type, product_type,
        published_date, like_count, comments_count, permalink,
-       content_type, is_reel, plays, reach
+       content_type, is_reel, plays, reach, shares
 FROM (
     SELECT *, row_number() OVER (
         PARTITION BY portal_id, post_id

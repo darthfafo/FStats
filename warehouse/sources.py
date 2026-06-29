@@ -91,13 +91,16 @@ class WarehouseFacebookCollector:
                 "posts_error": ""}
 
     def get_recent_posts(self, limit=30):
-        rows = _q(
-            """SELECT post_id, created_date, message, reactions_count,
-                      comments_count, shares_count FROM fb_posts
-               WHERE portal_id = ? ORDER BY created_date DESC LIMIT ?""",
-            [self.portal_id, limit])
+        # 'video_views' es columna nueva: fallback a 0 si la vista aún no la tiene.
+        _base = ("SELECT post_id, created_date, message, reactions_count, "
+                 "comments_count, shares_count, {vv} FROM fb_posts "
+                 "WHERE portal_id = ? ORDER BY created_date DESC LIMIT ?")
+        try:
+            rows = _q(_base.format(vv="video_views"), [self.portal_id, limit])
+        except Exception:
+            rows = _q(_base.format(vv="0 AS video_views"), [self.portal_id, limit])
         data = []
-        for pid, created, msg, reac, com, sh in rows:
+        for pid, created, msg, reac, com, sh, vv in rows:
             data.append({
                 "id":           pid,
                 "created_time": _d(created),
@@ -105,6 +108,7 @@ class WarehouseFacebookCollector:
                 "reactions":    {"summary": {"total_count": int(reac or 0)}},
                 "comments":     {"summary": {"total_count": int(com or 0)}},
                 "shares":       {"count": int(sh or 0)},
+                "video_views":  int(vv or 0),
             })
         return {"data": data}
 
@@ -152,18 +156,24 @@ class WarehouseInstagramCollector:
         return int(rows[0][0]) if rows else 0
 
     def _posts_data(self):
-        rows = _q(
-            """SELECT post_id, published_date, content_type, media_type,
-                      plays, reach, like_count, comments_count, permalink, caption
-               FROM ig_posts WHERE portal_id = ?""", [self.portal_id])
+        # 'shares' (envíos) es una columna nueva: si la vista todavía no la tiene
+        # (deploy sin re-ingesta), caemos a 0 para no romper la lectura.
+        _base = ("SELECT post_id, published_date, content_type, media_type, "
+                 "plays, reach, like_count, comments_count, permalink, caption, {sh} "
+                 "FROM ig_posts WHERE portal_id = ?")
+        try:
+            rows = _q(_base.format(sh="shares"), [self.portal_id])
+        except Exception:
+            rows = _q(_base.format(sh="0 AS shares"), [self.portal_id])
         out = []
-        for pid, pub, ctype, mtype, plays, reach, likes, com, perm, cap in rows:
+        for pid, pub, ctype, mtype, plays, reach, likes, com, perm, cap, shares in rows:
             out.append({
                 "id":        pid,
                 "ts":        _d(pub),
                 "tipo":      ctype or (mtype or "").lower(),
                 "plays":     int(plays or 0),
                 "reach":     int(reach or 0),
+                "shares":    int(shares or 0),
                 "likes":     int(likes or 0),
                 "comments":  int(com or 0),
                 "permalink": perm or "",

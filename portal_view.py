@@ -94,6 +94,56 @@ def tarjeta_ranking(rank, meta_html, titulo, stats, copy_full=None):
             st.write(copy_full)
 
 
+def mostrar_top(posts, plataforma, n=10):
+    """Renderiza un Top de publicaciones con tarjetas de ranking — MISMO estilo
+    en todo el panel (portales y Estadísticas Globales) y las estadísticas
+    propias de cada plataforma.
+
+    posts: lista YA ordenada de dicts normalizados con las claves:
+      ts (str)    fecha 'YYYY-MM-DD'
+      titulo      caption (IG) o mensaje (FB), completo (se recorta solo)
+      tipo        etiqueta IG ('🎬 Reel', '📷 Imagen'...); ignorado en FB
+      portal      nombre del portal (solo en Globales; None en páginas de portal)
+      link        permalink (IG); None en FB
+      views       visualizaciones de video (estadística cardinal en ambas)
+      likes       likes (IG) / reacciones (FB)
+      com         comentarios
+      shares      envíos (IG) / compartidos (FB)
+    plataforma: 'ig' | 'fb'.
+    """
+    st.markdown(TOP_CSS, unsafe_allow_html=True)
+    for i, p in enumerate(posts[:n], 1):
+        if plataforma == "ig":
+            head = p.get("tipo") or "📷"
+            if p.get("link"):
+                head = f'<a href="{p["link"]}" target="_blank">{head}</a>'
+        else:
+            head = "📘"
+        bits = [head]
+        if p.get("portal"):
+            bits.append(f'<b>{p["portal"]}</b>')
+        if p.get("ts"):
+            bits.append(p["ts"])
+        meta = " · ".join(bits)
+
+        views = f'{p.get("views", 0):,}' if p.get("views") else "—"
+        if plataforma == "ig":
+            stats = [
+                ("▶️", views,                       "visualizaciones"),
+                ("❤️", f'{p.get("likes", 0):,}',    "likes"),
+                ("💬", f'{p.get("com", 0):,}',      "comentarios"),
+                ("📤", f'{p.get("shares", 0):,}',   "envíos"),
+            ]
+        else:
+            stats = [
+                ("▶️", views,                       "visualizaciones"),
+                ("❤️", f'{p.get("likes", 0):,}',    "reacciones"),
+                ("💬", f'{p.get("com", 0):,}',      "comentarios"),
+                ("🔁", f'{p.get("shares", 0):,}',   "compartidos"),
+            ]
+        tarjeta_ranking(i, meta, p.get("titulo", ""), stats, copy_full=p.get("titulo"))
+
+
 def mostrar_portal(nombre):
     portal = _portal(nombre)
     icono  = portal["icono"] if portal else "📊"
@@ -274,16 +324,21 @@ def mostrar_portal(nombre):
     st.caption("Ordenadas por **visualizaciones** (difusión real), no por likes.")
     media_data = datos_ig.get("media", {})
     if media_data.get("data"):
-        # Visualizaciones por post: del warehouse (cubre todos los posts ingestados),
-        # con fallback a las métricas en vivo de los más recientes.
+        # Visualizaciones y envíos por post: del warehouse (cubre todos los posts
+        # ingestados), con fallback a las métricas en vivo de los más recientes.
+        views_lookup, shares_lookup = {}, {}
         try:
             _wp = _wr.posts(nombre, "ig")
-            views_lookup = {str(r["post_id"]): int((r["plays"] or 0) or (r["reach"] or 0))
-                            for _, r in _wp.iterrows()} if _wp is not None and not _wp.empty else {}
+            if _wp is not None and not _wp.empty:
+                for _, r in _wp.iterrows():
+                    pid_w = str(r["post_id"])
+                    views_lookup[pid_w]  = int((r["plays"] or 0) or (r["reach"] or 0))
+                    shares_lookup[pid_w] = int(r.get("shares", 0) or 0)
         except Exception:
-            views_lookup = {}
-        plays_lookup = {(p.get("id", "") or p.get("ts", "")): (p.get("plays", 0) or p.get("reach", 0))
-                        for p in imp_ig.get("posts_data", [])}
+            pass
+        plays_lookup  = {(p.get("id", "") or p.get("ts", "")): (p.get("plays", 0) or p.get("reach", 0))
+                         for p in imp_ig.get("posts_data", [])}
+        env_lookup    = {p.get("id", ""): p.get("shares", 0) for p in imp_ig.get("posts_data", [])}
 
         lista_ig = []
         for post in media_data["data"]:
@@ -297,11 +352,13 @@ def mostrar_portal(nombre):
             pid   = post.get("id", "")
             views = (views_lookup.get(str(pid)) or plays_lookup.get(pid, 0)
                      or plays_lookup.get(post.get("timestamp", "")[:10], 0))
+            shares = shares_lookup.get(str(pid)) or env_lookup.get(pid, 0)
             lista_ig.append({
-                "ts": post.get("timestamp", "")[:10], "tipo": tl, "cap": cap,
+                "ts": post.get("timestamp", "")[:10], "tipo": tl, "titulo": cap,
                 "likes": post.get("like_count", 0),
                 "com":   post.get("comments_count", 0),
                 "views": int(views or 0),
+                "shares": int(shares or 0),
                 "link":  post.get("permalink", ""),
             })
         # Ordenamos por visualizaciones (difusión real) y, a igualdad, por likes:
@@ -309,22 +366,13 @@ def mostrar_portal(nombre):
         # al top, en vez de quedar afuera por tener menos likes que posts chicos.
         lista_ig.sort(key=lambda x: (x["views"], x["likes"]), reverse=True)
 
-        st.markdown(TOP_CSS, unsafe_allow_html=True)
-        for i, p in enumerate(lista_ig[:10], 1):
-            tipo   = (f'<a href="{p["link"]}" target="_blank">{p["tipo"]}</a>'
-                      if p["link"] else p["tipo"])
-            vistas = f'{p["views"]:,}' if p["views"] else "—"
-            tarjeta_ranking(i, f'📅 {p["ts"]} · {tipo}', p["cap"], [
-                ("❤️", f'{p["likes"]:,}', "likes"),
-                ("💬", f'{p["com"]:,}', "comentarios"),
-                ("▶️", vistas, "visualizaciones"),
-            ], copy_full=p["cap"])
+        mostrar_top(lista_ig, "ig", n=10)
 
         with st.expander("📋 Ver todas las publicaciones de Instagram"):
             df_all = pd.DataFrame([
                 {"Fecha": p["ts"], "Tipo": p["tipo"], "❤️ Likes": p["likes"],
                  "💬 Coment.": p["com"], "▶️ Visualiz.": p["views"],
-                 "Publicación": p["cap"][:120]}
+                 "📤 Envíos": p["shares"], "Publicación": p["titulo"][:120]}
                 for p in lista_ig])
             st.dataframe(df_all, width='stretch', hide_index=True)
     else:
@@ -383,9 +431,11 @@ def mostrar_portal(nombre):
         else:
             st.info("Sin datos de seguidores por día.")
 
-    # Top 10 publicaciones de Facebook — mismas tarjetas de ranking que Instagram.
+    # Top 10 publicaciones de Facebook — mismas tarjetas de ranking que Instagram,
+    # ordenadas por reproducciones de video (estadística cardinal).
     st.markdown("---")
     st.subheader("🏆 Top 10 publicaciones de Facebook")
+    st.caption("Ordenadas por **reproducciones de video**.")
     posts_fb = datos_fb.get("posts", {}).get("data", [])
     if posts_fb:
         lista_fb = []
@@ -396,16 +446,11 @@ def mostrar_portal(nombre):
             shares = post.get("shares", {}).get("count", 0)
             lista_fb.append({
                 "ts": post.get("created_time", "")[:10],
-                "msg": post.get("message", "") or "(Sin texto)",
+                "titulo": post.get("message", "") or "(Sin texto)",
+                "views": int(post.get("video_views", 0) or 0),
                 "likes": likes, "com": com, "shares": shares,
             })
-        lista_fb.sort(key=lambda x: x["likes"], reverse=True)
-        st.markdown(TOP_CSS, unsafe_allow_html=True)
-        for i, p in enumerate(lista_fb[:10], 1):
-            tarjeta_ranking(i, f'📅 {p["ts"]}', p["msg"], [
-                ("❤️", f'{p["likes"]:,}', "reacciones"),
-                ("💬", f'{p["com"]:,}', "comentarios"),
-                ("🔁", f'{p["shares"]:,}', "compartidos"),
-            ], copy_full=p["msg"])
+        lista_fb.sort(key=lambda x: (x["views"], x["likes"]), reverse=True)
+        mostrar_top(lista_fb, "fb", n=10)
     else:
         st.info("Sin datos de publicaciones de Facebook.")

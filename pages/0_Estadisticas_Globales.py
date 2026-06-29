@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 from config import PORTALES, RESPONSIVE_CSS, sidebar_nav, fb_source, ig_source
 from audience import contribucion_audiencia
-from portal_view import tarjeta_ranking, TOP_CSS
+from portal_view import tarjeta_ranking, TOP_CSS, mostrar_top
 
 st.set_page_config(page_title="Estadísticas Globales", page_icon="📊", layout="wide")
 
@@ -178,6 +178,7 @@ def _delta_periodo_seguidores(dias=30):
 total_viz   = sum(d["total_imp"] for d in datos_portales)
 total_seg   = sum(d["total_seg"] for d in datos_portales)
 total_eng   = sum(d["fb_eng"]    for d in datos_portales)
+total_fb_vv = sum(d["fb_imp"]    for d in datos_portales)   # reproducciones de video FB
 total_reach = sum(d["ig_reach"]  for d in datos_portales)
 tasa_global = round(total_eng / total_seg * 100, 2) if total_seg else 0
 portales_activos = len(activos)
@@ -187,7 +188,7 @@ portales_activos = len(activos)
 # día viral y es coherente con que los KPIs son del mes. Visualizaciones y tasa
 # no llevan flecha (no son un flujo diario acumulable comparable).
 d_seg = _delta_periodo_seguidores()
-d_eng = _delta_periodo("fb", "page_post_engagements")
+d_vv  = _delta_periodo("fb", "page_video_views")
 d_rch = _delta_periodo("ig", "reach")
 
 def _kpi_delta(d, fallback=""):
@@ -204,8 +205,8 @@ st.markdown(f"""
     <div class="k-value">{total_viz:,}</div><div class="k-sub">Acumulado · 30 días</div></div>
   <div class="kpi-card"><div class="k-label">👥 Seguidores</div>
     <div class="k-value">{total_seg:,}</div>{_kpi_delta(d_seg, "Audiencia propia (hoy)")}</div>
-  <div class="kpi-card"><div class="k-label">💬 Engagement FB</div>
-    <div class="k-value">{total_eng:,}</div>{_kpi_delta(d_eng, "Interacciones · 30d")}</div>
+  <div class="kpi-card"><div class="k-label">▶️ Reproducciones FB</div>
+    <div class="k-value">{total_fb_vv:,}</div>{_kpi_delta(d_vv, "Reproducciones de video · 30d")}</div>
   <div class="kpi-card"><div class="k-label">🎯 Alcance IG</div>
     <div class="k-value">{total_reach:,}</div>{_kpi_delta(d_rch, "Personas únicas · 30d")}</div>
   <div class="kpi-card"><div class="k-label">📊 Tasa engagement</div>
@@ -751,23 +752,25 @@ if activos:
         top10_ig = sorted(cand_ig, key=_difusion, reverse=True)[:10]
 
         if top10_ig and _difusion(top10_ig[0]) > 0:
-            st.markdown(TOP_CSS, unsafe_allow_html=True)
-            for i, post in enumerate(top10_ig, 1):
-                ic = {"reel": "🎬", "video": "▶️", "carousel_album": "🖼️"}.get(post["tipo"], "📷")
-                link = post.get("permalink", "")
-                ic_html = f'<a href="{link}" target="_blank">{ic}</a>' if link else ic
-                meta = f'{ic_html} <b>{post["portal"]}</b> · {post["ts"]}'
-                tarjeta_ranking(i, meta, post.get("caption", ""), [
-                    ("▶️", f'{_difusion(post):,}', "difusión"),
-                    ("❤️", f'{post.get("likes", 0):,}', "likes"),
-                    ("💬", f'{post.get("comments", 0):,}', "comentarios"),
-                ], copy_full=post.get("caption", ""))
+            _TL = {"reel": "🎬 Reel", "video": "▶️ Video", "carousel_album": "🖼️ Carrusel"}
+            mostrar_top([{
+                "ts":     post["ts"],
+                "tipo":   _TL.get(post.get("tipo"), "📷 Imagen"),
+                "titulo": post.get("caption", ""),
+                "portal": post["portal"],
+                "link":   post.get("permalink", ""),
+                "views":  _difusion(post),
+                "likes":  post.get("likes", 0),
+                "com":    post.get("comments", 0),
+                "shares": post.get("shares", 0),
+            } for post in top10_ig], "ig", n=10)
         else:
             st.info("Sin métricas de difusión cargadas todavía (corré la ingesta para verlas).")
 
     # ── Top 10 FB último mes ─────────────────────────────────────
     st.markdown("---")
     st.subheader("📘 Top 10 publicaciones Facebook — último mes")
+    st.caption("Ordenadas por **reproducciones de video**.")
     from datetime import timedelta
     limite_30 = datetime.now() - timedelta(days=30)
     todos_posts_fb = []
@@ -785,24 +788,25 @@ if activos:
                     "portal":  d["nombre"],
                     "fecha":   post.get("created_time","")[:10],
                     "mensaje": (post.get("message") or "")[:100],
+                    "views":   int(post.get("video_views", 0) or 0),
                     "likes":   likes,
                     "comentarios": com,
                     "compartidos": shares,
-                    "engagement": likes + com + shares,
                 })
             except:
                 pass
 
     if todos_posts_fb:
-        top10_fb = sorted(todos_posts_fb, key=lambda x: x["engagement"], reverse=True)[:10]
-        st.markdown(TOP_CSS, unsafe_allow_html=True)
-        for i, post in enumerate(top10_fb, 1):
-            meta = f'📘 <b>{post["portal"]}</b> · {post["fecha"]}'
-            tarjeta_ranking(i, meta, post["mensaje"], [
-                ("❤️", f'{post["likes"]:,}', "reacciones"),
-                ("💬", f'{post["comentarios"]:,}', "comentarios"),
-                ("🔁", f'{post["compartidos"]:,}', "compartidos"),
-            ], copy_full=post["mensaje"])
+        top10_fb = sorted(todos_posts_fb, key=lambda x: (x["views"], x["likes"]), reverse=True)[:10]
+        mostrar_top([{
+            "ts":     post["fecha"],
+            "titulo": post["mensaje"],
+            "portal": post["portal"],
+            "views":  post["views"],
+            "likes":  post["likes"],
+            "com":    post["comentarios"],
+            "shares": post["compartidos"],
+        } for post in top10_fb], "fb", n=10)
     else:
         st.info("Sin datos de publicaciones de Facebook en los último mes.")
 

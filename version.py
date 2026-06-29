@@ -5,10 +5,22 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.35"
+APP_VERSION = "1.9.36"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.36",
+        "fecha":   "2026-06-28",
+        "titulo":  "Tops unificados: envíos en IG, reproducciones en FB + función única",
+        "cambios": [
+            "Función única de Tops (mostrar_top) usada en portales y Estadísticas Globales: mismo estilo en todo el panel y estadísticas propias de cada plataforma.",
+            "Top de Instagram: ahora muestra los ENVÍOS (compartidos por DM) de cada publicación, una métrica fuerte en reels, además de visualizaciones, likes y comentarios.",
+            "Top de Facebook: las reproducciones de video pasan a ser la estadística cardinal (y ordenan el ranking), junto con reacciones, comentarios y compartidos.",
+            "Estadísticas Globales: el KPI principal de Facebook ahora son las reproducciones de video (antes engagement).",
+            "Nuevas métricas por post en el warehouse: envíos de IG (ig_posts.shares) y reproducciones de video por post de FB (fb_posts.video_views). REQUIERE correr la ingesta para poblarlas.",
+        ],
+    },
     {
         "version": "1.9.35",
         "fecha":   "2026-06-28",

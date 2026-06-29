@@ -148,11 +148,13 @@ def _ingest_posts(con, fb, portal_id):
             if isinstance(shares_data, dict):
                 shares = shares_data.get("count", 0)
 
+            video_views = int(p.get("video_views", 0) or 0)
+
             con.execute(
                 """INSERT INTO raw_fb_posts
                    (portal_id, post_id, created_date, message,
-                    reactions_count, comments_count, shares_count, ingested_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, now())""",
+                    reactions_count, comments_count, shares_count, video_views, ingested_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, now())""",
                 [
                     portal_id,
                     p.get("id", ""),
@@ -161,6 +163,7 @@ def _ingest_posts(con, fb, portal_id):
                     likes,
                     comments,
                     shares,
+                    video_views,
                 ]
             )
             inserted += 1

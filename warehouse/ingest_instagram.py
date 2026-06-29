@@ -172,19 +172,19 @@ def _ingest_posts(con, ig, portal_id):
             # métricas de los reels (lo que usa el modelo) para ahorrar miles de
             # llamadas a la API; los no-reels viejos se guardan con 0/0.
             if deep and not is_reel:
-                plays, reach = 0, 0
+                plays, reach, shares = 0, 0, 0
             else:
                 try:
-                    plays, reach = ig._get_media_metric(p.get("id", ""), media_type, product_type)
+                    plays, reach, shares = ig._get_media_metric(p.get("id", ""), media_type, product_type)
                 except Exception:
-                    plays, reach = 0, 0
+                    plays, reach, shares = 0, 0, 0
 
             con.execute(
                 """INSERT INTO raw_ig_posts
                    (portal_id, post_id, caption, media_type, product_type,
                     published_date, like_count, comments_count, permalink,
-                    content_type, is_reel, plays, reach, ingested_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())""",
+                    content_type, is_reel, plays, reach, shares, ingested_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())""",
                 [
                     portal_id,
                     p.get("id", ""),
@@ -199,6 +199,7 @@ def _ingest_posts(con, ig, portal_id):
                     is_reel,
                     int(plays or 0),
                     int(reach or 0),
+                    int(shares or 0),
                 ]
             )
             inserted += 1
