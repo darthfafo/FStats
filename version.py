@@ -5,10 +5,18 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.40"
+APP_VERSION = "1.9.41"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.41",
+        "fecha":   "2026-06-28",
+        "titulo":  "Tasa de engagement real: interacciones ÷ visualizaciones",
+        "cambios": [
+            "La tasa de engagement ahora se calcula como interacciones (reacciones + comentarios + envíos, IG + FB) ÷ visualizaciones, en vez del viejo engagement FB ÷ seguidores que daba >100%. Da un porcentaje sensato y comparable entre portales (en el KPI global y en la columna de la tabla comparativa).",
+        ],
+    },
     {
         "version": "1.9.40",
         "fecha":   "2026-06-28",

@@ -180,7 +180,6 @@ total_seg   = sum(d["total_seg"] for d in datos_portales)
 total_eng   = sum(d["fb_eng"]    for d in datos_portales)
 total_fb_vv = sum(d["fb_imp"]    for d in datos_portales)   # reproducciones de video FB
 total_reach = sum(d["ig_reach"]  for d in datos_portales)
-tasa_global = round(total_eng / total_seg * 100, 2) if total_seg else 0
 
 # Interacciones de la red (reacciones / comentarios / envíos), sumando IG + FB de
 # las publicaciones del último mes. Se calcula acá (antes de los KPIs) y se reusa
@@ -207,6 +206,13 @@ for d in datos_portales:
         _filas_int.append((d["nombre"], reac, com, env))
         _tot_reac += reac; _tot_com += com; _tot_env += env
 total_interacciones = _tot_reac + _tot_com + _tot_env
+# Interacciones por portal (para la tasa de engagement por portal en la tabla).
+_interacc_map = {n: r + c + e for n, r, c, e in _filas_int}
+
+# Tasa de engagement REAL: interacciones ÷ visualizaciones (qué porción del
+# contenido visto generó una interacción). Reemplaza al viejo engagement FB ÷
+# seguidores, que daba >100% porque también interactúan los no-seguidores.
+tasa_global = round(total_interacciones / total_viz * 100, 2) if total_viz else 0
 portales_activos = len(activos)
 
 # Variación de PERÍODO (verde/roja): últimos 30 días vs los 30 anteriores,
@@ -238,7 +244,7 @@ st.markdown(f"""
   <div class="kpi-card"><div class="k-label">💬 Interacciones</div>
     <div class="k-value">{total_interacciones:,}</div><div class="k-sub">Reacciones + comentarios + envíos · IG + FB · 30d</div></div>
   <div class="kpi-card"><div class="k-label">📊 Tasa engagement</div>
-    <div class="k-value">{tasa_global:.1f}%</div><div class="k-sub">Engagement ÷ seguidores</div></div>
+    <div class="k-value">{tasa_global:.1f}%</div><div class="k-sub">Interacciones ÷ visualizaciones · 30d</div></div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -261,9 +267,10 @@ with st.expander("📖 Qué mide cada indicador y por qué importa"):
         "el alcance de página).\n"
         "- **🎯 Alcance IG:** a cuántas **personas únicas** llegaste en Instagram. A "
         "diferencia de las visualizaciones, cuenta personas, no reproducciones.\n"
-        "- **📊 Tasa de engagement:** engagement de Facebook (reacciones + comentarios + "
-        "compartidos) ÷ seguidores. Pone las interacciones en contexto del tamaño: un "
-        "portal chico puede tener mejor tasa que uno grande.\n\n"
+        "- **📊 Tasa de engagement:** interacciones (reacciones + comentarios + envíos, "
+        "IG + FB) ÷ visualizaciones. Qué porción del contenido visto generó una "
+        "interacción; da un % comparable entre portales (un portal chico puede tener "
+        "mejor tasa que uno grande).\n\n"
         "Más abajo, la sección **💬 Interacciones de la red** desglosa las reacciones, "
         "comentarios y envíos sumando ambas plataformas. Esta vista reúne todo para "
         "**comparar portales**, **ver la evolución** y **detectar a tiempo** qué crece y qué cae."
@@ -477,6 +484,8 @@ _filas_html = ""
 for d in datos_portales:
     if d.get("pendiente") or d["total_imp"] <= 0:
         continue
+    # Tasa de engagement = interacciones (IG+FB) ÷ visualizaciones del portal.
+    _tasa_p = (_interacc_map.get(d["nombre"], 0) / d["total_imp"] * 100) if d["total_imp"] else 0
     _filas_html += (
         "<tr>"
         f"<td class='tc-portal'>{d['nombre']}</td>"
@@ -485,7 +494,7 @@ for d in datos_portales:
         f"<td>{d['total_imp']:,}</td>"
         f"<td>{d['total_seg']:,}</td>"
         f"<td>{d['fb_eng']:,}</td>"
-        f"<td>{d['tasa_eng']:.1f}%</td>"
+        f"<td>{_tasa_p:.1f}%</td>"
         f"<td>{d['ig_reach']:,}</td>"
         f"<td>{d['ig_engaged']:,}</td>"
         "</tr>"
