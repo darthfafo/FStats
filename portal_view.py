@@ -261,9 +261,21 @@ def mostrar_portal(nombre):
     if es_ig_only:
         _seccion_instagram(nombre, datos_ig, imp_ig, imp_ig_total, err_ig)
     else:
-        _plat = st.radio("Plataforma", ["📸 Instagram", "📘 Facebook"],
-                         horizontal=True, label_visibility="collapsed",
-                         key=f"plat_{nombre}")
+        # Switch de plataforma, moderno y bien visible: control segmentado (pill).
+        # CSS para agrandarlo y centrarlo; fallback a radio si la versión no lo trae.
+        st.markdown("""
+        <style>
+        [data-testid="stSegmentedControl"] { justify-content:center; margin:6px 0 14px; }
+        [data-testid="stSegmentedControl"] button {
+            font-size:1.02rem !important; font-weight:700 !important; padding:10px 30px !important; }
+        </style>""", unsafe_allow_html=True)
+        _opts = ["📸 Instagram", "📘 Facebook"]
+        try:
+            _plat = st.segmented_control("Plataforma", _opts, default=_opts[0],
+                                         label_visibility="collapsed", key=f"plat_{nombre}")
+        except Exception:
+            _plat = st.radio("Plataforma", _opts, horizontal=True,
+                             label_visibility="collapsed", key=f"plat_{nombre}")
         if _plat == "📘 Facebook":
             _seccion_facebook(nombre, datos_fb, err_fb)
         else:
