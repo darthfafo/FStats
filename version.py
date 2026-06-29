@@ -5,10 +5,19 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.42"
+APP_VERSION = "1.9.43"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.43",
+        "fecha":   "2026-06-28",
+        "titulo":  "Audiencia: KPIs de crecimiento (nuevos seguidores y tasa mensual)",
+        "cambios": [
+            "La sección de Audiencia suma dos KPIs: nuevos seguidores netos del mes (FB + IG, en verde/rojo) y crecimiento mensual (nuevos ÷ base de seguidores).",
+            "Descripciones de la sección acortadas, sin aclaraciones: solo explican qué se ve.",
+        ],
+    },
     {
         "version": "1.9.42",
         "fecha":   "2026-06-28",

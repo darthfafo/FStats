@@ -560,9 +560,8 @@ st.markdown("---")
 st.markdown('<div class="grupo-titulo">👥 Audiencia</div>', unsafe_allow_html=True)
 st.subheader("👥 Seguidores y su aporte a la audiencia")
 st.caption(
-    "Cuánto pesa cada portal en la base total de seguidores. El alcance a "
-    "no-seguidores incluye los **reels de prueba** (que solo se muestran a "
-    "no-seguidores), así que está inflado: tomalo como un techo."
+    "El tamaño y el crecimiento de la audiencia de la red, y cuánto aporta cada "
+    "portal a la base de seguidores."
 )
 
 if activos:
@@ -576,12 +575,22 @@ if activos:
     cob_global = (tot_fr / contrib["total_seguidores"]) if (hay_cob and contrib["total_seguidores"]) else 0
 
     nf_str = f"{int(tot_nf):,}" if hay_cob else "—"
+    # Crecimiento del último mes (seguidores netos, FB + IG) y su tasa sobre la base.
+    _base_seg   = contrib['total_seguidores']
+    _seg_nuevos = f"{d_seg:+,}" if d_seg is not None else "—"
+    _seg_col    = "#22c55e" if (d_seg or 0) >= 0 else "#f87171"
+    _crec       = (d_seg / _base_seg * 100) if (d_seg is not None and _base_seg) else None
+    _crec_str   = f"{_crec:+.1f}%" if _crec is not None else "—"
     st.markdown(f"""
     <div class="kpi-grid">
       <div class="kpi-card"><div class="k-label">👥 Seguidores totales</div>
-        <div class="k-value">{contrib['total_seguidores']:,}</div><div class="k-sub">FB + IG · toda la red</div></div>
+        <div class="k-value">{_base_seg:,}</div><div class="k-sub">FB + IG · toda la red</div></div>
+      <div class="kpi-card"><div class="k-label">📈 Nuevos seguidores · mes</div>
+        <div class="k-value" style="color:{_seg_col}">{_seg_nuevos}</div><div class="k-sub">Netos (FB + IG) · 30d</div></div>
+      <div class="kpi-card"><div class="k-label">📊 Crecimiento mensual</div>
+        <div class="k-value" style="color:{_seg_col}">{_crec_str}</div><div class="k-sub">Nuevos ÷ base de seguidores</div></div>
       <div class="kpi-card"><div class="k-label">🌐 Alcance a no-seguidores</div>
-        <div class="k-value">{nf_str}</div><div class="k-sub">Día promedio · incluye reels de prueba</div></div>
+        <div class="k-value">{nf_str}</div><div class="k-sub">Personas nuevas · día promedio</div></div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -615,15 +624,13 @@ if activos:
     st.markdown(
         '<div class="tc-wrap"><table class="tc"><thead><tr>'
         '<th>Portal</th><th>👥 Seguidores</th><th>📊 % de seguidores</th>'
-        '<th>🌐 No-seg/día*</th>'
+        '<th>🌐 No-seg/día</th>'
         f'</tr></thead><tbody>{_det_rows}</tbody></table></div>',
         unsafe_allow_html=True)
 
     st.caption(
-        "📊 **% de seguidores** = cuánto pesa cada portal en la base total.  \n"
-        "🌐 **No-seg/día** = alcance diario a no-seguidores. (*) Incluye reels de "
-        "prueba, que por diseño solo llegan a no-seguidores, así que está inflado.  \n"
-        "ℹ️ FB e IG se cuentan por separado; quien sigue ambas puede contarse dos veces."
+        "📊 **% de seguidores** = cuánto pesa cada portal en la base total. "
+        "🌐 **No-seg/día** = personas nuevas alcanzadas por día (promedio)."
     )
 else:
     st.info("No hay portales activos con datos de audiencia para analizar todavía.")
