@@ -5,10 +5,20 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.52"
+APP_VERSION = "1.9.53"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.53",
+        "fecha":   "2026-06-29",
+        "titulo":  "Globales: tarjetas del top con el color del portal + participación en el top",
+        "cambios": [
+            "En los tops de Estadísticas Globales, cada tarjeta se tiñe con el color de marca del portal (borde + fondo), para identificar de un vistazo de quién es cada publicación.",
+            "Debajo de cada top hay una barra de participación: cuántas de las 20 publicaciones aporta cada portal, con sus colores.",
+            "El color de marca de los portales se centralizó en un único mapa (config.COLOR_PORTAL).",
+        ],
+    },
     {
         "version": "1.9.52",
         "fecha":   "2026-06-29",

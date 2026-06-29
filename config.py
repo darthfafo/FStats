@@ -6,6 +6,14 @@ import streamlit as st
 
 load_dotenv()
 
+# Color de marca de cada portal (usado en banners del inicio, tops de Globales,
+# recaps, etc.). Mapa canónico para mantener la identidad consistente.
+COLOR_PORTAL = {
+    "Chubut Noticias": "#64748b", "Atento Chubut": "#22d3ee",
+    "La Calle Online": "#f97316", "El Americano": "#22c55e",
+    "Viste esto?":     "#a855f7", "Boca en Linea": "#fbbf24",
+}
+
 RESPONSIVE_CSS = """
 <style>
 /* Ocultar la navegación automática de Streamlit */

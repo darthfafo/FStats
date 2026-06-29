@@ -3,9 +3,9 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
-from config import PORTALES, RESPONSIVE_CSS, sidebar_nav, fb_source, ig_source
+from config import PORTALES, RESPONSIVE_CSS, sidebar_nav, fb_source, ig_source, COLOR_PORTAL
 from audience import contribucion_audiencia
-from portal_view import tarjeta_ranking, TOP_CSS, mostrar_top, TABLA_CSS
+from portal_view import tarjeta_ranking, TOP_CSS, mostrar_top, TABLA_CSS, recap_participacion
 
 st.set_page_config(page_title="Estadísticas Globales", page_icon="📊", layout="wide")
 
@@ -828,7 +828,7 @@ if activos:
 
         if top10_ig and _difusion(top10_ig[0]) > 0:
             _TL = {"reel": "🎬 Reel", "video": "▶️ Video", "carousel_album": "🖼️ Carrusel"}
-            mostrar_top([{
+            _lista_ig = [{
                 "ts":     post["ts"],
                 "tipo":   _TL.get(post.get("tipo"), "📷 Imagen"),
                 "titulo": post.get("caption", ""),
@@ -838,7 +838,10 @@ if activos:
                 "likes":  post.get("likes", 0),
                 "com":    post.get("comments", 0),
                 "shares": post.get("shares", 0),
-            } for post in top10_ig], "ig", n=20)
+            } for post in top10_ig]
+            mostrar_top(_lista_ig, "ig", n=20, colores=COLOR_PORTAL)
+            st.caption("**Participación en el top** — cuántas de las 20 aporta cada portal:")
+            recap_participacion(_lista_ig, COLOR_PORTAL, n=20)
         else:
             st.info("Sin métricas de difusión cargadas todavía (corré la ingesta para verlas).")
 
@@ -873,7 +876,7 @@ if activos:
 
     if todos_posts_fb:
         top10_fb = sorted(todos_posts_fb, key=lambda x: (x["views"], x["likes"]), reverse=True)[:20]
-        mostrar_top([{
+        _lista_fb = [{
             "ts":     post["fecha"],
             "titulo": post["mensaje"],
             "portal": post["portal"],
@@ -881,7 +884,10 @@ if activos:
             "likes":  post["likes"],
             "com":    post["comentarios"],
             "shares": post["compartidos"],
-        } for post in top10_fb], "fb", n=20)
+        } for post in top10_fb]
+        mostrar_top(_lista_fb, "fb", n=20, colores=COLOR_PORTAL)
+        st.caption("**Participación en el top** — cuántas de las 20 aporta cada portal:")
+        recap_participacion(_lista_fb, COLOR_PORTAL, n=20)
     else:
         st.info("Sin datos de publicaciones de Facebook en los último mes.")
 

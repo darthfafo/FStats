@@ -119,23 +119,28 @@ TABLA_CSS = """
 """
 
 
-def tarjeta_ranking(rank, meta_html, titulo, stats):
+def tarjeta_ranking(rank, meta_html, titulo, stats, color=None):
     """Una tarjeta de ranking. stats: lista de (emoji, valor_str, etiqueta).
     meta_html ya viene como HTML (puede traer un <a> con el link). El título se
-    recorta: con ese fragmento ya se identifica la publicación."""
+    recorta: con ese fragmento ya se identifica la publicación. Si se pasa `color`
+    (color de marca del portal), la tarjeta se tiñe con ese color (Globales)."""
     LIM = 140
     titulo = titulo or ""
     corto  = html.escape(titulo[:LIM].rstrip()) + ("…" if len(titulo) > LIM else "")
     stats_html = "".join(
         f'<div class="tp-stat">{e}<b>{v}</b><span>{l}</span></div>' for e, v, l in stats)
+    # Tinte por portal: fondo con el color de marca difuminado hacia el oscuro
+    # (texto claro sigue legible) + borde izquierdo del color.
+    estilo = (f' style="background:linear-gradient(120deg,{color}40,#0f172a 62%);'
+              f'border-left:5px solid {color}"') if color else ""
     st.markdown(
-        f'<div class="tp-card"><div class="tp-row"><div class="tp-rank">#{rank}</div>'
+        f'<div class="tp-card"{estilo}><div class="tp-row"><div class="tp-rank">#{rank}</div>'
         f'<div class="tp-main"><div class="tp-meta">{meta_html}</div>'
         f'<div class="tp-title">{corto}</div></div>{stats_html}</div></div>',
         unsafe_allow_html=True)
 
 
-def mostrar_top(posts, plataforma, n=10):
+def mostrar_top(posts, plataforma, n=10, colores=None):
     """Renderiza un Top de publicaciones con tarjetas de ranking — MISMO estilo
     en todo el panel (portales y Estadísticas Globales) y las estadísticas
     propias de cada plataforma.
@@ -182,7 +187,37 @@ def mostrar_top(posts, plataforma, n=10):
                 ("💬", f'{p.get("com", 0):,}',      "comentarios"),
                 ("🔁", f'{p.get("shares", 0):,}',   "compartidos"),
             ]
-        tarjeta_ranking(i, meta, p.get("titulo", ""), stats)
+        _col = colores.get(p.get("portal")) if (colores and p.get("portal")) else None
+        tarjeta_ranking(i, meta, p.get("titulo", ""), stats, color=_col)
+
+
+def recap_participacion(posts, colores, n=None):
+    """Barra de proporciones: cuánto aporta cada portal al top (por cantidad de
+    publicaciones). Pensada para los tops de Estadísticas Globales."""
+    from collections import Counter
+    items = posts[:n] if n else posts
+    cuenta = Counter(p.get("portal") for p in items if p.get("portal"))
+    total  = sum(cuenta.values())
+    if not total:
+        return
+    segs, leyenda = "", ""
+    for nombre, c in cuenta.most_common():
+        pct = c / total * 100
+        col = colores.get(nombre, "#64748b")
+        dentro = f"{c}" if pct >= 7 else ""
+        segs += (f'<div title="{nombre}: {c} de {total}" '
+                 f'style="width:{pct}%;background:{col};display:flex;align-items:center;'
+                 f'justify-content:center;color:#fff;font-size:0.82rem;font-weight:700;'
+                 f'min-width:0;overflow:hidden">{dentro}</div>')
+        leyenda += (f'<span style="display:inline-flex;align-items:center;gap:6px;'
+                    f'margin:0 14px 6px 0;font-size:0.85rem;color:var(--text-color)">'
+                    f'<span style="width:11px;height:11px;border-radius:3px;background:{col};'
+                    f'display:inline-block"></span>{nombre} · {c} ({pct:.0f}%)</span>')
+    st.markdown(
+        f'<div style="display:flex;height:30px;border-radius:8px;overflow:hidden;'
+        f'gap:2px;margin-top:6px">{segs}</div>'
+        f'<div style="margin-top:10px;line-height:1.8">{leyenda}</div>',
+        unsafe_allow_html=True)
 
 
 def mostrar_portal(nombre):

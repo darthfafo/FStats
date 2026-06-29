@@ -369,11 +369,7 @@ st.markdown(
 # ── Banner por portal: uno full-width por portal, apilados, cada uno con el
 # color de su marca (borde + tinte). Aprovecha el ancho y despliega FB/IG sin
 # amontonar. En el celular las columnas se apilan solas. ───────────────────────
-COLOR_PORTAL = {
-    "Chubut Noticias": "#64748b", "Atento Chubut": "#22d3ee",
-    "La Calle Online": "#f97316", "El Americano": "#22c55e",
-    "Viste esto?":     "#a855f7", "Boca en Linea": "#fbbf24",
-}
+from config import COLOR_PORTAL
 _PAL_BANNER = ["#38bdf8", "#a855f7", "#f472b6", "#fbbf24", "#14b8a6"]
 def _color_banner(nombre, i):
     return COLOR_PORTAL.get(nombre) or _PAL_BANNER[i % len(_PAL_BANNER)]
