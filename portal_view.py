@@ -41,7 +41,7 @@ def _cargar_fb(nombre, page_id, token, live):
         "info":        fb.get_page_info(),
         "impresiones": fb.get_posts_impressions(),
         "fan_growth":  fb.get_fan_growth(),
-        "posts":       fb.get_recent_posts(limit=100),
+        "posts":       fb.get_recent_posts(limit=500),
     }
 
 
@@ -119,10 +119,11 @@ TABLA_CSS = """
 """
 
 
-def tarjeta_ranking(rank, meta_html, titulo, stats, copy_full=None):
+def tarjeta_ranking(rank, meta_html, titulo, stats):
     """Una tarjeta de ranking. stats: lista de (emoji, valor_str, etiqueta).
-    meta_html ya viene como HTML (puede traer un <a> con el link)."""
-    LIM = 110
+    meta_html ya viene como HTML (puede traer un <a> con el link). El título se
+    recorta: con ese fragmento ya se identifica la publicación."""
+    LIM = 140
     titulo = titulo or ""
     corto  = html.escape(titulo[:LIM].rstrip()) + ("…" if len(titulo) > LIM else "")
     stats_html = "".join(
@@ -132,9 +133,6 @@ def tarjeta_ranking(rank, meta_html, titulo, stats, copy_full=None):
         f'<div class="tp-main"><div class="tp-meta">{meta_html}</div>'
         f'<div class="tp-title">{corto}</div></div>{stats_html}</div></div>',
         unsafe_allow_html=True)
-    if copy_full and len(copy_full) > LIM:
-        with st.expander("📖 Leer descripción completa"):
-            st.write(copy_full)
 
 
 def mostrar_top(posts, plataforma, n=10):
@@ -184,7 +182,7 @@ def mostrar_top(posts, plataforma, n=10):
                 ("💬", f'{p.get("com", 0):,}',      "comentarios"),
                 ("🔁", f'{p.get("shares", 0):,}',   "compartidos"),
             ]
-        tarjeta_ranking(i, meta, p.get("titulo", ""), stats, copy_full=p.get("titulo"))
+        tarjeta_ranking(i, meta, p.get("titulo", ""), stats)
 
 
 def mostrar_portal(nombre):
@@ -387,10 +385,8 @@ def _seccion_instagram(nombre, datos_ig, imp_ig, imp_ig_total, err_ig):
     else:
         st.info("Sin datos de contenido para resumir.")
 
-    # Top 10 publicaciones de Instagram — tarjetas tipo ranking (hero + KPI), responsive.
+    # Top de publicaciones de Instagram: último mes + histórico (tarjetas ranking).
     st.markdown("---")
-    st.subheader("🏆 Top 10 publicaciones de Instagram")
-    st.caption("Ordenadas por **visualizaciones** (difusión real), no por likes.")
     media_data = datos_ig.get("media", {})
     if media_data.get("data"):
         # Visualizaciones y envíos por post: del warehouse (cubre todos los posts
@@ -435,7 +431,21 @@ def _seccion_instagram(nombre, datos_ig, imp_ig, imp_ig_total, err_ig):
         # al top, en vez de quedar afuera por tener menos likes que posts chicos.
         lista_ig.sort(key=lambda x: (x["views"], x["likes"]), reverse=True)
 
-        mostrar_top(lista_ig, "ig", n=10)
+        from datetime import datetime as _dtmes, timedelta as _tdmes
+        _lim_mes = (_dtmes.now() - _tdmes(days=30)).strftime("%Y-%m-%d")
+        _ig_mes  = [p for p in lista_ig if p["ts"] >= _lim_mes][:15]
+
+        st.subheader("🏆 Top 15 de Instagram — último mes")
+        st.caption("Las más vistas de los últimos 30 días.")
+        if _ig_mes:
+            mostrar_top(_ig_mes, "ig", n=15)
+        else:
+            st.info("Sin publicaciones de Instagram en el último mes.")
+
+        st.markdown("---")
+        st.subheader("🏆 Top 15 de Instagram — histórico")
+        st.caption("Las más vistas de todo el período cargado.")
+        mostrar_top(lista_ig[:15], "ig", n=15)
 
         with st.expander("📋 Ver todas las publicaciones de Instagram"):
             st.markdown(TABLA_CSS, unsafe_allow_html=True)
@@ -506,11 +516,9 @@ def _seccion_facebook(nombre, datos_fb, err_fb):
         else:
             st.info("Sin datos de seguidores por día.")
 
-    # Top 10 publicaciones de Facebook — mismas tarjetas de ranking que Instagram,
+    # Top de publicaciones de Facebook: último mes + histórico (tarjetas ranking),
     # ordenadas por reproducciones de video (estadística cardinal).
     st.markdown("---")
-    st.subheader("🏆 Top 10 publicaciones de Facebook")
-    st.caption("Ordenadas por **reproducciones de video**.")
     posts_fb = datos_fb.get("posts", {}).get("data", [])
     if posts_fb:
         lista_fb = []
@@ -526,6 +534,21 @@ def _seccion_facebook(nombre, datos_fb, err_fb):
                 "likes": likes, "com": com, "shares": shares,
             })
         lista_fb.sort(key=lambda x: (x["views"], x["likes"]), reverse=True)
-        mostrar_top(lista_fb, "fb", n=10)
+
+        from datetime import datetime as _dtmf, timedelta as _tdmf
+        _lim_mf = (_dtmf.now() - _tdmf(days=30)).strftime("%Y-%m-%d")
+        _fb_mes = [p for p in lista_fb if p["ts"] >= _lim_mf][:15]
+
+        st.subheader("🏆 Top 15 de Facebook — último mes")
+        st.caption("Las más reproducidas de los últimos 30 días.")
+        if _fb_mes:
+            mostrar_top(_fb_mes, "fb", n=15)
+        else:
+            st.info("Sin publicaciones de Facebook en el último mes.")
+
+        st.markdown("---")
+        st.subheader("🏆 Top 15 de Facebook — histórico")
+        st.caption("Las más reproducidas de todo el período cargado.")
+        mostrar_top(lista_fb[:15], "fb", n=15)
     else:
         st.info("Sin datos de publicaciones de Facebook.")
