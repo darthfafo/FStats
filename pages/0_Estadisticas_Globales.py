@@ -206,13 +206,9 @@ for d in datos_portales:
         _filas_int.append((d["nombre"], reac, com, env))
         _tot_reac += reac; _tot_com += com; _tot_env += env
 total_interacciones = _tot_reac + _tot_com + _tot_env
-# Interacciones por portal (para la tasa de engagement por portal en la tabla).
+# Interacciones por portal (para la columna de tasa de engagement de la tabla:
+# interacciones ÷ visualizaciones, un % comparable entre portales).
 _interacc_map = {n: r + c + e for n, r, c, e in _filas_int}
-
-# Tasa de engagement REAL: interacciones ÷ visualizaciones (qué porción del
-# contenido visto generó una interacción). Reemplaza al viejo engagement FB ÷
-# seguidores, que daba >100% porque también interactúan los no-seguidores.
-tasa_global = round(total_interacciones / total_viz * 100, 2) if total_viz else 0
 portales_activos = len(activos)
 
 # Variación de PERÍODO (verde/roja): últimos 30 días vs los 30 anteriores,
@@ -243,8 +239,6 @@ st.markdown(f"""
     <div class="k-value">{total_reach:,}</div>{_kpi_delta(d_rch, "Personas únicas · 30d")}</div>
   <div class="kpi-card"><div class="k-label">💬 Interacciones</div>
     <div class="k-value">{total_interacciones:,}</div><div class="k-sub">Reacciones + comentarios + envíos · IG + FB · 30d</div></div>
-  <div class="kpi-card"><div class="k-label">📊 Tasa engagement</div>
-    <div class="k-value">{tasa_global:.1f}%</div><div class="k-sub">Interacciones ÷ visualizaciones · 30d</div></div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -267,10 +261,8 @@ with st.expander("📖 Qué mide cada indicador y por qué importa"):
         "el alcance de página).\n"
         "- **🎯 Alcance IG:** a cuántas **personas únicas** llegaste en Instagram. A "
         "diferencia de las visualizaciones, cuenta personas, no reproducciones.\n"
-        "- **📊 Tasa de engagement:** interacciones (reacciones + comentarios + envíos, "
-        "IG + FB) ÷ visualizaciones. Qué porción del contenido visto generó una "
-        "interacción; da un % comparable entre portales (un portal chico puede tener "
-        "mejor tasa que uno grande).\n\n"
+        "- **💬 Interacciones:** total de reacciones + comentarios + envíos del mes, "
+        "sumando Instagram y Facebook. Mide qué tan involucrada está la audiencia.\n\n"
         "Más abajo, la sección **💬 Interacciones de la red** desglosa las reacciones, "
         "comentarios y envíos sumando ambas plataformas. Esta vista reúne todo para "
         "**comparar portales**, **ver la evolución** y **detectar a tiempo** qué crece y qué cae."
@@ -559,8 +551,6 @@ if _filas_int:
         '<th>Portal</th><th>❤️ Reacciones</th><th>💬 Comentarios</th><th>📤 Envíos</th>'
         f'</tr></thead><tbody>{_rows_html}</tbody></table></div>',
         unsafe_allow_html=True)
-    st.caption("Los **envíos** de Instagram aparecen cuando corras la ingesta con "
-               "la métrica nueva; hasta entonces solo suman los compartidos de Facebook.")
 else:
     st.info("Sin interacciones cargadas todavía.")
 
@@ -907,39 +897,42 @@ if activos:
 else:
     st.info("No hay portales activos con datos disponibles aún.")
 
-st.markdown("---")
+# ── Informe ejecutivo en PDF (OCULTO hasta actualizarlo) ──────────────
+# Deshabilitado a pedido: el PDF todavía no refleja las métricas nuevas
+# (reproducciones FB, envíos, interacciones). Reactivar: _PDF_HABILITADO = True.
+_PDF_HABILITADO = False
+if _PDF_HABILITADO:
+    st.markdown("---")
+    st.subheader("📄 Informe ejecutivo en PDF")
+    st.markdown(
+        "Generá un **informe en PDF** listo para compartir o presentar, con el resumen "
+        "del último mes de **toda la red**: los KPIs y totales, el ranking de portales por "
+        "visualizaciones, las tendencias de alcance, el desglose por portal y el top de "
+        "publicaciones de Instagram. *(Es una primera versión; la vamos a seguir "
+        "mejorando.)*"
+    )
 
-# ── Informe ejecutivo en PDF ─────────────────────────────────────────
-st.subheader("📄 Informe ejecutivo en PDF")
-st.markdown(
-    "Generá un **informe en PDF** listo para compartir o presentar, con el resumen "
-    "del último mes de **toda la red**: los KPIs y totales, el ranking de portales por "
-    "visualizaciones, las tendencias de alcance, el desglose por portal y el top de "
-    "publicaciones de Instagram. *(Es una primera versión; la vamos a seguir "
-    "mejorando.)*"
-)
-
-if st.button("📄 Generar informe PDF", type="primary", key="gen_pdf"):
-    with st.spinner("Generando informe… (puede tardar unos segundos)"):
-        try:
-            from pdf_report import generar_brief
-            resumenes = [{**d, "ig_daily_seg": d.get("ig_daily_seg", {})}
-                         for d in datos_portales]
-            totales = {
-                "total_imp": total_viz,
-                "total_seg": total_seg,
-                "total_eng": total_eng,
-                "total_fb":  sum(d.get("fb_imp", 0) for d in datos_portales),
-                "total_ig":  sum(d.get("ig_imp", 0) for d in datos_portales),
-            }
-            top_ig = [{**p, "portal": d["nombre"]}
-                      for d in activos for p in d.get("posts_ig", [])]
-            pdf_bytes = generar_brief(resumenes=resumenes, totales=totales,
-                                      top_ig=top_ig, top_fb=[])
-            st.download_button(
-                "⬇️ Descargar informe PDF", data=pdf_bytes,
-                file_name=f"informe_fstats_{datetime.now():%Y%m%d}.pdf",
-                mime="application/pdf", type="primary", key="dl_pdf")
-            st.success("Informe generado — tocá **Descargar informe PDF**.")
-        except Exception as e:
-            st.error(f"No se pudo generar el PDF: {e}")
+    if st.button("📄 Generar informe PDF", type="primary", key="gen_pdf"):
+        with st.spinner("Generando informe… (puede tardar unos segundos)"):
+            try:
+                from pdf_report import generar_brief
+                resumenes = [{**d, "ig_daily_seg": d.get("ig_daily_seg", {})}
+                             for d in datos_portales]
+                totales = {
+                    "total_imp": total_viz,
+                    "total_seg": total_seg,
+                    "total_eng": total_eng,
+                    "total_fb":  sum(d.get("fb_imp", 0) for d in datos_portales),
+                    "total_ig":  sum(d.get("ig_imp", 0) for d in datos_portales),
+                }
+                top_ig = [{**p, "portal": d["nombre"]}
+                          for d in activos for p in d.get("posts_ig", [])]
+                pdf_bytes = generar_brief(resumenes=resumenes, totales=totales,
+                                          top_ig=top_ig, top_fb=[])
+                st.download_button(
+                    "⬇️ Descargar informe PDF", data=pdf_bytes,
+                    file_name=f"informe_fstats_{datetime.now():%Y%m%d}.pdf",
+                    mime="application/pdf", type="primary", key="dl_pdf")
+                st.success("Informe generado — tocá **Descargar informe PDF**.")
+            except Exception as e:
+                st.error(f"No se pudo generar el PDF: {e}")

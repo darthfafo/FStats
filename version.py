@@ -5,10 +5,20 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.41"
+APP_VERSION = "1.9.42"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.42",
+        "fecha":   "2026-06-28",
+        "titulo":  "Saco la tasa de engagement del KPI, limpio aclaraciones y oculto el PDF",
+        "cambios": [
+            "Quitado el KPI de Tasa de engagement de Estadísticas Globales (el % daba muy bajo para un titular). Queda como columna comparativa por portal en la tabla.",
+            "Sacada la aclaración sobre la ingesta de los envíos debajo de la tabla de interacciones.",
+            "El generador de informe PDF queda oculto hasta actualizarlo a las métricas nuevas (flag _PDF_HABILITADO).",
+        ],
+    },
     {
         "version": "1.9.41",
         "fecha":   "2026-06-28",
