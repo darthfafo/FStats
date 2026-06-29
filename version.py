@@ -5,10 +5,19 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.36"
+APP_VERSION = "1.9.37"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.37",
+        "fecha":   "2026-06-28",
+        "titulo":  "PIN global: todo el panel protegido, con memoria de 1 hora",
+        "cambios": [
+            "Ahora TODO el panel pide PIN al entrar (datos sensibles), no solo Analizador/Realimentación/Bitácora. El desbloqueo se recuerda durante 1 hora dentro de la sesión, así no se pide a cada paso.",
+            "El gate corre en cada página (va en sidebar_nav) y bloquea el contenido —y la propia navegación— hasta ingresar el PIN. Al refrescar el navegador o abrir una pestaña nueva, se vuelve a pedir.",
+        ],
+    },
     {
         "version": "1.9.36",
         "fecha":   "2026-06-28",

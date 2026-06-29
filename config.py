@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 import os
 import hashlib
+import time
 import streamlit as st
 
 load_dotenv()
@@ -115,6 +116,9 @@ def sidebar_nav(current="", show_update=True, extra_widgets=None):
     extra_widgets: callable que se ejecuta antes del separador final.
     """
     from datetime import datetime as _dt
+    # Gate global: bloquea la página (y no muestra ni el sidebar) si el PIN no se
+    # ingresó en la última hora. Va primero para no renderizar datos sensibles.
+    require_app_pin()
     with st.sidebar:
         st.markdown("### 📊 FStats")
         # Navegación con page_link: es un ancla nativa, mucho más confiable en
@@ -164,29 +168,44 @@ def _secret(key, default="PENDIENTE"):
     return val if val not in (None, "") else default
 
 
-# ── PIN de acceso a secciones internas (Analizador, Realimentación, Bitácora) ──
+# ── PIN de acceso a TODO el panel (datos sensibles) ───────────────────────────
 # Se guarda SOLO el hash SHA-256 (nunca el PIN en texto plano); se puede override
-# desde secrets con FSTATS_PIN_HASH.
+# desde secrets con FSTATS_PIN_HASH. El desbloqueo se recuerda 1 hora por sesión.
 _PIN_HASH = _secret("FSTATS_PIN_HASH",
                     "251cd2d8d9d3d6281a8bf72251a7af1f3c4d323906806474772960f3968a7342")
+_PIN_TTL_SEG = 3600   # validez del desbloqueo: 1 hora
 
-def require_pin(seccion="esta sección"):
-    """Bloquea la página hasta ingresar el PIN correcto. Validado una vez en la
-    sesión, no se vuelve a pedir. Se compara por hash (el PIN nunca está en claro)."""
-    if st.session_state.get("fstats_pin_ok"):
+
+def _pin_vigente():
+    """¿El PIN se ingresó dentro de la última hora (en esta sesión)?"""
+    return time.time() < st.session_state.get("fstats_pin_ok_until", 0)
+
+
+def require_app_pin():
+    """Gate GLOBAL del panel: si no se ingresó el PIN en la última hora, bloquea
+    la página y lo pide. Pensado para llamarse en CADA página (va dentro de
+    sidebar_nav, que corre en todas). El PIN se compara por hash, nunca en claro.
+    Al refrescar el navegador (sesión nueva) se vuelve a pedir."""
+    if _pin_vigente():
         return
-    st.markdown("## 🔒 Sección protegida")
-    st.caption(f"Ingresá el PIN para acceder a **{seccion}**.")
-    with st.form("pin_form"):
+    st.markdown("## 🔒 Panel protegido")
+    st.caption("Los datos del panel son sensibles. Ingresá el PIN para acceder "
+               "(se recordará durante 1 hora).")
+    with st.form("pin_form_global"):
         pin    = st.text_input("PIN", type="password", max_chars=16)
         entrar = st.form_submit_button("Entrar")
     if entrar:
         if hashlib.sha256(pin.strip().encode()).hexdigest() == _PIN_HASH:
-            st.session_state["fstats_pin_ok"] = True
+            st.session_state["fstats_pin_ok_until"] = time.time() + _PIN_TTL_SEG
             st.rerun()
         else:
             st.error("PIN incorrecto.")
     st.stop()
+
+
+def require_pin(seccion="esta sección"):
+    """Compatibilidad: el PIN ahora es global (mismo gate de 1 hora)."""
+    require_app_pin()
 
 
 PORTALES = [
