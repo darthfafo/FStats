@@ -5,10 +5,21 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.43"
+APP_VERSION = "1.9.44"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.44",
+        "fecha":   "2026-06-28",
+        "titulo":  "Estadísticas Globales más claras: tablas, gráficos y reels",
+        "cambios": [
+            "Tablas: bordes internos invisibles (se veían feos sobre el degradado) y más aire antes del pie. Estilo unificado en una sola definición para todas.",
+            "Crecimiento de seguidores: textos más claros, el gráfico diario ahora tiene título y se quitaron las aclaraciones sobrantes.",
+            "Demografía: contexto de uso al inicio (qué hace cada selector) y se sacaron las explicaciones del 'porqué'. (Facebook no se puede sumar: Meta ya no expone demografía de página por API.)",
+            "Contenido y reels: el gráfico pasó a una sola métrica clara (reproducciones promedio por reel) y la tabla suma los envíos por reel (señal de viralidad) con el dato nuevo.",
+        ],
+    },
     {
         "version": "1.9.43",
         "fecha":   "2026-06-28",

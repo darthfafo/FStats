@@ -5,11 +5,12 @@ import plotly.graph_objects as go
 from datetime import datetime
 from config import PORTALES, RESPONSIVE_CSS, sidebar_nav, fb_source, ig_source
 from audience import contribucion_audiencia
-from portal_view import tarjeta_ranking, TOP_CSS, mostrar_top
+from portal_view import tarjeta_ranking, TOP_CSS, mostrar_top, TABLA_CSS
 
 st.set_page_config(page_title="Estadísticas Globales", page_icon="📊", layout="wide")
 
 st.markdown(RESPONSIVE_CSS, unsafe_allow_html=True)
+st.markdown(TABLA_CSS, unsafe_allow_html=True)   # estilo isla-oscura de las tablas
 sidebar_nav(current="")
 
 st.markdown("## 📊 Estadísticas Globales")
@@ -492,20 +493,6 @@ for d in datos_portales:
         "</tr>"
     )
 st.markdown(f"""
-<style>
-.tc-wrap {{ overflow-x:auto; margin-top:4px;
-            background:linear-gradient(135deg,#0f172a,#1e1b4b);
-            border:1px solid rgba(148,163,184,0.18); border-radius:14px;
-            padding:4px 16px 8px; }}
-.tc {{ width:100%; border-collapse:collapse; font-size:0.92rem; }}
-.tc th {{ color:#f1f5f9; font-weight:700; text-align:right; padding:9px 14px;
-          border-bottom:2px solid rgba(148,163,184,0.35); white-space:nowrap; }}
-.tc th:first-child {{ text-align:left; }}
-.tc td {{ color:#e2e8f0; text-align:right; padding:8px 14px;
-          border-bottom:1px solid rgba(148,163,184,0.12); white-space:nowrap; }}
-.tc td.tc-portal {{ text-align:left; font-weight:700; color:#fff; }}
-.tc tbody tr:hover td {{ background:rgba(148,163,184,0.07); }}
-</style>
 <div class="tc-wrap"><table class="tc"><thead><tr>
 <th>Portal</th><th>📸 IG visualiz.</th><th>▶️ Reproducc. FB</th><th>🎯 Total visualiz.</th>
 <th>👥 Seguidores</th><th>💬 Engagement FB</th><th>📊 Tasa eng.</th>
@@ -642,9 +629,8 @@ st.markdown("---")
 # ── 1) Crecimiento de seguidores por portal ─────────────────────────
 st.subheader("📈 Crecimiento de seguidores — por portal")
 st.caption(
-    "Altas netas de seguidores (FB + IG) en el período cargado en la base. "
-    "El total casi no se mueve día a día, así que en vez del acumulado mostramos "
-    "**cuánto creció cada portal** para que se vea el avance real."
+    "Cuántos seguidores netos (FB + IG) sumó cada portal en el período guardado. "
+    "Barra a la derecha = creció; a la izquierda = perdió."
 )
 
 _series_seg = {}
@@ -682,6 +668,7 @@ if _series_seg:
     # Altas netas por día (total de todos los portales), si hay días suficientes.
     altas_dia = df_seg.sum(axis=1).diff().dropna()
     if len(altas_dia) >= 3:
+        st.markdown("**Seguidores netos sumados por día — toda la red**")
         fig_ad = go.Figure(go.Bar(
             x=altas_dia.index, y=altas_dia.values,
             marker_color=["#22C55E" if v >= 0 else "#EA580C" for v in altas_dia.values]))
@@ -696,10 +683,8 @@ if _series_seg:
     hasta = df_seg.index.max().strftime("%d/%m")
     total_delta = int(crec.sum())
     st.caption(
-        f"📅 Período en base: **{desde} → {hasta}**. Crecimiento total: "
-        f"**{'+' if total_delta >= 0 else ''}{total_delta:,}** seguidores. "
-        "Verde = ganó · naranja = perdió. Cuantos más días acumule la ingesta, "
-        "más clara la tendencia."
+        f"📅 Período guardado: **{desde} → {hasta}** · la red sumó "
+        f"**{'+' if total_delta >= 0 else ''}{total_delta:,}** seguidores en total."
     )
 else:
     st.info("Todavía no hay histórico de seguidores cargado en la base.")
@@ -708,6 +693,12 @@ st.markdown("---")
 
 # ── 2) Demografía de la audiencia (Instagram) ───────────────────────
 st.subheader("🧭 Demografía de la audiencia — Instagram")
+st.caption(
+    "Quiénes son las personas detrás de los números. Elegí qué audiencia mirar y "
+    "con qué corte: **Seguidores** es tu base fija; **Audiencia que interactúa** "
+    "es quien engancha con tu contenido (incluye no-seguidores). Cambiá el "
+    "**segmento** para verla por edad, género, país o ciudad."
+)
 
 _AUD = {"Seguidores": "follower", "Audiencia que interactúa": "engaged"}
 _BD  = {"Edad": "age", "Género": "gender", "País": "country", "Ciudad": "city"}
@@ -741,17 +732,11 @@ if _acc:
         plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
     st.plotly_chart(fig_dem, width='stretch')
     st.caption(
-        f"Demografía de **{_aud_label.lower()}** por **{_bd_label.lower()}**, "
-        "agregando todos los portales con Instagram. *Seguidores* = tu base; "
-        "*Audiencia que interactúa* incluye también a no-seguidores. "
-        "Meta solo entrega demografía para cuentas con ≥100 seguidores."
+        f"**{_aud_label}** por **{_bd_label.lower()}**, sumando todos los portales "
+        "con Instagram."
     )
 else:
-    st.info(
-        "🛠️ La demografía (geo · edad · género) se llena con la ingesta nueva. "
-        "Tras la próxima corrida vas a ver acá la distribución de seguidores y de "
-        "la audiencia que interactúa. Requiere cuentas con ≥100 seguidores."
-    )
+    st.info("Todavía no hay demografía cargada para mostrar.")
 
 st.markdown("---")
 
@@ -763,9 +748,10 @@ if activos:
     # ── Rendimiento de reels por portal ──────────────────────────────
     st.subheader("🎬 Rendimiento de reels por portal")
     st.caption(
-        "Reproducciones y alcance promedio por reel en cada portal, para ver qué "
-        "portal logra reels que más circulan y aprender del que mejor rinde. "
-        "Sobre los reels con métricas cargadas."
+        "Cuánto rinde, en promedio, un reel de cada portal. El gráfico ordena los "
+        "portales por **reproducciones promedio** (qué portal hace los reels que más "
+        "circulan); la tabla suma el alcance, los **envíos** (la señal de viralidad "
+        "más fuerte) y cuál fue el mejor reel de cada uno."
     )
 
     todos_posts_ig = []
@@ -780,28 +766,26 @@ if activos:
             continue
         con_plays = [p for p in reels if (p.get("plays") or 0) > 0]
         reels_portal[d["nombre"]] = {
-            "n":         len(reels),
-            "avg_plays": (sum(p.get("plays", 0) for p in con_plays) / len(con_plays)) if con_plays else 0,
-            "avg_reach": sum(p.get("reach", 0) for p in reels) / len(reels),
-            "best":      max(reels, key=lambda p: (p.get("plays", 0) or p.get("reach", 0))),
+            "n":          len(reels),
+            "avg_plays":  (sum(p.get("plays", 0) for p in con_plays) / len(con_plays)) if con_plays else 0,
+            "avg_reach":  sum(p.get("reach", 0) for p in reels) / len(reels),
+            "avg_shares": sum(p.get("shares", 0) or 0 for p in reels) / len(reels),
+            "best":       max(reels, key=lambda p: (p.get("plays", 0) or p.get("reach", 0))),
         }
 
     if reels_portal:
         orden_r = sorted(reels_portal.items(), key=lambda kv: kv[1]["avg_plays"], reverse=True)
-        df_rm = pd.DataFrame([
-            {"Portal": n, "Métrica": etq, "Promedio": int(val)}
-            for n, v in orden_r
-            for etq, val in (("▶️ Reproduc./reel", v["avg_plays"]),
-                             ("🎯 Alcance/reel", v["avg_reach"]))
-        ])
-        fig_r = px.bar(df_rm, x="Promedio", y="Portal", color="Métrica",
-                       orientation="h", barmode="group",
-                       color_discrete_map={"▶️ Reproduc./reel": "#c026d3",
-                                           "🎯 Alcance/reel": "#0ea5e9"})
-        fig_r.update_layout(margin=dict(l=0, r=0, t=10, b=40),
-                            yaxis=dict(autorange="reversed"),
-                            height=max(220, 64 * len(reels_portal)), legend_title="",
-                            legend=dict(orientation="h", y=-0.25),
+        # Un solo gráfico claro: reproducciones promedio por reel, por portal.
+        df_rm = pd.DataFrame([{"Portal": n, "Promedio": int(v["avg_plays"])}
+                              for n, v in orden_r])
+        fig_r = px.bar(df_rm, x="Promedio", y="Portal", orientation="h",
+                       color_discrete_sequence=["#c026d3"],
+                       text=[f"{x:,}" for x in df_rm["Promedio"]])
+        fig_r.update_traces(textposition="outside", cliponaxis=False)
+        fig_r.update_layout(margin=dict(l=0, r=0, t=10, b=10),
+                            yaxis=dict(autorange="reversed", title=""),
+                            xaxis=dict(title="reproducciones promedio por reel"),
+                            height=max(220, 56 * len(reels_portal)),
                             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
         st.plotly_chart(fig_r, width='stretch')
 
@@ -815,11 +799,13 @@ if activos:
                 f"<td>{v['n']:,}</td>"
                 f"<td>{int(v['avg_plays']):,}</td>"
                 f"<td>{int(v['avg_reach']):,}</td>"
-                f"<td style='text-align:left'>{_mejor_val:,} · {_mejor_cap}</td></tr>")
+                f"<td>{int(v['avg_shares']):,}</td>"
+                f"<td class='tc-text'>{_mejor_val:,} · {_mejor_cap}</td></tr>")
         st.markdown(
             '<div class="tc-wrap"><table class="tc"><thead><tr>'
             "<th>Portal</th><th>🎬 Reels</th><th>▶️ Reproduc./reel</th>"
-            "<th>🎯 Alcance/reel</th><th style='text-align:left'>🏆 Mejor reel</th>"
+            "<th>🎯 Alcance/reel</th><th>📤 Envíos/reel</th>"
+            "<th style='text-align:left'>🏆 Mejor reel</th>"
             f'</tr></thead><tbody>{_reel_rows}</tbody></table></div>',
             unsafe_allow_html=True)
     else:

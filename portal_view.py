@@ -79,19 +79,21 @@ TOP_CSS = """
 # fondo oscuro propio + texto claro, legible en tema claro y oscuro.
 TABLA_CSS = """
 <style>
-.tc-wrap { overflow-x:auto; margin-top:4px;
+.tc-wrap { overflow-x:auto; margin:4px 0 16px;
            background:linear-gradient(135deg,#0f172a,#1e1b4b);
            border:1px solid rgba(148,163,184,0.18); border-radius:14px;
-           padding:4px 16px 8px; }
+           padding:6px 16px 10px; }
 .tc { width:100%; border-collapse:collapse; font-size:0.92rem; }
-.tc th { color:#f1f5f9; font-weight:700; text-align:right; padding:9px 14px;
-         border-bottom:2px solid rgba(148,163,184,0.35); white-space:nowrap; }
+/* Sin bordes internos: se veían feos sobre el degradado de la tarjeta. El
+   encabezado lleva un divisor muy tenue y las filas se distinguen por padding
+   + el hover. */
+.tc th { color:#f1f5f9; font-weight:700; text-align:right; padding:10px 14px;
+         border-bottom:1px solid rgba(148,163,184,0.15); white-space:nowrap; }
 .tc th:first-child { text-align:left; }
-.tc td { color:#e2e8f0; text-align:right; padding:8px 14px;
-         border-bottom:1px solid rgba(148,163,184,0.12); white-space:nowrap; }
+.tc td { color:#e2e8f0; text-align:right; padding:9px 14px; white-space:nowrap; }
 .tc td.tc-portal { text-align:left; font-weight:700; color:#fff; }
 .tc td.tc-text  { text-align:left; white-space:normal; min-width:240px; }
-.tc tbody tr:hover td { background:rgba(148,163,184,0.07); }
+.tc tbody tr:hover td { background:rgba(148,163,184,0.06); }
 </style>
 """
 
