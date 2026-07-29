@@ -18,7 +18,13 @@ numpy>=1.24.0,<2
 scikit-learn>=1.3.0
 joblib>=1.3.0
 
-# ── Analizador de viralidad: las dependencias MULTIMEDIA pesadas (opencv,
-# librosa, soundfile, faster-whisper/ctranslate2) NO van acá: se movieron a
-# requirements-analyzer.txt para uso LOCAL. En Streamlit Cloud causaban
-# Segmentation fault y además no pueden correr sin ffmpeg/Ollama instalados.
+# opencv: necesario para extraer features de video en la Realimentación (ingestar
+# bloque) también en la nube. Trae su propio decodificador, así que lee los mp4
+# sin ffmpeg del sistema. Con numpy<2 no reintroduce el segfault (ese era de
+# numpy 2.x contra duckdb, no de opencv).
+opencv-python-headless>=4.9.0,<4.11
+
+# ── Analizador: el resto de las deps MULTIMEDIA pesadas (librosa, soundfile,
+# faster-whisper/ctranslate2) siguen en requirements-analyzer.txt (uso LOCAL).
+# En la nube el audio/transcripción degradan solo (try/except) — no rompen la
+# ingesta, solo se saltean esas features.

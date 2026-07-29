@@ -6,9 +6,10 @@
 # Instalación local (después de requirements.txt):
 #   pip install -r requirements.txt -r requirements-analyzer.txt
 #
-# Mantener numpy < 2 (lo fija requirements.txt) para no romper el ABI de opencv,
-# librosa y ctranslate2 (faster-whisper).
-opencv-python-headless>=4.9.0
+# Mantener numpy < 2 (lo fija requirements.txt) para no romper el ABI de librosa
+# y ctranslate2 (faster-whisper).
+# (opencv-python-headless ya está en requirements.txt: se necesita también en la
+# nube para la Realimentación.)
 librosa>=0.10.0
 soundfile>=0.12.0
 # faster-whisper trae ctranslate2 (binario grande, sensible a la CPU; suele ser

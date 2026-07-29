@@ -5,10 +5,19 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.53"
+APP_VERSION = "1.9.54"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.54",
+        "fecha":   "2026-06-29",
+        "titulo":  "Realimentación: opencv en la nube para poder ingestar bloques",
+        "cambios": [
+            "La ingesta de bloques de Realimentación fallaba en la nube con 'No module named cv2' porque opencv se había sacado del deploy (al arreglar el segfault). Se re-agregó opencv-python-headless a requirements.txt: con numpy<2 no reintroduce el crash (ese era de numpy 2.x contra duckdb), y opencv lee los mp4 sin ffmpeg del sistema.",
+            "El audio/transcripción (librosa, faster-whisper) siguen siendo locales; en la nube esas features se saltean solas sin romper la ingesta.",
+        ],
+    },
     {
         "version": "1.9.53",
         "fecha":   "2026-06-29",
