@@ -439,29 +439,30 @@ for i, resumen in enumerate(resumenes):
                 st.switch_page(resumen["pagina"])
 
 # ── Visualizaciones por día (IG + reproducciones FB) — últimos 30 días ────
-# Versión simplificada de la tendencia de Globales: una línea por portal con las
-# visualizaciones (IG + video de FB) que acumulan las publicaciones según el día
-# en que se publicaron. Sin el día en curso (parcial).
+# Tendencia por portal de las visualizaciones diarias (IG + video de FB), por día
+# de publicación. Suavizada con promedio móvil de 7 días (los valores por día son
+# muy spiky: un reel viral dispara un día). Sin el día en curso (parcial).
 if len(resumenes) > 1:
     st.markdown("---")
     st.subheader("📈 Visualizaciones por día — cada portal")
     st.caption(
-        "Visualizaciones de Instagram + reproducciones de video de Facebook que "
-        "acumulan las publicaciones según el día en que se publicaron · últimos 30 días."
+        "Tendencia de las visualizaciones diarias (Instagram + reproducciones de "
+        "video de Facebook), suavizada con promedio móvil de 7 días · últimos 30 días."
     )
     from datetime import timedelta as _tdv
-    _corte_v = (datetime.now() - _tdv(days=30)).date()
+    _hoy_v  = datetime.now().date()
+    _idx_v  = list(pd.date_range(_hoy_v - _tdv(days=37), _hoy_v, freq="D").date)  # +7 warm-up
     _series_v = {}
     for r in resumenes:
         nombre = r["nombre"]
-        ser = None
+        raw = None
         try:
             ig = _wr.posts(nombre, "ig")
             if ig is not None and not ig.empty:
                 _ig = ig.assign(
                     _d=pd.to_datetime(ig["published_date"], errors="coerce").dt.date,
                     _v=ig["plays"].where(ig["plays"] > 0, ig["reach"]).fillna(0))
-                ser = _ig.dropna(subset=["_d"]).groupby("_d")["_v"].sum()
+                raw = _ig.dropna(subset=["_d"]).groupby("_d")["_v"].sum()
         except Exception:
             pass
         try:
@@ -470,31 +471,33 @@ if len(resumenes) > 1:
                 _fb = fb.assign(
                     _d=pd.to_datetime(fb["created_date"], errors="coerce").dt.date,
                     _v=pd.to_numeric(fb["video_views"], errors="coerce").fillna(0))
-                _fser = _fb.dropna(subset=["_d"]).groupby("_d")["_v"].sum()
-                ser = _fser if ser is None else ser.add(_fser, fill_value=0)
+                _f = _fb.dropna(subset=["_d"]).groupby("_d")["_v"].sum()
+                raw = _f if raw is None else raw.add(_f, fill_value=0)
         except Exception:
             pass
-        if ser is None or ser.empty:
+        if raw is None or raw.empty:
             continue
-        ser = ser[[d >= _corte_v for d in ser.index]]
-        ser = ser[ser > 0]
-        if len(ser) >= 2:
-            _series_v[nombre] = ser
+        # Serie continua sobre la ventana (huecos = 0) → promedio móvil de 7 días.
+        s = pd.Series({d: float(raw.get(d, 0)) for d in _idx_v})
+        s = s.rolling(7, min_periods=3).mean().dropna()
+        s = s[s > 0]
+        if len(s) >= 2:
+            _series_v[nombre] = s
 
     if _series_v:
-        _maxd_v = max(s.index.max() for s in _series_v.values())   # día en curso (parcial)
+        _corte_v = _hoy_v - _tdv(days=30)
+        _maxd_v  = max(s.index.max() for s in _series_v.values())   # día en curso (parcial)
         _fig_v = go.Figure()
         _ymaxv = 0
-        for nombre, ser in _series_v.items():
-            ser = ser[[d < _maxd_v for d in ser.index]]
-            if len(ser) < 2:
+        for nombre, s in _series_v.items():
+            s = s[(s.index >= _corte_v) & (s.index < _maxd_v)]
+            if len(s) < 2:
                 continue
-            _fechas = sorted(ser.index)
-            _vals = [int(ser[f]) for f in _fechas]
-            _ymaxv = max(_ymaxv, max(_vals))
+            _ymaxv = max(_ymaxv, float(s.max()))
             _fig_v.add_trace(go.Scatter(
-                x=[pd.Timestamp(f) for f in _fechas], y=_vals, mode="lines",
-                name=nombre, line=dict(color=COLOR_PORTAL.get(nombre, "#64748b"), width=2)))
+                x=[pd.Timestamp(d) for d in s.index], y=list(s.values),
+                mode="lines", name=nombre, line_shape="spline",
+                line=dict(color=COLOR_PORTAL.get(nombre, "#64748b"), width=2.5)))
         if _ymaxv > 0:
             import math as _mv
             _techo_v = _mv.log10(_ymaxv) + 0.15
@@ -512,41 +515,6 @@ if len(resumenes) > 1:
             st.plotly_chart(_fig_v, width='stretch')
     else:
         st.info("Todavía no hay publicaciones con visualizaciones para graficar la tendencia.")
-
-# ── Rinde por seguidor: visualizaciones por seguidor de cada portal ──────
-# Re-nivela el dominio de los grandes (La Calle se come las views absolutas):
-# mide cuánto circula el contenido de cada portal RELATIVO a su audiencia, así
-# se ve qué portal rinde de verdad (uno chico puede rendir más por seguidor).
-if len(resumenes) > 1:
-    st.markdown("---")
-    st.subheader("🚀 Qué portal rinde más por seguidor")
-    st.caption(
-        "Visualizaciones por cada seguidor: cuánto circula el contenido relativo "
-        "al tamaño de la audiencia. Re-nivela a los grandes — un portal chico puede "
-        "rendir más por seguidor que uno grande."
-    )
-
-    ef = sorted([r for r in resumenes if r["total_seg"] > 0 and r["total_imp"] > 0],
-                key=lambda r: r["total_imp"] / r["total_seg"], reverse=True)
-    if ef:
-        nombres = [r["nombre"] for r in ef]
-        valores = [r["total_imp"] / r["total_seg"] for r in ef]
-        colores = [COLOR_PORTAL.get(n, "#0EA5E9") for n in nombres]
-        fig_ef = go.Figure(go.Bar(
-            x=valores, y=nombres, orientation="h", marker_color=colores,
-            text=[f"{v:,.0f}" for v in valores], textposition="outside",
-            cliponaxis=False,
-            customdata=[(r["total_imp"], r["total_seg"]) for r in ef],
-            hovertemplate="<b>%{y}</b><br>%{x:,.0f} views por seguidor<br>"
-                          "%{customdata[0]:,} views · %{customdata[1]:,} seguidores<extra></extra>"))
-        fig_ef.update_layout(
-            margin=dict(l=0, r=0, t=10, b=10), height=max(220, 56 * len(ef)),
-            yaxis=dict(autorange="reversed", title=""),
-            xaxis=dict(title="visualizaciones por seguidor"),
-            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
-        st.plotly_chart(fig_ef, width='stretch')
-    else:
-        st.info("Todavía no hay datos suficientes (visualizaciones y seguidores) para el ranking.")
 
 # El informe PDF se genera ahora desde la página de Estadísticas Globales, así la
 # barra lateral queda igual en todas las páginas (solo la navegación).

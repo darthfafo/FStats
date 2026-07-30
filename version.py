@@ -5,10 +5,19 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.56"
+APP_VERSION = "1.9.57"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.57",
+        "fecha":   "2026-06-29",
+        "titulo":  "Inicio: gráfico de visualizaciones suavizado y sin el rinde por seguidor",
+        "cambios": [
+            "El gráfico de visualizaciones por día del inicio se veía muy spiky (un reel viral disparaba un día). Ahora se suaviza con un promedio móvil de 7 días, líneas continuas y legibles.",
+            "Se quitó del inicio el gráfico de 'rinde por seguidor'; la versión detallada queda en Estadísticas Globales.",
+        ],
+    },
     {
         "version": "1.9.56",
         "fecha":   "2026-06-29",
