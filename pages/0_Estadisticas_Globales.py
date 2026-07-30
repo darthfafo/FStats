@@ -312,11 +312,15 @@ if activos:
         # otra opción). Filtramos las series por este corte.
         corte_30 = (_dt.now() - _td(days=30)).strftime("%Y-%m-%d")
         fecha_inicio_global = (_dt.now() - _td(days=29)).strftime("%Y-%m-%d")
+        # Excluimos el día MÁS reciente de toda la red: es el día en curso, con
+        # dato parcial de Meta, y su caída distorsiona todas las líneas.
+        _ultimo_dia = max((k for d in activos for k in d.get("ig_daily", {})), default=None)
         notas_inicio = []
         for d in activos:
             color = _colores_trend[d["nombre"]]
-            # IG = línea continua (últimos 30 días)
-            items_ig = [(k, v) for k, v in sorted(d["ig_daily"].items()) if k >= corte_30]
+            # IG = línea continua (últimos 30 días), sin el día en curso.
+            items_ig = [(k, v) for k, v in sorted(d["ig_daily"].items())
+                        if k >= corte_30 and k != _ultimo_dia]
             if items_ig:
                 fechas_ig = [k for k, v in items_ig]
                 vals_ig   = [v for k, v in items_ig]
@@ -335,15 +339,22 @@ if activos:
         if notas_inicio:
             nota_extra.append("⚠️ Inicio tardío: " + " | ".join(notas_inicio) +
                               " — Meta solo provee histórico desde la conexión al panel.")
-        nota_extra.append("ℹ️ Los datos del día actual pueden tardar horas en estar disponibles.")
+        nota_extra.append("El día en curso no se muestra: su dato todavía es parcial.")
     else:
         try:
             import warehouse.reader as wreader
             sin_hist = []   # portales activos sin ninguna serie histórica en la base
+            _dfs_ig = {d["nombre"]: wreader.daily_metric(d["nombre"], "ig", "reach")
+                       for d in activos}
+            # Excluimos el día más reciente de toda la red (día en curso, parcial).
+            _maxd = max((df["metric_date"].max() for df in _dfs_ig.values() if not df.empty),
+                        default=None)
             for d in activos:
                 color = _colores_trend[d["nombre"]]
                 con_traza = False
-                df_ig = wreader.daily_metric(d["nombre"], "ig", "reach")
+                df_ig = _dfs_ig[d["nombre"]]
+                if _maxd is not None and not df_ig.empty:
+                    df_ig = df_ig[df_ig["metric_date"] < _maxd]
                 if not df_ig.empty:
                     hay_datos = True
                     con_traza = True
@@ -415,9 +426,11 @@ if activos:
     if modo_trend == _MODO_VIVO:
         from datetime import datetime as _dt2, timedelta as _td2
         corte_30_fb = (_dt2.now() - _td2(days=30)).strftime("%Y-%m-%d")
+        # Sin el día en curso (parcial): distorsiona todas las líneas.
+        _ultimo_fb = max((k for d in activos for k in d.get("fb_video_daily", {})), default=None)
         for d in activos:
             items = [(k, v) for k, v in sorted(d.get("fb_video_daily", {}).items())
-                     if k >= corte_30_fb and v > 0]
+                     if k >= corte_30_fb and v > 0 and k != _ultimo_fb]
             if items:
                 fechas = [k for k, v in items]; vals = [v for k, v in items]
                 ymax_fb = max(ymax_fb, max(vals))
@@ -429,8 +442,15 @@ if activos:
     else:
         try:
             import warehouse.reader as wreader_fb
+            _dfs_fb = {d["nombre"]: wreader_fb.daily_metric(d["nombre"], "fb", "page_video_views")
+                       for d in activos}
+            # Sin el día más reciente de toda la red (día en curso, parcial).
+            _maxd_fb = max((df["metric_date"].max() for df in _dfs_fb.values()
+                            if df is not None and not df.empty), default=None)
             for d in activos:
-                df = wreader_fb.daily_metric(d["nombre"], "fb", "page_video_views")
+                df = _dfs_fb[d["nombre"]]
+                if _maxd_fb is not None and df is not None and not df.empty:
+                    df = df[df["metric_date"] < _maxd_fb]
                 if df is not None and not df.empty:
                     ymax_fb = max(ymax_fb, int(df["metric_value"].max()))
                     fig_fb.add_trace(go.Scatter(

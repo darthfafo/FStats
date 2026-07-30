@@ -5,10 +5,18 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.54"
+APP_VERSION = "1.9.55"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.55",
+        "fecha":   "2026-06-29",
+        "titulo":  "Tendencias de Globales: no mostrar el día en curso (dato parcial)",
+        "cambios": [
+            "Los gráficos de tendencia de alcance (IG) y de reproducciones de video (FB) de Estadísticas Globales dejan de mostrar el día más reciente de la red, cuyo dato es parcial y generaba una caída que distorsionaba todas las líneas. Aplica en los dos modos (en vivo e histórico).",
+        ],
+    },
     {
         "version": "1.9.54",
         "fecha":   "2026-06-29",
