@@ -5,10 +5,19 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.55"
+APP_VERSION = "1.9.56"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.56",
+        "fecha":   "2026-06-29",
+        "titulo":  "Rendimiento por seguidor detallado en Globales + visualizaciones/día en el inicio",
+        "cambios": [
+            "Estadísticas Globales suma una sección 'Qué portal rinde más por seguidor' más explicada: la barra de visualizaciones por seguidor + una tabla con views, alcance e interacciones por seguidor, en la sección de Audiencia.",
+            "El inicio suma, debajo de los banners de portales, un gráfico de visualizaciones por día (Instagram + reproducciones de video de Facebook combinadas) de los últimos 30 días, una línea por portal y sin el día en curso.",
+        ],
+    },
     {
         "version": "1.9.55",
         "fecha":   "2026-06-29",

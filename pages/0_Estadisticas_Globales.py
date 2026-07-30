@@ -642,6 +642,57 @@ else:
 
 st.markdown("---")
 
+# ── Rendimiento por seguidor (eficiencia) ────────────────────────────
+st.subheader("🚀 Qué portal rinde más por seguidor")
+st.caption(
+    "Cuánto rinde el contenido de cada portal **relativo al tamaño de su audiencia**. "
+    "Re-nivela a los grandes: un portal chico con contenido que circula mucho puede "
+    "rendir más por seguidor que uno grande. La barra ordena por **visualizaciones "
+    "por seguidor**; la tabla suma el alcance y las interacciones por seguidor."
+)
+_ef = sorted([d for d in datos_portales
+              if not d.get("pendiente") and d.get("total_seg", 0) > 0 and d.get("total_imp", 0) > 0],
+             key=lambda d: d["total_imp"] / d["total_seg"], reverse=True)
+if _ef:
+    _nombres = [d["nombre"] for d in _ef]
+    _valores = [d["total_imp"] / d["total_seg"] for d in _ef]
+    _colores = [COLOR_PORTAL.get(n, "#64748b") for n in _nombres]
+    _fig_ef = go.Figure(go.Bar(
+        x=_valores, y=_nombres, orientation="h", marker_color=_colores,
+        text=[f"{v:,.0f}" for v in _valores], textposition="outside", cliponaxis=False,
+        hovertemplate="<b>%{y}</b><br>%{x:,.0f} views por seguidor<extra></extra>"))
+    _fig_ef.update_layout(
+        margin=dict(l=0, r=0, t=10, b=10), height=max(220, 56 * len(_ef)),
+        yaxis=dict(autorange="reversed", title=""),
+        xaxis=dict(title="visualizaciones por seguidor"),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
+    st.plotly_chart(_fig_ef, width='stretch')
+
+    _rows_ef = ""
+    for d in _ef:
+        _seg = d["total_seg"]
+        _vps = d["total_imp"] / _seg
+        _aps = d.get("ig_reach", 0) / _seg
+        _ips = (d.get("ig_engaged", 0) + d.get("fb_eng", 0)) / _seg
+        _rows_ef += (
+            f"<tr><td class='tc-portal'>{d['nombre']}</td>"
+            f"<td>{_seg:,}</td><td>{d['total_imp']:,}</td>"
+            f"<td>{_vps:,.0f}</td><td>{_aps:,.0f}</td><td>{_ips:,.1f}</td></tr>")
+    st.markdown(
+        '<div class="tc-wrap"><table class="tc"><thead><tr>'
+        '<th>Portal</th><th>👥 Seguidores</th><th>▶️ Visualizaciones</th>'
+        '<th>▶️ Views/seg</th><th>🎯 Alcance/seg</th><th>💬 Interacc./seg</th>'
+        f'</tr></thead><tbody>{_rows_ef}</tbody></table></div>',
+        unsafe_allow_html=True)
+    st.caption(
+        "**Views/seg** = visualizaciones ÷ seguidores · **Alcance/seg** = personas "
+        "únicas de IG ÷ seguidores · **Interacc./seg** = interacciones ÷ seguidores."
+    )
+else:
+    st.info("Sin datos suficientes (visualizaciones y seguidores) para el rendimiento por seguidor.")
+
+st.markdown("---")
+
 # ── Evolución histórica de audiencia (base de datos) ─────────────────
 
 # ── 1) Crecimiento de seguidores por portal ─────────────────────────
