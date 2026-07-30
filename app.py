@@ -485,26 +485,32 @@ if len(resumenes) > 1:
     if _series_v:
         _maxd_v = max(s.index.max() for s in _series_v.values())   # día en curso (parcial)
         _fig_v = go.Figure()
-        _ymaxv = 0
+        _allvals = []
         for nombre, s in _series_v.items():
             s = s[s.index < _maxd_v]
             if len(s) < 2:
                 continue
             _fechas = sorted(s.index)
             _vals = [float(s[d]) for d in _fechas]
-            _ymaxv = max(_ymaxv, max(_vals))
+            _allvals.extend(_vals)
             _fig_v.add_trace(go.Scatter(
                 x=[pd.Timestamp(d) for d in _fechas], y=_vals,
                 mode="lines+markers", name=nombre,
                 line=dict(color=COLOR_PORTAL.get(nombre, "#64748b"), width=2),
                 marker=dict(size=4, color=COLOR_PORTAL.get(nombre, "#64748b"), opacity=0.75)))
-        if _ymaxv > 0:
+        if _allvals:
             import math as _mv
-            _techo_v = _mv.log10(_ymaxv) + 0.12
-            # Encuadre: mostramos ~3 décadas desde el máximo (donde viven los
-            # portales principales). Cuando El Americano se desploma a cientos,
-            # queda recortado abajo en vez de estirar todo el eje hacia abajo.
-            _piso_v = _techo_v - 3
+            _sv = pd.Series(_allvals)
+            # Encuadre por PERCENTILES (no por máx/mín): un día viral suelto no
+            # infla el techo ni una caída puntual estira el piso. El grueso de los
+            # datos llena la vista; los picos y crashes extremos se recortan.
+            _techo_v = _mv.log10(max(_sv.quantile(0.93), 1.0)) + 0.12
+            _piso_v  = _mv.log10(max(_sv.quantile(0.07), 1.0)) - 0.05
+            _win = _techo_v - _piso_v
+            if _win < 2.3:          # muy poco rango → dar aire
+                _piso_v = _techo_v - 2.3
+            elif _win > 3.0:        # demasiado → acotar el piso
+                _piso_v = _techo_v - 3.0
             _fig_v.update_layout(
                 showlegend=True,
                 legend=dict(orientation="h", yanchor="top", y=-0.18, xanchor="left",

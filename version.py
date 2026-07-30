@@ -5,10 +5,18 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.59"
+APP_VERSION = "1.9.60"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.60",
+        "fecha":   "2026-06-29",
+        "titulo":  "Inicio: encuadre del gráfico de visualizaciones por percentiles",
+        "cambios": [
+            "El techo y el piso del gráfico de visualizaciones por día del inicio salen de percentiles (p93/p07) en vez del máximo/mínimo, así un día viral suelto no infla el eje ni deja medio gráfico vacío arriba. El grueso de los datos llena la vista; los picos y caídas extremas se recortan (se pueden ver con el zoom del gráfico).",
+        ],
+    },
     {
         "version": "1.9.59",
         "fecha":   "2026-06-29",
