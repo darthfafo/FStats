@@ -439,19 +439,19 @@ for i, resumen in enumerate(resumenes):
                 st.switch_page(resumen["pagina"])
 
 # ── Visualizaciones por día (IG + reproducciones FB) — últimos 30 días ────
-# Tendencia por portal de las visualizaciones diarias (IG + video de FB), por día
-# de publicación. Suavizada con promedio móvil de 7 días (los valores por día son
-# muy spiky: un reel viral dispara un día). Sin el día en curso (parcial).
+# Una línea por portal con las visualizaciones diarias (IG + video de FB) por día
+# de publicación — DATO CRUDO, para ver la evolución real (sin suavizar). Sin el
+# día en curso (parcial). El encuadre acota el eje (~3 décadas) para que los
+# outliers bajos no lo estiren.
 if len(resumenes) > 1:
     st.markdown("---")
     st.subheader("📈 Visualizaciones por día — cada portal")
     st.caption(
-        "Tendencia de las visualizaciones diarias (Instagram + reproducciones de "
-        "video de Facebook), suavizada con promedio móvil de 7 días · últimos 30 días."
+        "Visualizaciones de Instagram + reproducciones de video de Facebook que "
+        "acumulan las publicaciones según el día en que se publicaron · últimos 30 días."
     )
     from datetime import timedelta as _tdv
-    _hoy_v  = datetime.now().date()
-    _idx_v  = list(pd.date_range(_hoy_v - _tdv(days=37), _hoy_v, freq="D").date)  # +7 warm-up
+    _corte_v = (datetime.now() - _tdv(days=30)).date()
     _series_v = {}
     for r in resumenes:
         nombre = r["nombre"]
@@ -477,27 +477,27 @@ if len(resumenes) > 1:
             pass
         if raw is None or raw.empty:
             continue
-        # Serie continua sobre la ventana (huecos = 0) → promedio móvil de 7 días.
-        s = pd.Series({d: float(raw.get(d, 0)) for d in _idx_v})
-        s = s.rolling(7, min_periods=3).mean().dropna()
-        s = s[s > 0]
-        if len(s) >= 2:
-            _series_v[nombre] = s
+        raw = raw[[d >= _corte_v for d in raw.index]]
+        raw = raw[raw > 0]
+        if len(raw) >= 2:
+            _series_v[nombre] = raw
 
     if _series_v:
-        _corte_v = _hoy_v - _tdv(days=30)
-        _maxd_v  = max(s.index.max() for s in _series_v.values())   # día en curso (parcial)
+        _maxd_v = max(s.index.max() for s in _series_v.values())   # día en curso (parcial)
         _fig_v = go.Figure()
         _ymaxv = 0
         for nombre, s in _series_v.items():
-            s = s[(s.index >= _corte_v) & (s.index < _maxd_v)]
+            s = s[s.index < _maxd_v]
             if len(s) < 2:
                 continue
-            _ymaxv = max(_ymaxv, float(s.max()))
+            _fechas = sorted(s.index)
+            _vals = [float(s[d]) for d in _fechas]
+            _ymaxv = max(_ymaxv, max(_vals))
             _fig_v.add_trace(go.Scatter(
-                x=[pd.Timestamp(d) for d in s.index], y=list(s.values),
-                mode="lines", name=nombre, line_shape="spline",
-                line=dict(color=COLOR_PORTAL.get(nombre, "#64748b"), width=2.5)))
+                x=[pd.Timestamp(d) for d in _fechas], y=_vals,
+                mode="lines+markers", name=nombre,
+                line=dict(color=COLOR_PORTAL.get(nombre, "#64748b"), width=2),
+                marker=dict(size=4, color=COLOR_PORTAL.get(nombre, "#64748b"), opacity=0.75)))
         if _ymaxv > 0:
             import math as _mv
             _techo_v = _mv.log10(_ymaxv) + 0.12

@@ -5,10 +5,18 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.58"
+APP_VERSION = "1.9.59"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.59",
+        "fecha":   "2026-06-29",
+        "titulo":  "Inicio: visualizaciones por día sin suavizado (dato crudo)",
+        "cambios": [
+            "Se quitó el promedio móvil del gráfico de visualizaciones por día del inicio: vuelve al dato crudo para que se vea la evolución real día a día. Se mantiene el encuadre acotado (~3 décadas) para que los outliers bajos no estiren el eje.",
+        ],
+    },
     {
         "version": "1.9.58",
         "fecha":   "2026-06-29",
