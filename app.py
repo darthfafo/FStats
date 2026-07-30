@@ -500,7 +500,11 @@ if len(resumenes) > 1:
                 line=dict(color=COLOR_PORTAL.get(nombre, "#64748b"), width=2.5)))
         if _ymaxv > 0:
             import math as _mv
-            _techo_v = _mv.log10(_ymaxv) + 0.15
+            _techo_v = _mv.log10(_ymaxv) + 0.12
+            # Encuadre: mostramos ~3 décadas desde el máximo (donde viven los
+            # portales principales). Cuando El Americano se desploma a cientos,
+            # queda recortado abajo en vez de estirar todo el eje hacia abajo.
+            _piso_v = _techo_v - 3
             _fig_v.update_layout(
                 showlegend=True,
                 legend=dict(orientation="h", yanchor="top", y=-0.18, xanchor="left",
@@ -509,7 +513,7 @@ if len(resumenes) > 1:
                 plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                 xaxis=dict(gridcolor="rgba(255,255,255,0.08)", showgrid=True, title=""),
                 yaxis=dict(type="log", title="visualizaciones (escala log.)",
-                           range=[max(0, _techo_v - 4.5), _techo_v],
+                           range=[_piso_v, _techo_v], autorange=False,
                            gridcolor="rgba(255,255,255,0.08)", tickformat=".2s"),
                 hovermode="x unified")
             st.plotly_chart(_fig_v, width='stretch')

@@ -5,10 +5,18 @@ Cubre el historial desde la creación del repo (2026-05-30). Para registrar una
 nueva versión: agregá un dict al principio de CHANGELOG y actualizá APP_VERSION.
 """
 
-APP_VERSION = "1.9.57"
+APP_VERSION = "1.9.58"
 
 # Más reciente primero. fecha en formato YYYY-MM-DD.
 CHANGELOG = [
+    {
+        "version": "1.9.58",
+        "fecha":   "2026-06-29",
+        "titulo":  "Inicio: mejor encuadre del gráfico de visualizaciones por día",
+        "cambios": [
+            "El eje Y del gráfico de visualizaciones diarias del inicio se acota a las ~3 décadas superiores (donde están los portales principales) y carga fijo en ese encuadre. Así El Americano, cuando cae a cientos de vistas, queda recortado abajo en vez de estirar todo el eje y comprimir al resto.",
+        ],
+    },
     {
         "version": "1.9.57",
         "fecha":   "2026-06-29",
